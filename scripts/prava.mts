@@ -25,7 +25,7 @@ async function setup() {
     merchantUrl: MERCHANT.url,
     merchantCountry: MERCHANT.country,
     productDescription: "Ad creative render credits",
-    merchantScope: MERCHANT.url,
+    merchantScope: "listed",
     maxCharges: 10,
     validUntil: validUntil(30),
     recurringFrequency: "monthly",

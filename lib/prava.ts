@@ -52,7 +52,7 @@ async function call<T>(path: string, method: "GET" | "POST", body?: Json): Promi
   return parsed as T;
 }
 
-export type MerchantScope = "any" | string;
+export type MerchantScope = "any" | "listed";
 
 export interface CreateMandateSessionInput {
   userId: string;
@@ -89,13 +89,15 @@ export async function createMandateSession(input: CreateMandateSessionInput): Pr
         merchant_details: {
           name: input.merchantName,
           url: input.merchantUrl,
-          country: input.merchantCountry,
+          country_code_iso2: input.merchantCountry,
         },
-        product_details: {
-          description: input.productDescription,
-          unit_price: input.amount,
-          quantity: 1,
-        },
+        product_details: [
+          {
+            description: input.productDescription,
+            unit_price: input.amount,
+            quantity: 1,
+          },
+        ],
       },
     ],
     mandate_setup: {
