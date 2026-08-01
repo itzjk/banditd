@@ -43,6 +43,22 @@ export function shortId(id: string | null | undefined, keep = 6): string {
   return id.length <= keep + 3 ? id : `${id.slice(0, keep)}...${id.slice(-4)}`;
 }
 
+const HEADING = /^[ \t]{0,3}#{1,6}[ \t]+/gm;
+const BULLET = /^[ \t]{0,3}[*+][ \t]+/gm;
+const BOLD = /(\*\*|__)(\S(?:[\s\S]*?\S)?)\1/g;
+const ITALIC = /(?<![\w*_])([*_])(\S(?:[^*_\n]*?\S)?)\1(?![\w*_])/g;
+const CODE = /`{1,3}([^`\n]+)`{1,3}/g;
+const STRAY = /\*{2,}/g;
+const RUN = /[ \t]{2,}/g;
+
+export function plain(value: string | null | undefined): string {
+  if (!value) return "";
+  let out = String(value).replace(HEADING, "").replace(BULLET, "");
+  for (let pass = 0; pass < 3; pass += 1) out = out.replace(BOLD, "$2");
+  out = out.replace(ITALIC, "$2").replace(CODE, "$1").replace(STRAY, "");
+  return out.replace(RUN, " ").trim();
+}
+
 export interface Citation {
   label: string;
   url: string;
@@ -61,15 +77,16 @@ const SENTENCE = /(?<=[.!?](?:@@CITE\d+@@)*)\s+/;
 export function extractCitations(value: string): { text: string; citations: Citation[] } {
   const citations: Citation[] = [];
   const marked = (value ?? "").replace(LINK, (_match, label: string, url: string) => {
-    citations.push({ label: label.trim(), url });
+    citations.push({ label: plain(label), url });
     return `@@CITE${citations.length - 1}@@`;
   });
-  if (!citations.length) return { text: marked, citations };
+  if (!citations.length) return { text: plain(marked), citations };
 
-  const text = marked
-    .replace(GROUP, (_match, group: string) => group.replace(/[\s,;]+/g, ""))
-    .replace(LOOSE, "")
-    .trim();
+  const text = plain(
+    marked
+      .replace(GROUP, (_match, group: string) => group.replace(/[\s,;]+/g, ""))
+      .replace(LOOSE, ""),
+  );
 
   return { text, citations };
 }

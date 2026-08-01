@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Creative, State } from "@/lib/store";
 import { evaluate } from "@/lib/bandit";
 import AgentStatus from "@/components/AgentStatus";
-import { ctr, money, pct } from "@/components/format";
+import { ctr, money, pct, plain } from "@/components/format";
 
 export type Task =
   | "load"
@@ -141,6 +141,8 @@ const ROUND_SAMPLES = 20000;
 const EVIDENCE_TARGET = 20;
 const ROUND_PAUSE = 180;
 
+const CYCLE_BLOCKS = new Set(["NO_MANDATE_AVAILABLE", "CYCLE_ALREADY_CHARGED"]);
+
 type Tone = "done" | "held" | "blocked";
 type Status = "running" | Tone | "failed" | "cancelled";
 
@@ -247,6 +249,14 @@ function look(cohort: Creative[]): Evaluation {
     generation: cohort[0]?.generation ?? 0,
     candidateId: cohort[result.candidateIndex]?.id ?? null,
   };
+}
+
+function looksWord(n: number): string {
+  return n === 1 ? "1 look" : `${n} looks`;
+}
+
+function gatesCleared(evaluation: Evaluation | null): boolean {
+  return evaluation?.sufficientEvidence === true;
 }
 
 function blockingGate(evaluation: Evaluation): string | null {
@@ -696,17 +706,17 @@ export default function DemoRunner({
             detail: `Gates opened on look ${last.n} with ${last.impressions.toLocaleString()} impressions served, evidence ${strength(
               last.eValue,
             )} against the ${EVIDENCE_TARGET} needed`,
-            note: `Probability best reached ${pct(last.probabilityBest)} and the frontier held across ${
-              last.n
-            } looks at the same test`,
+            note: `Probability best reached ${pct(
+              last.probabilityBest,
+            )} and the frontier held across ${looksWord(last.n)} at the same test`,
           };
         }
 
         return {
           tone: "held" as Tone,
-          detail: `Served ${last.impressions.toLocaleString()} impressions across ${
-            last.n
-          } looks and the evidence stalled at ${strength(last.eValue)} of ${EVIDENCE_TARGET}`,
+          detail: `Served ${last.impressions.toLocaleString()} impressions across ${looksWord(
+            last.n,
+          )} and the evidence stalled at ${strength(last.eValue)} of ${EVIDENCE_TARGET}`,
           note: last.gate ? `The gate still holding the money: ${last.gate}.` : undefined,
         };
       });
@@ -730,17 +740,20 @@ export default function DemoRunner({
             detail: `Cleared to spend $${money(res.decision.amount)} at ${pct(
               res.evaluation.probabilityBest,
             )} probability best over ${res.evaluation.totalImpressions.toLocaleString()} impressions`,
-            note: res.decision.reason,
+            note: plain(res.decision.reason),
           };
         }
 
-        held.gate = blockingGate(res.evaluation);
+        const cleared = gatesCleared(res.evaluation);
+        held.gate = cleared ? null : blockingGate(res.evaluation);
         return {
           tone: "held" as Tone,
-          detail: held.gate
-            ? `Held the money. The gate that stopped it: ${held.gate}.`
-            : "Held the money. The evidence never cleared the gates.",
-          note: res.decision.abstainedBecause ?? res.decision.reason,
+          detail: cleared
+            ? "Held the money. All four gates cleared, so the evidence is not what stopped it: the block is on the mandate."
+            : held.gate
+              ? `Held the money. The gate that stopped it: ${held.gate}.`
+              : "Held the money. The evidence never cleared the gates.",
+          note: plain(res.decision.abstainedBecause ?? res.decision.reason),
         };
       });
     };
@@ -804,12 +817,21 @@ export default function DemoRunner({
       }
 
       if (!held.decision?.shouldBuy) {
+        const looked = held.round === 1 ? "The agent looked once" : `The agent looked ${held.round} times`;
+        if (gatesCleared(held.evaluation)) {
+          setEnding({
+            kind: "held",
+            headline: "The evidence cleared, the mandate did not",
+            text: `This is a valid outcome, not a failure. All four gates opened on look ${held.round}: the evidence was enough and the agent judged the leading ad had earned the spend. What held the money is the mandate, not the statistics. A Prava mandate on a monthly frequency allows one charge per cycle, so once the signed mandates are charged there is nothing left to spend against until the seller signs another one. The reason the agent gave sits on the decide step above.`,
+          });
+          return;
+        }
         setEnding({
           kind: "held",
           headline: "The agent decided not to spend",
           text: held.gate
-            ? `This is a valid outcome, not a failure. The agent looked ${held.round} times as traffic came in and the gate "${held.gate}" never opened, so it kept the money and the run ends here.`
-            : `This is a valid outcome, not a failure. The agent looked ${held.round} times as traffic came in and the statistics never cleared the gates, so it kept the money and the run ends here.`,
+            ? `This is a valid outcome, not a failure. ${looked} as traffic came in and the gate "${held.gate}" never opened, so it kept the money and the run ends here.`
+            : `This is a valid outcome, not a failure. ${looked} as traffic came in and the statistics never cleared the gates, so it kept the money and the run ends here.`,
         });
         return;
       }
@@ -852,12 +874,15 @@ export default function DemoRunner({
       guard();
 
       if (!held.bought) {
+        const code = held.declined ?? "declined";
         setEnding({
           kind: "blocked",
-          headline: "The mandate refused the charge",
-          text: `The guardrail did its job and the agent could not spend. Code returned: ${
-            held.declined ?? "declined"
-          }. Nothing left the account and the run ends here.`,
+          headline: CYCLE_BLOCKS.has(code)
+            ? "The mandate had no charge left"
+            : "The mandate refused the charge",
+          text: CYCLE_BLOCKS.has(code)
+            ? `The gates opened and the agent decided to buy, then the mandate refused the charge. Code returned: ${code}. A Prava mandate on a monthly frequency allows one charge per cycle and the signed mandates are already charged in this one. Nothing left the account and the run ends here.`
+            : `The guardrail did its job and the agent could not spend. Code returned: ${code}. Nothing left the account and the run ends here.`,
         });
         return;
       }
@@ -916,7 +941,9 @@ export default function DemoRunner({
       setEnding({
         kind: "complete",
         headline: "The full loop closed",
-        text: `Researched, wrote, served traffic across ${held.round} looks until the anytime valid frontier cleared, spent under the mandate, bred the winner and retested the next generation.`,
+        text: `Researched, wrote, served traffic across ${looksWord(
+          held.round,
+        )} until the anytime valid frontier cleared, spent under the mandate, bred the winner and retested the next generation.`,
       });
     } catch (err) {
       if (err instanceof Cancelled) {

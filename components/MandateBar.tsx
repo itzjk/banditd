@@ -19,6 +19,7 @@ interface Props {
   purchases: PurchaseEvent[];
   facts?: MandateFacts;
   working?: boolean;
+  chargeable?: boolean;
 }
 
 function Field({
@@ -90,7 +91,14 @@ function Caret({ open }: { open: boolean }) {
   );
 }
 
-export default function MandateBar({ mandateId, cap, purchases, facts, working }: Props) {
+export default function MandateBar({
+  mandateId,
+  cap,
+  purchases,
+  facts,
+  working,
+  chargeable = true,
+}: Props) {
   const [open, setOpen] = useState(false);
 
   const spent = purchases.filter((p) => p.ok).reduce((sum, p) => sum + toNumber(p.amount), 0);
@@ -99,27 +107,36 @@ export default function MandateBar({ mandateId, cap, purchases, facts, working }
   const remaining = Math.max(0, cap - spent);
   const left = cap > 0 ? Math.max(0, Math.min(1, remaining / cap)) : 0;
   const armed = Boolean(mandateId);
+  const dry = armed && !chargeable;
   const shownRemaining = useCountUp(remaining);
   const shownSpent = useCountUp(spent);
 
   const meterFill = !armed
     ? "bg-zinc-700"
-    : left > 0.5
-      ? "bg-emerald-400"
-      : left > 0.15
-        ? "bg-amber-400"
-        : "bg-rose-400";
+    : dry
+      ? "bg-amber-400"
+      : left > 0.5
+        ? "bg-emerald-400"
+        : left > 0.15
+          ? "bg-amber-400"
+          : "bg-rose-400";
 
   const meterText = !armed
     ? "text-zinc-400"
-    : left > 0.5
-      ? "text-emerald-300"
-      : left > 0.15
-        ? "text-amber-300"
-        : "text-rose-300";
+    : dry
+      ? "text-amber-300"
+      : left > 0.5
+        ? "text-emerald-300"
+        : left > 0.15
+          ? "text-amber-300"
+          : "text-rose-300";
 
   const live = Boolean(facts?.live);
-  const remainingLabel = live && facts?.remaining ? facts.remaining : `$${money(shownRemaining)}`;
+  const remainingLabel = dry
+    ? "None this cycle"
+    : live && facts?.remaining
+      ? facts.remaining
+      : `$${money(shownRemaining)}`;
   const scopeLabel = (live && facts?.scope) || "Render credits only, one merchant";
   const expiryLabel = (live && facts?.expiry) || "On the signed mandate";
 
@@ -129,13 +146,13 @@ export default function MandateBar({ mandateId, cap, purchases, facts, working }
         <div className="mx-auto flex w-full max-w-6xl items-center gap-2 px-4 py-2 sm:gap-3 sm:px-6 sm:py-2.5">
           <span
             className={`relative flex h-2 w-2 shrink-0 rounded-full ${
-              armed ? "bg-emerald-400" : "bg-zinc-600"
+              !armed ? "bg-zinc-600" : dry ? "bg-amber-400" : "bg-emerald-400"
             }`}
           >
             {working ? (
               <span
                 className={`absolute inset-0 animate-ping rounded-full ${
-                  armed ? "bg-emerald-400" : "bg-zinc-500"
+                  !armed ? "bg-zinc-500" : dry ? "bg-amber-400" : "bg-emerald-400"
                 }`}
               />
             ) : null}
@@ -148,7 +165,11 @@ export default function MandateBar({ mandateId, cap, purchases, facts, working }
           <span aria-hidden="true" className="hidden h-3.5 w-px shrink-0 bg-white/12 sm:block" />
 
           <span className="hidden truncate text-[12px] text-zinc-300 sm:block">
-            {armed ? "Mandate armed" : "No mandate signed"}
+            {!armed
+              ? "No mandate signed"
+              : dry
+                ? "Mandate signed, no charge left this cycle"
+                : "Mandate armed"}
           </span>
 
           <span className="shrink-0 rounded border border-white/15 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-300">
@@ -172,7 +193,7 @@ export default function MandateBar({ mandateId, cap, purchases, facts, working }
               value={armed ? remainingLabel : "Not set"}
               tone={meterText}
               badge={
-                armed ? (
+                armed && !dry ? (
                   <span className="shrink-0 rounded border border-white/15 px-1 py-px text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
                     <span className="sm:hidden">{live ? "Live" : "Est"}</span>
                     <span className="hidden sm:inline">{live ? "Live" : "Local estimate"}</span>
@@ -197,7 +218,7 @@ export default function MandateBar({ mandateId, cap, purchases, facts, working }
         <div className="h-[2px] w-full bg-white/10">
           <div
             className={`bar-fill h-full w-full ${meterFill}`}
-            style={{ transform: `scaleX(${armed ? left : 0})` }}
+            style={{ transform: `scaleX(${armed && !dry ? left : 0})` }}
           />
         </div>
       </header>
@@ -213,7 +234,13 @@ export default function MandateBar({ mandateId, cap, purchases, facts, working }
                 <Field
                   label="Budget left"
                   value={remainingLabel}
-                  hint={live ? `of $${money(cap)} approved` : `of the $${money(cap)} ceiling`}
+                  hint={
+                    dry
+                      ? `the $${money(cap)} ceiling is intact, the charge for this cycle is used`
+                      : live
+                        ? `of $${money(cap)} approved`
+                        : `of the $${money(cap)} ceiling`
+                  }
                 />
                 <Field label="Merchant scope" value={scopeLabel} hint="Nothing else can be charged" />
                 <Field
@@ -227,7 +254,15 @@ export default function MandateBar({ mandateId, cap, purchases, facts, working }
                   hint={`Mandate ${shortId(mandateId, 8)}`}
                 />
               </div>
-              {live ? null : (
+              {dry ? (
+                <p className="mt-3 max-w-3xl break-words text-[11px] leading-relaxed text-zinc-300">
+                  The agent reported that the signed mandate has no charge left in this monthly
+                  cycle. A Prava mandate on a monthly frequency allows one charge per cycle, so the{" "}
+                  {`$${money(cap)}`} ceiling is untouched and still nothing can be spent until the
+                  seller signs another mandate.
+                </p>
+              ) : null}
+              {live || dry ? null : (
                 <p className="mt-3 max-w-3xl break-words text-[11px] leading-relaxed text-zinc-400">
                   Budget left is a local estimate: it counts the runs in this browser against the
                   ceiling the demo assumes. The live balance, scope and expiry sit on the signed

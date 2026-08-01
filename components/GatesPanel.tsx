@@ -26,6 +26,7 @@ interface Props {
   effectSizeTolerance?: number;
   alpha?: number;
   candidateLabel?: string | null;
+  mandateBlocked?: boolean;
 }
 
 interface Gate {
@@ -236,6 +237,7 @@ export default function GatesPanel({
   effectSizeTolerance = 0.01,
   alpha = 0.05,
   candidateLabel,
+  mandateBlocked = false,
 }: Props) {
   const signature = evaluation
     ? [
@@ -422,6 +424,12 @@ export default function GatesPanel({
                 {candidateLabel ? `"${candidateLabel}"` : "The leading ad"} has earned the budget. The
                 agent is cleared to spend on it.
               </p>
+              {mandateBlocked ? (
+                <p className="mt-1.5 break-words text-[12px] leading-relaxed text-zinc-400">
+                  The statistics cleared and the money still did not move: the mandate has no charge
+                  left in this cycle. That block is on the leash, not on the evidence.
+                </p>
+              ) : null}
             </div>
           ) : (
             <div className="rounded-xl border border-amber-400/25 bg-amber-400/[0.06] px-3 py-2.5">

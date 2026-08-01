@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   DEFAULT_ALPHA,
   DEFAULT_PRIOR_ALPHA,
@@ -26,6 +26,8 @@ export interface ProofScore {
   gatedRight: number;
 }
 
+export type ProofTone = "auto" | "panel";
+
 interface Props {
   className?: string;
   defaultTruth?: ProofTruth;
@@ -36,8 +38,27 @@ interface Props {
   batchSize?: number;
   autoBatch?: boolean;
   seed?: number;
+  tone?: ProofTone;
+  folded?: boolean;
   onScore?: (score: ProofScore) => void;
 }
+
+const PANEL_TOKENS = {
+  "--background": "#09090b",
+  "--surface": "#0e0e11",
+  "--surface-2": "#141417",
+  "--foreground": "#fafafa",
+  "--muted": "#d4d4d8",
+  "--subtle": "#a1a1aa",
+  "--border": "rgba(255, 255, 255, 0.1)",
+  "--border-strong": "rgba(255, 255, 255, 0.22)",
+  "--accent": "#34d399",
+  "--accent-soft": "rgba(52, 211, 153, 0.12)",
+  "--danger": "#fb7185",
+  "--danger-soft": "rgba(251, 113, 133, 0.12)",
+  "--ring": "rgba(250, 250, 250, 0.6)",
+  "--card-shadow": "none",
+} as CSSProperties;
 
 const BASE_RATE = 0.03;
 const THRESHOLD = 0.95;
@@ -294,6 +315,21 @@ function trailPath(values: number[], top: number): string {
   const lastY = 44 - 40 * Math.min(1, values[values.length - 1] / top);
   points.push(`${lastX},${lastY.toFixed(1)}`);
   return `M${points.join("L")}`;
+}
+
+function Caret() {
+  return (
+    <svg viewBox="0 0 12 12" aria-hidden="true" className="h-3 w-3">
+      <path
+        d="M2.5 4.5L6 8l3.5-3.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 function Segmented({

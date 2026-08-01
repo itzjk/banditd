@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { AuditEntry } from "@/lib/store";
-import { clock, timeAgo } from "./format";
+import { clock, plain, timeAgo } from "./format";
 
 interface Props {
   entries: AuditEntry[];
@@ -53,7 +53,7 @@ export default function AuditLog({ entries, initial = 8 }: Props) {
               </span>
             </div>
             <p className="min-w-0 break-words text-[13px] leading-relaxed text-zinc-300 [overflow-wrap:anywhere]">
-              {entry.detail}
+              {plain(entry.detail)}
             </p>
           </li>
         ))}

@@ -24,9 +24,15 @@ import LineageTree from "@/components/LineageTree";
 import MarketPanel from "@/components/MarketPanel";
 import DemoRunner, { AGENT_STEPS } from "@/components/DemoRunner";
 import type { Decision, Evaluation, LastPurchase, Task } from "@/components/DemoRunner";
-import { ctr, money, pct } from "@/components/format";
+import { ctr, money, pct, plain } from "@/components/format";
 
 const MANDATE_CAP = 50;
+const MANDATE_BLOCKS = new Set([
+  "NO_MANDATE_AVAILABLE",
+  "CYCLE_ALREADY_CHARGED",
+  "TRIES_EXHAUSTED",
+  "MANDATE_NOT_ACTIVE",
+]);
 const STORAGE_KEY = "banditd_state";
 const IMAGES_KEY = "banditd_images";
 const ANGLES: CreativeAngle[] = ["price", "ritual", "gift", "quality"];
@@ -596,6 +602,14 @@ export default function Dashboard() {
     : undefined;
 
   const purchases = state?.purchases ?? [];
+  const latestPurchase = purchases[0] ?? null;
+  const heldOnMandate = Boolean(
+    decision && !decision.shouldBuy && freshEvaluation?.sufficientEvidence,
+  );
+  const declinedOnMandate = Boolean(
+    latestPurchase && !latestPurchase.ok && MANDATE_BLOCKS.has(latestPurchase.errorCode ?? ""),
+  );
+  const mandateBlocked = heldOnMandate || declinedOnMandate;
   const hasProduct = Boolean(state?.product);
   const hasResearch = Boolean(state?.research);
   const hasCreatives = cohort.length > 0;
@@ -665,6 +679,7 @@ export default function Dashboard() {
         cap={MANDATE_CAP}
         purchases={purchases}
         working={locked}
+        chargeable={!mandateBlocked}
       />
 
       <main className="mx-auto w-full max-w-6xl px-4 pb-24 pt-5 sm:px-6 sm:pt-8">
@@ -795,7 +810,9 @@ export default function Dashboard() {
             </div>
 
             <p className="mt-2 text-[13px] leading-relaxed text-zinc-200">
-              {decision.shouldBuy ? decision.reason : (decision.abstainedBecause ?? decision.reason)}
+              {plain(
+                decision.shouldBuy ? decision.reason : (decision.abstainedBecause ?? decision.reason),
+              )}
             </p>
 
             <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/[0.08] sm:grid-cols-4">
@@ -921,6 +938,7 @@ export default function Dashboard() {
             evaluation={freshEvaluation}
             candidateImpressions={candidateImpressions}
             candidateLabel={cohort.find((c) => c.id === winnerId)?.headline}
+            mandateBlocked={mandateBlocked}
           />
 
           <Fold

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { PurchaseEvent } from "@/lib/store";
-import { clock, money, pct, shortId, timeAgo } from "./format";
+import { clock, money, pct, plain, shortId, timeAgo } from "./format";
 
 interface Props {
   event: PurchaseEvent;
@@ -30,6 +30,11 @@ const DECLINES: Record<string, { title: string; plain: string }> = {
     title: "No charges left on the mandate",
     plain:
       "The mandate allowed a fixed number of charges and they are all used. Nothing was spent on this attempt.",
+  },
+  NO_MANDATE_AVAILABLE: {
+    title: "No mandate left to charge this cycle",
+    plain:
+      "Every mandate the seller signed has already been charged in this monthly cycle, so there was nothing left to charge. Nothing was spent. A Prava mandate on a monthly frequency allows one charge per cycle: the seller signs another mandate for the agent to keep buying before the cycle renews.",
   },
   CYCLE_ALREADY_CHARGED: {
     title: "Already charged this cycle",
@@ -116,7 +121,9 @@ export default function PurchaseEventItem({ event, winnerHeadline, latest }: Pro
           <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
             Why the agent did this
           </div>
-          <p className="mt-1 break-words text-[13px] leading-relaxed text-zinc-200">{event.reason}</p>
+          <p className="mt-1 break-words text-[13px] leading-relaxed text-zinc-200">
+            {plain(event.reason)}
+          </p>
         </div>
 
         {!ok ? (
@@ -177,7 +184,8 @@ export default function PurchaseEventItem({ event, winnerHeadline, latest }: Pro
         </div>
 
         <div className="break-words text-[11px] text-zinc-400">
-          Bought for {winnerHeadline ? `"${winnerHeadline}"` : shortId(event.winnerId, 10)}. The card
+          {ok ? "Bought for" : "Tried to buy for"}{" "}
+          {winnerHeadline ? `"${winnerHeadline}"` : shortId(event.winnerId, 10)}. The card
           number never touches the agent, it is minted for this one charge and dies with it.
         </div>
       </div>
