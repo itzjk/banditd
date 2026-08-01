@@ -3,7 +3,8 @@ import { z } from "zod";
 import { zodTextFormat } from "openai/helpers/zod";
 import type { Product, Research, CreativeAngle } from "./store.ts";
 
-export const TEXT_MODEL = process.env.OPENAI_TEXT_MODEL ?? "gpt-5.6-luna";
+export const SEARCH_MODEL = process.env.OPENAI_SEARCH_MODEL ?? "gpt-5.6-luna";
+export const TEXT_MODEL = process.env.OPENAI_TEXT_MODEL ?? "gpt-5.6-terra";
 export const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-1-mini";
 
 const SEARCH_CONTEXT = (process.env.OPENAI_SEARCH_CONTEXT ?? "low") as "low" | "medium" | "high";
@@ -270,7 +271,7 @@ export async function researchMarket(product: Product, budget: Budget): Promise<
   const res = await withBudget(budget, (signal) =>
     openai().responses.parse(
       {
-        model: TEXT_MODEL,
+        model: SEARCH_MODEL,
         tools: [{ type: "web_search", search_context_size: SEARCH_CONTEXT }],
         input: [
           {
