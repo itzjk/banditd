@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
 import { openSession, commit, logAudit } from "@/lib/store";
-import { chargeMandate, reportCharge } from "@/lib/prava";
+import { reportCharge } from "@/lib/prava";
+import {
+  mandateQueue,
+  chargeWithRotation,
+  rejectionTarget,
+  overCapAmount,
+  exhaustionMessage,
+  NO_MANDATE_AVAILABLE,
+  NO_MANDATE_MESSAGE,
+} from "@/lib/mandate";
 import type { PurchaseEvent } from "@/lib/store";
 
 export const maxDuration = 60;
@@ -24,16 +33,10 @@ const DECLINE_MESSAGES: Record<string, string> = {
     "The mandate is no longer usable: it was consumed, paused, revoked or it expired. Nothing was spent. The seller has to sign a fresh mandate before the agent can buy again.",
   TRIES_EXHAUSTED:
     "The mandate has no charges left, its max_charges allowance is spent. Nothing was spent on this attempt. The seller has to sign a fresh mandate.",
+  CYCLE_ALREADY_CHARGED:
+    "This mandate was already charged in the current monthly cycle, and Prava allows one charge per cycle. Nothing was spent. The agent moves to the next signed mandate, or the seller signs another one.",
+  [NO_MANDATE_AVAILABLE]: NO_MANDATE_MESSAGE,
 };
-
-function mandateCap(): number {
-  const cap = Number(process.env.MANDATE_CAP ?? "50.00");
-  return Number.isFinite(cap) && cap > 0 ? cap : 50;
-}
-
-function overCapAmount(): string {
-  return (mandateCap() * 10).toFixed(2);
-}
 
 function normalizeAmount(raw: string | undefined): string | null {
   if (!raw) return null;
@@ -62,7 +65,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const mandateId = state.mandateId;
+  const preferredId = state.mandateId;
   const force = body.force === true;
   const requested = normalizeAmount(body.amount);
 
@@ -73,7 +76,15 @@ export async function POST(req: Request) {
     );
   }
 
-  const amount = force ? overCapAmount() : requested!;
+  const queue = await mandateQueue(
+    force ? 0 : Number(requested),
+    preferredId,
+    process.env.PRAVA_USER_ID,
+  );
+  const target = force ? rejectionTarget(queue, preferredId) : null;
+  const attempts = force ? (target ? [target] : []) : queue.candidates;
+
+  const amount = force ? overCapAmount(target) : requested!;
   const winnerId = body.winnerId?.trim() || "unknown_creative";
   const reason =
     body.reason?.trim() ||
@@ -82,20 +93,51 @@ export async function POST(req: Request) {
       : "Bandit called the winner and bought more render credits");
   const probabilityBest = toNumber(body.probabilityBest);
   const impressions = toNumber(body.impressions);
-  const reference = `banditd_${Date.now()}_${winnerId}`;
+  const baseReference = `banditd_${Date.now()}_${winnerId}`;
 
-  if (force) {
+  if (queue.listError) {
     logAudit(
       state,
-      "purchase",
-      `Forcing a ${amount} charge against a ${mandateCap().toFixed(2)} per-charge cap to show the guardrail rejecting the agent`,
+      "mandate",
+      `Prava did not answer when listing the signed mandates (${queue.listError}), falling back to the mandate on file`,
     );
   }
 
-  const result = await chargeMandate(mandateId, amount, reference);
+  if (force && target) {
+    logAudit(
+      state,
+      "purchase",
+      `Forcing a ${amount} charge against the ${target.approvedAmount.toFixed(2)} ceiling on reserved mandate ${target.id} to show the guardrail rejecting the agent`,
+    );
+  }
 
-  if (!result.ok) {
-    const message = DECLINE_MESSAGES[result.code] ?? result.message ?? "The charge was declined";
+  if (!force && queue.skipped.length) {
+    logAudit(
+      state,
+      "mandate",
+      `${queue.skipped.length} signed mandate(s) are out for this cycle (${queue.skipped.map((m) => `${m.id} ${m.chargedThisCycle ? "already charged this cycle" : `only ${m.remaining.toFixed(2)} left`}`).join("; ")}), ${queue.candidates.length} still usable`,
+    );
+  }
+
+  const rotation = await chargeWithRotation(attempts, amount, baseReference);
+
+  for (const skipped of rotation.rotated) {
+    logAudit(
+      state,
+      "mandate",
+      `Mandate ${skipped.mandateId} was already charged in this cycle, rotating to the next signed mandate without touching the run`,
+    );
+  }
+
+  const mandateId = rotation.mandateId;
+  const reference = rotation.reference ?? baseReference;
+  const result = rotation.charge;
+
+  if (!result || !result.ok) {
+    const code = result ? result.code : NO_MANDATE_AVAILABLE;
+    const message = result
+      ? DECLINE_MESSAGES[code] ?? result.message ?? "The charge was declined"
+      : exhaustionMessage(queue, amount);
 
     const event: PurchaseEvent = {
       id: `pu_${Date.now()}`,
@@ -106,9 +148,10 @@ export async function POST(req: Request) {
       probabilityBest,
       impressions,
       ok: false,
-      errorCode: result.code,
+      errorCode: code,
       cardLast4: null,
-      transactionId: result.transactionId ?? null,
+      transactionId: result?.transactionId ?? null,
+      mandateId,
     };
 
     state.purchases.unshift(event);
@@ -116,7 +159,9 @@ export async function POST(req: Request) {
     logAudit(
       state,
       "purchase",
-      `Declined ${amount} on mandate ${mandateId}: ${result.code}. ${message} (upstream HTTP ${result.httpStatus}, reference ${reference})`,
+      result
+        ? `Declined ${amount} on mandate ${mandateId}: ${code}. ${message} (upstream HTTP ${result.httpStatus}, reference ${reference})`
+        : `Held back ${amount}: ${code}. ${message} (${rotation.rotated.length} signed mandate(s) tried and already charged this cycle, reference ${reference})`,
     );
 
     return NextResponse.json({
@@ -126,16 +171,19 @@ export async function POST(req: Request) {
         amount,
         reason,
         winnerId,
-        errorCode: result.code,
+        errorCode: code,
         message,
-        upstreamMessage: result.message,
-        upstreamStatus: result.httpStatus,
+        upstreamMessage: result?.message ?? null,
+        upstreamStatus: result?.httpStatus ?? null,
+        mandateId,
+        rotatedPast: rotation.rotated.map((r) => r.mandateId),
         forced: force,
         reference,
       },
     });
   }
 
+  const usedMandateId = mandateId ?? result.mandateId;
   const token = result.credentials.token ?? "";
   const cardLast4 = token.length >= 4 ? token.slice(-4) : null;
   const transactionId = result.transactionId || null;
@@ -145,7 +193,7 @@ export async function POST(req: Request) {
 
   if (transactionId) {
     try {
-      await reportCharge(mandateId, transactionId, true, amount);
+      await reportCharge(usedMandateId, transactionId, true, amount);
       reported = true;
     } catch (e) {
       reportError = e instanceof Error ? e.message : String(e);
@@ -166,14 +214,16 @@ export async function POST(req: Request) {
     errorCode: null,
     cardLast4,
     transactionId,
+    mandateId: usedMandateId,
   };
 
   state.purchases.unshift(event);
+  state.mandateId = usedMandateId;
 
   logAudit(
     state,
     "purchase",
-    `Charged ${amount} on mandate ${mandateId} for "${reason}" on card ending ${cardLast4 ?? "????"}${result.deduplicated ? ", deduplicated by reference" : ""} (txn ${transactionId ?? "n/a"}, reference ${reference})`,
+    `Charged ${amount} on mandate ${usedMandateId} for "${reason}" on card ending ${cardLast4 ?? "????"}${result.deduplicated ? ", deduplicated by reference" : ""} (txn ${transactionId ?? "n/a"}, reference ${reference})`,
   );
 
   if (reportError) {
@@ -193,6 +243,8 @@ export async function POST(req: Request) {
       winnerId,
       transactionId,
       cardLast4,
+      mandateId: usedMandateId,
+      rotatedPast: rotation.rotated.map((r) => r.mandateId),
       status: result.status,
       deduplicated: result.deduplicated,
       reported,

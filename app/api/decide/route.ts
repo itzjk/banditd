@@ -3,6 +3,7 @@ import { openSession, commit, logAudit } from "@/lib/store";
 import { evaluate } from "@/lib/bandit";
 import { decideSpend } from "@/lib/openai";
 import { getMandate, listMandates } from "@/lib/prava";
+import { mandateQueue } from "@/lib/mandate";
 import type { DecisionContext } from "@/lib/openai";
 import type { Mandate } from "@/lib/prava";
 
@@ -106,6 +107,14 @@ export async function POST(req: Request) {
     logAudit(state, "mandate", "Prava did not answer, deciding without live mandate data");
   }
 
+  const queue = await mandateQueue(Number(CREDIT_PRICE), state.mandateId, process.env.PRAVA_USER_ID);
+  const poolRemaining = queue.candidates.reduce((sum, m) => sum + m.remaining, 0);
+  const pool = queue.listError
+    ? "signed mandate pool unknown, Prava did not answer"
+    : queue.candidates.length
+      ? `${queue.candidates.length} signed mandate(s) still chargeable in this cycle, ${poolRemaining.toFixed(2)} USD total, one charge per mandate per monthly cycle`
+      : "every signed mandate has already been charged in this cycle, the next purchase will be refused until the seller signs another mandate";
+
   const context: DecisionContext = {
     arms: cohort.map((c) => ({
       headline: c.headline,
@@ -120,7 +129,7 @@ export async function POST(req: Request) {
     probabilityBest: evaluation.probabilityBest,
     sufficientEvidence: evaluation.sufficientEvidence,
     totalImpressions: evaluation.totalImpressions,
-    mandateRemaining: mandate.remaining,
+    mandateRemaining: `${mandate.remaining}. ${pool}`,
     mandateScope: mandate.scope,
     mandateExpiry: mandate.expiry,
     creditPrice: CREDIT_PRICE,

@@ -12,6 +12,8 @@ import PosteriorChart from "@/components/PosteriorChart";
 import GatesPanel from "@/components/GatesPanel";
 import LineageTree from "@/components/LineageTree";
 import MarketPanel from "@/components/MarketPanel";
+import DemoRunner, { AGENT_STEPS } from "@/components/DemoRunner";
+import type { Decision, Evaluation, LastPurchase, Task } from "@/components/DemoRunner";
 import { ctr, money, pct } from "@/components/format";
 
 const MANDATE_CAP = 50;
@@ -56,114 +58,13 @@ function restore(): State | null {
   }
 }
 
-type Task =
-  | "load"
-  | "research"
-  | "creatives"
-  | "evolve"
-  | "simulate"
-  | "decide"
-  | "purchase"
-  | "force";
-
-interface Decision {
-  shouldBuy: boolean;
-  amount: string | null;
-  reason: string;
-  abstainedBecause: string | null;
-}
-
-interface Evaluation {
-  candidateIndex: number;
-  probabilityBest: number;
-  sufficientEvidence: boolean;
-  totalImpressions: number;
-  generation?: number;
-  candidateId?: string | null;
-}
-
 interface DecideResponse {
   decision: Decision;
   evaluation: Evaluation;
   state: State;
 }
 
-interface LastPurchase {
-  ok: boolean;
-  amount: string;
-  reason: string;
-  errorCode?: string;
-  message?: string;
-  forced?: boolean;
-  cardLast4?: string | null;
-}
-
 type PurchaseResponse = State & { lastPurchase?: LastPurchase };
-
-const STEPS: Record<Task, { title: string; steps: string[] }> = {
-  load: { title: "Waking up", steps: ["Reading the agent state"] },
-  research: {
-    title: "Researching the market",
-    steps: [
-      "Searching the web for who buys this",
-      "Reading the angles competitors run",
-      "Placing the price against comparable products",
-      "Writing the buyer profile",
-    ],
-  },
-  creatives: {
-    title: "Writing creatives",
-    steps: [
-      "Picking 4 angles out of the research",
-      "Writing headlines and body copy",
-      "Rendering 4 images",
-      "Loading every variant into the bandit",
-    ],
-  },
-  evolve: {
-    title: "Breeding the winner",
-    steps: [
-      "Taking the winning creative apart",
-      "Writing 4 mutations of that angle",
-      "Rendering the new images",
-      "Opening generation two",
-    ],
-  },
-  simulate: {
-    title: "Serving traffic",
-    steps: [
-      "Opening the simulated auction",
-      "Allocating impressions by Thompson sampling",
-      "Counting clicks per variant",
-      "Updating each posterior",
-    ],
-  },
-  decide: {
-    title: "Deciding whether to spend",
-    steps: [
-      "Drawing 20,000 samples from every posterior",
-      "Ranking the variants by probability best",
-      "Reading the mandate limits",
-      "Asking the model to justify the spend",
-    ],
-  },
-  purchase: {
-    title: "Buying render credits",
-    steps: [
-      "Minting a single use card",
-      "Charging the mandate",
-      "Reporting the charge back to Prava",
-    ],
-  },
-  force: {
-    title: "Testing the guardrail",
-    steps: [
-      "Building a charge above the signed ceiling",
-      "Sending it at the mandate on purpose",
-      "Waiting for the refusal",
-    ],
-  },
-};
 
 async function api<T>(url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
@@ -235,12 +136,19 @@ export default function Dashboard() {
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [receipt, setReceipt] = useState<LastPurchase | null>(null);
   const [impressions, setImpressions] = useState(1000);
+  const [autoRunning, setAutoRunning] = useState(false);
 
   const absorb = useCallback((next: State) => {
     const { clean, images: found } = split(next);
     setState(clean);
     if (Object.keys(found).length > 0) setImages((prev) => ({ ...prev, ...found }));
     save(clean);
+    return clean;
+  }, []);
+
+  const carryDecision = useCallback((next: Decision | null, evaluated: Evaluation | null) => {
+    setDecision(next);
+    setEvaluation(evaluated);
   }, []);
 
   const run = useCallback(async (task: Task, fn: () => Promise<void>) => {
@@ -319,7 +227,7 @@ export default function Dashboard() {
   const hasResearch = Boolean(state?.research);
   const hasCreatives = cohort.length > 0;
   const hasTraffic = cohortImpressions > 0;
-  const locked = busy !== null;
+  const locked = busy !== null || autoRunning;
 
   const research = () =>
     run("research", async () => {
@@ -479,9 +387,22 @@ export default function Dashboard() {
           ) : null}
         </section>
 
+        <DemoRunner
+          state={state}
+          absorb={absorb}
+          impressions={impressions}
+          disabled={busy !== null}
+          running={autoRunning}
+          onRunningChange={setAutoRunning}
+          onDecision={carryDecision}
+          onReceipt={setReceipt}
+        />
+
         <section className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
           <div className="flex items-baseline justify-between gap-2">
-            <h2 className="text-sm font-semibold tracking-tight text-white">Run the agent</h2>
+            <h2 className="text-sm font-semibold tracking-tight text-white">
+              Or run it step by step
+            </h2>
             <span className="text-[11px] text-zinc-500">Generation {generation}</span>
           </div>
 
@@ -579,7 +500,7 @@ export default function Dashboard() {
         </section>
 
         {busy && busy !== "load" ? (
-          <AgentStatus title={STEPS[busy].title} steps={STEPS[busy].steps} />
+          <AgentStatus title={AGENT_STEPS[busy].title} steps={AGENT_STEPS[busy].steps} />
         ) : null}
 
         {receipt ? (

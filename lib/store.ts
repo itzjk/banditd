@@ -47,6 +47,7 @@ export interface PurchaseEvent {
   errorCode: string | null;
   cardLast4: string | null;
   transactionId: string | null;
+  mandateId: string | null;
 }
 
 export interface AuditEntry {
@@ -185,6 +186,7 @@ function coercePurchase(value: unknown): PurchaseEvent | null {
     errorCode: typeof p.errorCode === "string" ? p.errorCode : null,
     cardLast4: typeof p.cardLast4 === "string" ? p.cardLast4 : null,
     transactionId: typeof p.transactionId === "string" ? p.transactionId : null,
+    mandateId: typeof p.mandateId === "string" ? p.mandateId : null,
   };
 }
 
