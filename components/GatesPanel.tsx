@@ -33,6 +33,7 @@ interface Gate {
   name: string;
   met: boolean;
   current: string;
+  unit: string;
   required: string;
   meaning: string;
   action: string;
@@ -127,13 +128,21 @@ function GateRow({
   blocking: boolean;
   resolved: boolean;
 }) {
-  const tone = !resolved
-    ? "border-white/10 bg-white/[0.02]"
+  const edge = !resolved
+    ? "border-white/10"
     : gate.met
-      ? "border-white/22 bg-white/[0.05]"
+      ? "border-emerald-400/60"
       : blocking
-        ? "border-white/18 bg-white/[0.035]"
-        : "border-white/10 bg-white/[0.02]";
+        ? "border-amber-400/60"
+        : "border-white/12";
+
+  const tint = !resolved
+    ? ""
+    : gate.met
+      ? "bg-emerald-400/[0.045]"
+      : blocking
+        ? "bg-amber-400/[0.045]"
+        : "";
 
   const badge = !resolved
     ? "border-white/10 bg-white/5 text-zinc-300"
@@ -147,53 +156,63 @@ function GateRow({
   const veil = resolved ? "opacity-100" : "opacity-40";
 
   return (
-    <li className={`rounded-xl border p-3 transition-colors duration-200 ${tone}`}>
-      <div className="flex items-start justify-between gap-2">
-        <h4 className="min-w-0 break-words text-[13px] font-semibold leading-snug text-zinc-100">
-          {gate.name}
-        </h4>
-        <span
-          className={`flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition-opacity duration-200 ${badge} ${veil}`}
-        >
-          {gate.met ? <CheckIcon /> : <WaitIcon />}
-          {gate.met ? "Cleared" : "Pending"}
-        </span>
-      </div>
-
+    <li className="bg-zinc-950">
       <div
-        className={`mt-1.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-[12px] tabular-nums transition-opacity duration-200 ${veil}`}
+        className={`h-full border-l-2 px-3 py-3 transition-colors duration-200 sm:px-4 ${edge} ${tint}`}
       >
-        <span
-          className={
-            resolved && gate.met ? "font-semibold text-white" : "font-semibold text-zinc-100"
-          }
-        >
-          {gate.current}
-        </span>
-        <span className="text-zinc-400">of</span>
-        <span className="text-zinc-300">{gate.required}</span>
-      </div>
+        <div className="flex items-start justify-between gap-2">
+          <h4 className="min-w-0 break-words text-[13px] font-semibold leading-snug text-zinc-100">
+            {gate.name}
+          </h4>
+          <span
+            className={`flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition-opacity duration-200 ${badge} ${veil}`}
+          >
+            {gate.met ? <CheckIcon /> : <WaitIcon />}
+            {gate.met ? "Cleared" : "Pending"}
+          </span>
+        </div>
 
-      <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white/10">
         <div
-          className={`bar-fill h-full w-full ${bar}`}
-          style={{
-            transform: `scaleX(${
-              resolved ? Math.max(gate.progress > 0 ? 0.03 : 0, gate.progress) : 0
-            })`,
-          }}
-        />
-      </div>
-
-      <p className="mt-2 text-[11px] leading-relaxed text-zinc-400">{gate.meaning}</p>
-
-      {!gate.met && blocking ? (
-        <p
-          className={`mt-1.5 text-[11px] font-medium leading-relaxed text-zinc-300 transition-opacity duration-200 ${veil}`}
+          className={`mt-2.5 flex items-baseline justify-between gap-2 transition-opacity duration-200 ${veil}`}
         >
-          {gate.action}
+          <span className="flex min-w-0 items-baseline gap-1.5">
+            <span
+              className={`text-[17px] font-semibold leading-none tabular-nums ${
+                resolved && gate.met ? "text-white" : "text-zinc-100"
+              }`}
+            >
+              {gate.current}
+            </span>
+            <span className="truncate text-[10px] font-medium uppercase tracking-[0.1em] text-zinc-400">
+              {gate.unit}
+            </span>
+          </span>
+          <span className="shrink-0 text-[11px] tabular-nums text-zinc-400">{gate.required}</span>
+        </div>
+
+        <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white/10">
+          <div
+            className={`bar-fill h-full w-full ${bar}`}
+            style={{
+              transform: `scaleX(${
+                resolved ? Math.max(gate.progress > 0 ? 0.03 : 0, gate.progress) : 0
+              })`,
+            }}
+          />
+        </div>
+
+        <p className="mt-2.5 break-words text-[11px] leading-relaxed text-zinc-400">
+          {gate.meaning}
         </p>
-      ) : null}
+
+        {!gate.met && blocking ? (
+          <p
+            className={`mt-1.5 break-words text-[11px] font-medium leading-relaxed text-zinc-300 transition-opacity duration-200 ${veil}`}
+          >
+            {gate.action}
+          </p>
+        ) : null}
+      </div>
     </li>
   );
 }
@@ -246,28 +265,38 @@ export default function GatesPanel({
   if (!evaluation) {
     return (
       <Shell>
-        <div className="border-b border-white/10 px-3 py-3 sm:px-4">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
-              Decision gates
+        <div className="border-b border-white/10 px-3 py-3 sm:px-4 sm:py-3.5">
+          <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+            <div className="min-w-0">
+              <h3 className="text-[14px] font-semibold tracking-tight text-white">
+                Decision gates
+              </h3>
+              <p className="mt-0.5 break-words text-[11px] leading-snug text-zinc-400">
+                Four conditions. All four clear before a cent moves.
+              </p>
             </div>
             <SimTag />
           </div>
-          <p className="mt-1 text-[13px] leading-relaxed text-zinc-400">
-            No evaluation yet. The agent checks four conditions before it is allowed to spend, and
-            they will fill in here once traffic starts.
+          <p className="mt-2.5 break-words text-[12px] leading-relaxed text-zinc-400">
+            No evaluation yet. They fill in here once traffic starts.
           </p>
         </div>
-        <ul className="grid gap-2 p-3 sm:grid-cols-2 sm:p-4">
+        <ul className="grid gap-px bg-white/[0.07] sm:grid-cols-2">
           {GATE_COPY.map((gate) => (
-            <li key={gate.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
-              <div className="flex items-center justify-between gap-2">
-                <h4 className="text-[13px] font-semibold text-zinc-400">{gate.name}</h4>
-                <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-300">
-                  Not run
-                </span>
+            <li key={gate.id} className="bg-zinc-950">
+              <div className="h-full border-l-2 border-white/10 px-3 py-3 sm:px-4">
+                <div className="flex items-start justify-between gap-2">
+                  <h4 className="min-w-0 break-words text-[13px] font-semibold leading-snug text-zinc-400">
+                    {gate.name}
+                  </h4>
+                  <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-300">
+                    Not run
+                  </span>
+                </div>
+                <p className="mt-2.5 break-words text-[11px] leading-relaxed text-zinc-400">
+                  {gate.meaning}
+                </p>
               </div>
-              <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-400">{gate.meaning}</p>
             </li>
           ))}
         </ul>
@@ -295,8 +324,9 @@ export default function GatesPanel({
     {
       ...GATE_COPY[0],
       met: trafficMet,
-      current: `${count(impressions)} ${onCandidate ? "on the candidate" : "across the cohort"}`,
-      required: `${count(minImpressions)} simulated impressions needed`,
+      current: count(impressions),
+      unit: onCandidate ? "on the candidate" : "across the cohort",
+      required: `${count(minImpressions)} needed`,
       action: `The candidate needs ${count(missing)} more simulated impressions. Keep the test running.`,
       progress: ratio(impressions, minImpressions),
     },
@@ -304,7 +334,8 @@ export default function GatesPanel({
       ...GATE_COPY[1],
       met: aheadMet,
       current: pct(probabilityBest),
-      required: `${pct(threshold)} confidence`,
+      unit: "sure it is best",
+      required: `${pct(threshold)} needed`,
       action: `The leader sits at ${pct(probabilityBest)} and has to pass ${pct(
         threshold,
       )}. More traffic separates it from the rest.`,
@@ -313,7 +344,8 @@ export default function GatesPanel({
     {
       ...GATE_COPY[2],
       met: gapMet,
-      current: `${loss(expectedLoss)} expected loss`,
+      current: loss(expectedLoss),
+      unit: "expected loss",
       required: `under ${loss(lossBudget)}`,
       action: `The gap between the leader and the pack is still worth ${loss(
         expectedLoss,
@@ -323,7 +355,8 @@ export default function GatesPanel({
     {
       ...GATE_COPY[3],
       met: looksMet,
-      current: `${strength(eValue)} evidence`,
+      current: strength(eValue),
+      unit: "evidence strength",
       required: `${strength(evidenceTarget)} needed`,
       action: `Evidence strength is ${strength(eValue)} and has to reach ${strength(
         evidenceTarget,
@@ -341,20 +374,23 @@ export default function GatesPanel({
 
   return (
     <Shell>
-      <div className="border-b border-white/10 px-3 py-3 sm:px-4">
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
-              Decision gates
-            </div>
-            <SimTag />
+      <div className="border-b border-white/10 px-3 py-3 sm:px-4 sm:py-3.5">
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+          <div className="min-w-0">
+            <h3 className="text-[14px] font-semibold tracking-tight text-white">Decision gates</h3>
+            <p className="mt-0.5 break-words text-[11px] leading-snug text-zinc-400">
+              Four conditions. All four clear before a cent moves.
+            </p>
           </div>
-          <div className="text-[11px] font-semibold tabular-nums text-zinc-400">
-            {clearedSoFar} of {gates.length} cleared
+          <div className="flex shrink-0 items-center gap-2">
+            <SimTag />
+            <span className="text-[11px] font-semibold tabular-nums text-zinc-300">
+              {clearedSoFar} of {gates.length}
+            </span>
           </div>
         </div>
 
-        <div className="mt-2 flex gap-1" aria-hidden="true">
+        <div className="mt-3 flex gap-1" aria-hidden="true">
           {gates.map((gate, i) => (
             <span
               key={gate.id}
@@ -404,7 +440,7 @@ export default function GatesPanel({
         </div>
       </div>
 
-      <ul className="grid gap-2 p-3 sm:grid-cols-2 sm:p-4">
+      <ul className="grid gap-px bg-white/[0.07] sm:grid-cols-2">
         {gates.map((gate, i) => (
           <GateRow
             key={gate.id}

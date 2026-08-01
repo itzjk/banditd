@@ -147,7 +147,7 @@ Same conditions: false positives drop to 0.5% with two arms over 200 runs, settl
 
 The 200 run figures are what `scripts/bandit-test.mts` prints, with a confidence interval of [37.8%, 51.4%] on that 44.5%. The larger numbers are where those estimates converge. ProofLab in the dashboard runs the same comparison in the browser, so anyone can push it further and watch it settle.
 
-You can watch the three gates disagree. On 3 clicks in 220 impressions against 12 in 220, the probability of being best is 0.9936 and the expected loss is tiny, so two of the three gates say buy. The e-value is 1.48 against a bar of 20, so the agent holds. Twelve clicks against three looks decisive and it is not.
+You can watch the four gates disagree. On 3 clicks in 220 impressions against 12 in 220, the probability of being best is 0.9936 and the expected loss is tiny, so three of the four gates say buy. The e-value is 1.48 against a bar of 20, so the agent holds. Twelve clicks against three looks decisive and it is not.
 
 The Monte Carlo size is 20000 samples, not 500. At 500 the Monte Carlo standard deviation of the probability estimate was 0.0094, and on one dataset sitting near the threshold, byte for byte identical every time, 200 reruns flipped the verdict 100 times. Half. At that point the estimator is the coin, not the data.
 

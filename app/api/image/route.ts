@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { generateImage, startBudget } from "@/lib/openai";
+import { generateImage, isAngle, startBudget } from "@/lib/openai";
 
 export const maxDuration = 300;
 
@@ -9,10 +9,12 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as {
     creativeId?: unknown;
     imagePrompt?: unknown;
+    angle?: unknown;
   };
 
   const creativeId = typeof body.creativeId === "string" ? body.creativeId.trim() : "";
   const imagePrompt = typeof body.imagePrompt === "string" ? body.imagePrompt.trim() : "";
+  const angle = isAngle(body.angle) ? body.angle : undefined;
 
   if (!creativeId) {
     return NextResponse.json({ error: "no creative id given" }, { status: 400 });
@@ -22,7 +24,7 @@ export async function POST(req: Request) {
   }
 
   const budget = startBudget("Image render", IMAGE_BUDGET_MS);
-  const imageData = await generateImage(imagePrompt, budget);
+  const imageData = await generateImage(imagePrompt, budget, angle);
 
   if (!imageData) {
     return NextResponse.json(

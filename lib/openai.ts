@@ -325,6 +325,38 @@ Find who actually buys this, the angles competitors use in their ads, and where 
 
 const ANGLES = ["price", "ritual", "gift", "quality"] as const;
 
+export function isAngle(value: unknown): value is CreativeAngle {
+  return typeof value === "string" && (ANGLES as readonly string[]).includes(value);
+}
+
+const AD_LEAD = "Advertising photograph for a paid social ad, not a catalogue product shot.";
+
+const AD_RULES =
+  "Shot on a real camera with believable props and a real environment, deliberate off-centre composition, natural depth cues. No text, no lettering, no numbers, no logos, no brand marks, no watermarks anywhere in the frame. No collage, no split frames, no borders, no empty white seamless catalogue backdrop.";
+
+const ART_DIRECTION: Record<CreativeAngle, string> = {
+  price:
+    "Composition has to make the value countable. Shoot straight down or dead-on at a deliberately arranged spread that shows quantity, scale or comparison: every unit the buyer gets laid out in a grid or stack, or the product beside the row of everyday things it replaces. One saturated flat colour backdrop, bright even light, clean hard shadows, deep focus so every item stays sharp, wide framing with generous empty space on one side.",
+  ritual:
+    "Catch the product mid-use in an ordinary moment, never idle. Human hands in frame doing the actual gesture, a real lived-in room around them, low morning sun raking through a window with visible haze, dust or steam. Handheld 35mm reportage feel, shallow focus on the hands and the product, the room falling soft behind.",
+  gift:
+    "Show the product as something being given. Wrapped or half-unwrapped in paper and ribbon, lifted out of a box through tissue, or passed from one person's hands to another's across a table. Two people at least partly in frame, warm evening interior, candles or string lights thrown far out of focus into round bokeh, 50mm at a wide aperture, celebratory clutter at the edges.",
+  quality:
+    "Get close enough that the material becomes the subject while the product stays recognisable. Macro on one telling detail, the seam, the grain, the machined edge, the weave, the condensation, framed so enough of the object's shape reads for a stranger to name it. Dark moody background, hard raking side light skimming the surface to pull out texture, 100mm macro at a wide aperture so the far end of the object melts out of focus, the detail filling two thirds of the frame.",
+};
+
+const ANGLE_BRIEF = ANGLES.map((angle) => `- ${angle}: ${ART_DIRECTION[angle]}`).join("\n");
+
+function directed(prompt: string): boolean {
+  return prompt.startsWith(AD_LEAD);
+}
+
+export function composeImagePrompt(angle: CreativeAngle, scene: string): string {
+  const trimmed = scene.trim();
+  if (directed(trimmed)) return trimmed;
+  return `${AD_LEAD} ${ART_DIRECTION[angle]} Scene: ${trimmed} ${AD_RULES}`;
+}
+
 const VariantSchema = z.object({
   angle: z.enum(ANGLES),
   headline: z.string(),
@@ -364,8 +396,15 @@ Winner body: ${parent.body}`
         input: [
           {
             role: "system",
-            content:
-              "You write direct response ad creative. Headlines under 60 characters. Body under 140 characters. No exclamation marks, no emoji, no hype words.",
+            content: `You write direct response ad creative and you art direct the photograph that carries it.
+
+Copy: headlines under 60 characters, body under 140 characters, no exclamation marks, no emoji, no hype words.
+
+Images: the angle has to be legible in the picture alone, with the copy covered up. Never describe the product sitting on a neutral seamless background. Write the imagePrompt as one 30 to 45 word scene that obeys the art direction for its angle:
+
+${ANGLE_BRIEF}
+
+Describe the product by shape, material, colour and size only, never by brand or model name, and never put readable text, labels or logos in the scene.`,
           },
           {
             role: "user",
@@ -379,11 +418,11 @@ Price positioning: ${research.pricePositioning}
 
 ${brief}
 
-For each variant also write an imagePrompt describing a photographic product image, no text in the image.`,
+For each variant also write the imagePrompt: the scene for that angle, following the art direction above. Four angles means four visibly different photographs, different framing, different light, different context.`,
           },
         ],
         text: { format: zodTextFormat(VariantsSchema, "creative_variants") },
-        max_output_tokens: 1200,
+        max_output_tokens: 2600,
       },
       { signal },
     ),
@@ -398,24 +437,37 @@ For each variant also write an imagePrompt describing a photographic product ima
       10,
     );
   }
-  return parsed.variants.slice(0, 4);
+  return parsed.variants.slice(0, 4).map((v) => ({
+    ...v,
+    imagePrompt: composeImagePrompt(v.angle, v.imagePrompt),
+  }));
 }
 
 const MIN_IMAGE_MS = 15000;
 const IMAGE_QUALITY = (process.env.OPENAI_IMAGE_QUALITY ?? "medium") as "low" | "medium" | "high";
 const IMAGE_COMPRESSION = Number(process.env.OPENAI_IMAGE_COMPRESSION ?? 72);
 
-export async function generateImage(prompt: string, budget: Budget): Promise<string | null> {
+export async function generateImage(
+  prompt: string,
+  budget: Budget,
+  angle?: CreativeAngle,
+): Promise<string | null> {
   const left = msLeft(budget);
   if (left < MIN_IMAGE_MS) {
     console.warn("image skipped, no time left in the budget");
     return null;
   }
+  const scene = prompt.trim();
+  const finalPrompt = angle
+    ? composeImagePrompt(angle, scene)
+    : directed(scene)
+      ? scene
+      : `${AD_LEAD} Scene: ${scene} ${AD_RULES}`;
   try {
     const res = await openai().images.generate(
       {
         model: IMAGE_MODEL,
-        prompt,
+        prompt: finalPrompt,
         size: "1024x1024",
         quality: IMAGE_QUALITY,
         output_format: "jpeg",

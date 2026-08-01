@@ -17,6 +17,8 @@ import PurchaseEventItem from "@/components/PurchaseEvent";
 import AuditLog from "@/components/AuditLog";
 import AgentStatus from "@/components/AgentStatus";
 import PosteriorChart from "@/components/PosteriorChart";
+import CampaignMetrics from "@/components/CampaignMetrics";
+import PerformanceChart from "@/components/PerformanceChart";
 import GatesPanel from "@/components/GatesPanel";
 import LineageTree from "@/components/LineageTree";
 import MarketPanel from "@/components/MarketPanel";
@@ -313,6 +315,63 @@ function Action({
   );
 }
 
+function Chip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="shrink-0 rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-400">
+      {children}
+    </span>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  sim,
+  dim,
+}: {
+  label: string;
+  value: string;
+  sim?: boolean;
+  dim?: boolean;
+}) {
+  return (
+    <div className="min-w-0 bg-zinc-950 px-3 py-2.5">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-400">
+          {label}
+        </span>
+        {sim ? (
+          <span className="shrink-0 rounded border border-white/12 px-1 py-px text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+            Sim
+          </span>
+        ) : null}
+      </div>
+      <div
+        className={`mt-1 truncate text-[17px] font-semibold leading-tight tabular-nums ${
+          dim ? "text-zinc-400" : "text-white"
+        }`}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function Caret() {
+  return (
+    <svg viewBox="0 0 12 12" aria-hidden="true" className="h-3 w-3">
+      <path
+        d="M2.5 4.5L6 8l3.5-3.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function Band({
   eyebrow,
   title,
@@ -325,20 +384,23 @@ function Band({
   children: React.ReactNode;
 }) {
   return (
-    <section className="mx-auto mt-10 w-full max-w-5xl sm:mt-14">
+    <section className="mx-auto mt-12 w-full max-w-5xl sm:mt-16">
       <div className="rounded-3xl border border-white/[0.07] bg-white/[0.012] p-3 sm:p-5">
-        <div className="px-1 pb-3 sm:pb-4">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
-            {eyebrow}
+        <div className="border-b border-white/[0.07] px-1 pb-4 sm:pb-5">
+          <div className="flex items-center gap-2">
+            <span aria-hidden="true" className="h-px w-5 shrink-0 bg-white/25" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
+              {eyebrow}
+            </span>
           </div>
-          <h2 className="mt-1 break-words text-base font-semibold tracking-tight text-zinc-200 sm:text-lg">
+          <h2 className="mt-2 break-words text-lg font-semibold tracking-tight text-white sm:text-xl">
             {title}
           </h2>
-          <p className="mt-1 max-w-2xl break-words text-[12px] leading-relaxed text-zinc-400">
+          <p className="mt-1.5 max-w-2xl break-words text-[12px] leading-relaxed text-zinc-400 sm:text-[13px]">
             {summary}
           </p>
         </div>
-        <div className="space-y-3">{children}</div>
+        <div className="mt-4 space-y-3 sm:mt-5">{children}</div>
       </div>
     </section>
   );
@@ -355,16 +417,15 @@ function Fold({
 }) {
   return (
     <details className="group">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.02] px-3 py-2.5 transition-colors hover:bg-white/[0.05] sm:px-4">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.02] px-3 py-3 transition-colors duration-150 hover:border-white/20 hover:bg-white/[0.05] sm:px-4">
         <span className="min-w-0">
           <span className="block break-words text-[13px] font-semibold text-zinc-100">{title}</span>
           <span className="mt-0.5 block break-words text-[11px] leading-snug text-zinc-400">
             {hint}
           </span>
         </span>
-        <span className="shrink-0 rounded-lg border border-white/12 bg-white/[0.05] px-2 py-1 text-[11px] font-medium text-zinc-300">
-          <span className="group-open:hidden">Open</span>
-          <span className="hidden group-open:inline">Close</span>
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/12 bg-white/[0.05] text-zinc-300 transition-transform duration-200 group-open:rotate-180">
+          <Caret />
         </span>
       </summary>
       <div className="mt-3">{children}</div>
@@ -737,49 +798,19 @@ export default function Dashboard() {
               {decision.shouldBuy ? decision.reason : (decision.abstainedBecause ?? decision.reason)}
             </p>
 
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <div className="rounded-lg bg-white/[0.04] px-2 py-1.5">
-                <div className="flex flex-wrap items-center gap-1 text-[10px] uppercase tracking-[0.12em] text-zinc-400">
-                  Probability best
-                  <span className="rounded border border-white/12 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-zinc-400">
-                    Sim
-                  </span>
-                </div>
-                <div className="text-sm font-semibold tabular-nums text-zinc-100">
-                  {pct(freshEvaluation.probabilityBest)}
-                </div>
-              </div>
-              <div className="rounded-lg bg-white/[0.04] px-2 py-1.5">
-                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-400">
-                  Evidence
-                </div>
-                <div
-                  className={`text-sm font-semibold ${
-                    freshEvaluation.sufficientEvidence ? "text-white" : "text-zinc-400"
-                  }`}
-                >
-                  {freshEvaluation.sufficientEvidence ? "Enough" : "Not yet"}
-                </div>
-              </div>
-              <div className="rounded-lg bg-white/[0.04] px-2 py-1.5">
-                <div className="flex flex-wrap items-center gap-1 text-[10px] uppercase tracking-[0.12em] text-zinc-400">
-                  Impressions
-                  <span className="rounded border border-white/12 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-zinc-400">
-                    Sim
-                  </span>
-                </div>
-                <div className="text-sm font-semibold tabular-nums text-zinc-100">
-                  {freshEvaluation.totalImpressions.toLocaleString()}
-                </div>
-              </div>
-              <div className="rounded-lg bg-white/[0.04] px-2 py-1.5">
-                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-400">
-                  Candidate
-                </div>
-                <div className="truncate text-sm font-semibold text-zinc-100">
-                  {winner ? winner.angle : "none"}
-                </div>
-              </div>
+            <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/[0.08] sm:grid-cols-4">
+              <Stat label="Probability best" value={pct(freshEvaluation.probabilityBest)} sim />
+              <Stat
+                label="Evidence"
+                value={freshEvaluation.sufficientEvidence ? "Enough" : "Not yet"}
+                dim={!freshEvaluation.sufficientEvidence}
+              />
+              <Stat
+                label="Impressions"
+                value={freshEvaluation.totalImpressions.toLocaleString()}
+                sim
+              />
+              <Stat label="Candidate" value={winner ? winner.angle : "none"} dim={!winner} />
             </div>
 
             {decision.shouldBuy ? (
@@ -797,12 +828,29 @@ export default function Dashboard() {
           </section>
         ) : null}
 
-        <section className="space-y-4 pt-2">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-            <h2 className="text-base font-semibold tracking-tight text-white sm:text-lg">
-              The four ads it wrote
-            </h2>
-            <span className="text-[11px] text-zinc-400">
+        <CampaignMetrics
+          cohort={cohort}
+          creatives={creatives}
+          purchases={purchases}
+          cap={MANDATE_CAP}
+          evaluation={freshEvaluation}
+          winnerId={winnerId}
+          generation={generation}
+        />
+
+        {hasCreatives ? (
+          <PerformanceChart cohort={cohort} winnerId={winnerId} generation={generation} />
+        ) : null}
+
+        <section className="space-y-4 pt-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <h2 className="text-base font-semibold tracking-tight text-white sm:text-lg">
+                The four ads it wrote
+              </h2>
+              <Chip>Simulated traffic</Chip>
+            </div>
+            <span className="text-[11px] tabular-nums text-zinc-400">
               {cohort.length} live in generation {generation}, {cohortImpressions.toLocaleString()}{" "}
               simulated impressions
             </span>
@@ -877,7 +925,7 @@ export default function Dashboard() {
 
           <Fold
             title="Lineage of the winners"
-            hint="One row per generation, the winner of each row is the parent of the next."
+            hint="Which ad bred which, and what the agent paid to get from one generation to the next."
           >
             <LineageTree
               creatives={state?.creatives ?? []}
@@ -900,13 +948,16 @@ export default function Dashboard() {
           summary="The money it actually moved, the log of every move, and the manual controls for anyone who wants to drive it by hand."
         >
           <section className="space-y-3">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-              <h3 className="text-[13px] font-semibold tracking-tight text-zinc-100">
-                Money it moved
-              </h3>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <h3 className="text-[14px] font-semibold tracking-tight text-white">
+                  Money it moved
+                </h3>
+                <Chip>Sandbox payments</Chip>
+              </div>
               <span className="max-w-md break-words text-[11px] leading-snug text-zinc-400">
-                Sandbox payments, single use cards, newest first. The impressions and confidence on
-                each charge come from simulated traffic.
+                Single use cards, newest first. The impressions and confidence on each charge come
+                from simulated traffic.
               </span>
             </div>
 
@@ -1033,9 +1084,9 @@ export default function Dashboard() {
 
           <Fold
             title="Audit log"
-            hint={`Every move the agent made, newest first. ${(state?.audit ?? []).length} ${
-              (state?.audit ?? []).length === 1 ? "entry" : "entries"
-            }.`}
+            hint={`Every call, every decision and every charge, newest first. ${
+              (state?.audit ?? []).length
+            } ${(state?.audit ?? []).length === 1 ? "entry" : "entries"}.`}
           >
             <AuditLog entries={state?.audit ?? []} />
           </Fold>

@@ -1,8 +1,12 @@
 # banditd visual system
 
-Reusable visual pieces. No dependencies, no external images, no external fonts. Everything is
-inline SVG or CSS driven by the tokens in `app/globals.css`, so light and dark both work with no
-extra props.
+Reusable visual pieces. No dependencies, no external images, no external requests. Everything is
+inline SVG, canvas or CSS driven by the tokens in `app/globals.css`, so light and dark both work
+with no extra props.
+
+Type is IBM Plex Sans and IBM Plex Mono, both loaded through `next/font` in `app/layout.tsx` and
+exposed as `--font-sans-face` and `--font-mono-face`. Plex draws its digits on a single width, so
+figures line up in a column even where nothing asks for tabular numerals.
 
 Import from the barrel:
 
@@ -25,13 +29,23 @@ Rules baked in:
 
 ## MeshField
 
-Background field for a whole page or a single section. Fine grid plus contour lines plus a ruler
-axis, masked so it fades before it reaches the content. Two layers drift at different speeds while
-scrolling, which reads as depth without anything blurred.
+Background field for a whole page or a single section. Two layers, both masked so they fade well
+before they reach the content.
+
+- The **grid** layer is a static CSS gradient. It costs nothing and it can cover a whole page.
+- The **flow** layer is a canvas: four horizontal lanes carrying traffic left to right, one lane per
+  creative. Over a 24 second cycle the allocation moves from even to concentrated, so dots respawn
+  into the leading lane and its guide line brightens. It is the same story the hero tells, at
+  wallpaper volume.
+
+The flow layer only paints inside a band in the middle of its box, so the canvas is sized to that
+band rather than to the whole field. Its backing store is capped at 2.4M pixels, the loop stops when
+the field scrolls out of view or the tab is hidden, and under `prefers-reduced-motion: reduce` it
+paints the converged state once and never starts a frame loop.
 
 | prop | type | default | what it does |
 | --- | --- | --- | --- |
-| `variant` | `"mesh" \| "grid" \| "contour"` | `"mesh"` | `mesh` is grid plus lines, the other two isolate one layer |
+| `variant` | `"mesh" \| "grid" \| "flow" \| "contour"` | `"mesh"` | `mesh` is both layers, `grid` is the static layer alone, `flow` is the canvas alone, `contour` is kept as an alias of `flow` |
 | `intensity` | `"faint" \| "soft" \| "medium"` | `"soft"` | how present the field is |
 | `parallax` | `boolean` | `true` | scroll parallax on both layers, off under reduced motion |
 | `position` | `"fixed" \| "absolute"` | `"fixed"` | `fixed` covers the viewport, `absolute` scopes it to the nearest positioned parent |
@@ -40,9 +54,12 @@ scrolling, which reads as depth without anything blurred.
 The field renders at `z-index: 0` and is `aria-hidden`, so give your content a stacking context
 above it.
 
+Use `grid` for anything page wide and keep `flow` scoped to one section, so only one canvas is ever
+running.
+
 ```tsx
 <div className="relative">
-  <MeshField />
+  <MeshField variant="grid" intensity="faint" />
   <main className="relative z-10">{children}</main>
 </div>
 ```
@@ -51,7 +68,7 @@ Scoped to one section:
 
 ```tsx
 <section className="relative isolate overflow-hidden">
-  <MeshField position="absolute" intensity="faint" parallax={false} />
+  <MeshField variant="flow" position="absolute" />
   <div className="relative z-10">{children}</div>
 </section>
 ```
@@ -92,22 +109,40 @@ All remaining props pass through to the element, so `onClick`, `id`, `role` and 
 
 ## BanditLearning
 
-The hero piece. Four belief curves start identical and overlapping, then narrow and separate while
-the traffic bar underneath reallocates to the winner. It loops slowly and alternates, which reads as
-explore and exploit. It takes no data, it is honest decoration that shows what the product does.
+The hero piece, built to read as an instrument rather than an illustration. Four posterior curves
+start identical and overlapping, then narrow and separate across a labelled conversion rate axis
+while the traffic bar underneath reallocates to the leader. It takes no data, it is honest
+decoration that shows what the product does.
 
-Under reduced motion it renders the converged state, which is the state worth seeing.
+What is on it:
 
-Below 520px of container width it switches to compact proportions, larger labels and a taller box,
-so it stays legible on a phone.
+- A plot with a density axis on the left, density gridlines, and a conversion rate axis underneath
+  with ticks and per cent values. The four curves land on real positions on that axis, and the
+  leader is the rightmost one, so the picture and the numbers agree.
+- A letter per curve, tracking its peak. The letters are fanned slightly so they stay apart while
+  the curves are still stacked.
+- A dashed cursor on the leading curve, which fades in as the lead becomes real.
+- The traffic bar, with hairline separators between segments and its own 0 to 100 per cent scale, so
+  the winner's share can be read off rather than guessed.
+- A cycle track from explore to exploit, so the loop reads as a state the run moves through instead
+  of an animation that happens to reverse.
+
+Everything is sized from the measured container width, so the caption is 11px and the tick labels
+are 10px whether the box is 300px or 700px wide. Nothing is dropped on a phone, it just gets
+proportionally larger inside the same viewBox. Under reduced motion it renders the converged state,
+which is the state worth seeing.
 
 | prop | type | default | what it does |
 | --- | --- | --- | --- |
 | `tone` | `"spectrum" \| "accent"` | `"spectrum"` | `spectrum` uses the four creative colors from the dashboard, `accent` keeps three arms neutral and the winner in brand green |
 | `labels` | `[string, string, string, string]` | `["A","B","C","D"]` | the letter that tracks each curve |
 | `caption` | `string` | `"belief per creative"` | top left mono caption, pass `""` to hide |
-| `allocationLabel` | `string` | `"traffic share"` | caption under the bar, pass `""` to hide |
-| `showAllocation` | `boolean` | `true` | show the traffic bar |
+| `allocationLabel` | `string` | `"traffic share"` | caption over the bar, pass `""` to hide |
+| `rateLabel` | `string` | `"conversion rate"` | title under the horizontal axis, pass `""` to hide |
+| `densityLabel` | `string` | `"density"` | rotated title on the vertical axis, pass `""` to hide |
+| `cycleLabels` | `[string, string]` | `["explore","exploit"]` | the two ends of the cycle track |
+| `showAllocation` | `boolean` | `true` | show the traffic bar and its scale |
+| `showCycle` | `boolean` | `true` | show the cycle track |
 | `loopSeconds` | `number` | `11` | one direction of the loop |
 | `title` | `string` | see source | the accessible label, it is `role="img"` |
 | `className` | `string` | `""` | extra classes on the wrapper |
@@ -120,8 +155,12 @@ full width instead of nesting it inside a heavily padded card.
   <BanditLearning />
 </Surface>
 
-<BanditLearning tone="accent" caption="" allocationLabel="" showAllocation={false} />
+<BanditLearning tone="accent" caption="" showAllocation={false} showCycle={false} />
 ```
+
+The geometry is shared with `app/globals.css`. The `bd-arm-*`, `bd-mean-*`, `bd-share-*`, `bd-lead`
+and `bd-cycle` keyframes are written in the same 640 unit coordinate space as the component, so a
+change to `PLOT_L`, `PLOT_W` or `CENTER` means recomputing those translations.
 
 ---
 

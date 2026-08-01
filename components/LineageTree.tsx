@@ -84,27 +84,27 @@ function Node({
       ref={(el) => {
         register(creative.id, el);
       }}
-      className={`relative flex flex-col gap-1.5 rounded-xl border p-2 transition-colors ${
+      className={`relative flex flex-col gap-1.5 rounded-xl border p-2 transition-colors duration-150 ${
         isWinner
           ? "border-white/45 bg-white/[0.07] shadow-[0_0_0_1px_rgba(255,255,255,0.15)]"
-          : "border-white/10 bg-zinc-950"
+          : "border-white/10 bg-zinc-950 hover:border-white/25"
       }`}
     >
       <div className="flex items-center justify-between gap-1">
         <span
-          className={`rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${ANGLE_STYLE}`}
+          className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${ANGLE_STYLE}`}
         >
           {creative.angle}
         </span>
         {isWinner ? (
-          <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-white">
+          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-white">
             Winner
           </span>
         ) : null}
       </div>
 
       <p
-        className={`line-clamp-2 break-words text-[11px] font-medium leading-snug ${
+        className={`line-clamp-2 break-words text-[11px] font-medium leading-snug [overflow-wrap:anywhere] ${
           isWinner ? "text-white" : "text-zinc-300"
         }`}
         title={creative.headline}
@@ -112,20 +112,21 @@ function Node({
         {creative.headline}
       </p>
 
-      <div className="mt-auto flex items-baseline justify-between gap-1">
-        <span
-          className={`text-[13px] font-semibold tabular-nums ${
+      <div className="mt-auto border-t border-white/[0.08] pt-1.5">
+        <div className="text-[10px] font-medium uppercase tracking-[0.1em] text-zinc-400">
+          Sim CTR
+        </div>
+        <div
+          className={`text-[15px] font-semibold leading-tight tabular-nums ${
             isWinner ? "text-white" : "text-zinc-200"
           }`}
         >
           {creative.arm.impressions ? pct(rate, 2) : "no data"}
-        </span>
-        <span className="text-[9px] uppercase tracking-wider text-zinc-400">sim CTR</span>
-      </div>
-
-      <div className="text-[9px] tabular-nums text-zinc-400">
-        {creative.arm.impressions.toLocaleString()} impr, {creative.arm.clicks.toLocaleString()}{" "}
-        clicks
+        </div>
+        <div className="mt-0.5 break-words text-[10px] tabular-nums leading-snug text-zinc-400">
+          {creative.arm.impressions.toLocaleString()} impr, {creative.arm.clicks.toLocaleString()}{" "}
+          clicks
+        </div>
       </div>
     </div>
   );
@@ -249,10 +250,19 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
 
   return (
     <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-[11px] text-zinc-400 sm:hidden">Swipe the tree sideways.</span>
-        <span className="ml-auto rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-          CTR simulated
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-b border-white/10 pb-3">
+        <div className="min-w-0">
+          <div className="text-[12px] font-semibold tabular-nums text-zinc-200">
+            {rows.length} {rows.length === 1 ? "generation" : "generations"}, {creatives.length}{" "}
+            {creatives.length === 1 ? "variant" : "variants"}
+          </div>
+          <div className="mt-0.5 text-[11px] leading-snug text-zinc-400">
+            <span className="sm:hidden">Swipe the tree sideways. </span>
+            Oldest at the top, the winner of each row breeds the next.
+          </div>
+        </div>
+        <span className="shrink-0 rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+          Simulated traffic
         </span>
       </div>
 
@@ -318,17 +328,20 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
                   key={row.generation}
                   style={depth && back ? { perspective: "1600px" } : undefined}
                 >
-                  <div className="sticky left-0 mb-2 flex w-fit flex-wrap items-center gap-2">
+                  <div className="sticky left-0 mb-2 flex w-fit flex-wrap items-baseline gap-x-2.5 gap-y-1">
                     <span className="rounded-md border border-white/10 bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-300">
                       Gen {row.generation}
                     </span>
-                    <span className="text-[11px] text-zinc-400">
+                    <span className="text-[11px] tabular-nums text-zinc-400">
                       {row.nodes.length} {row.nodes.length === 1 ? "variant" : "variants"}
                     </span>
                     {row.winner && row.winner.arm.impressions ? (
-                      <span className="text-[11px] tabular-nums text-zinc-300">
-                        best {pct(winnerRate, 2)}
-                      </span>
+                      <>
+                        <span aria-hidden="true" className="h-3 w-px self-center bg-white/12" />
+                        <span className="text-[11px] tabular-nums text-zinc-300">
+                          best {pct(winnerRate, 2)}
+                        </span>
+                      </>
                     ) : null}
                   </div>
 

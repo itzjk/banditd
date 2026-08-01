@@ -7,6 +7,9 @@ export type { SurfaceProps, SurfaceLevel, SurfaceTag } from "./Surface";
 export { default as BanditLearning } from "./BanditLearning";
 export type { BanditLearningProps, BanditLearningTone } from "./BanditLearning";
 
+export { default as BudgetShift } from "./BudgetShift";
+export type { BudgetShiftProps } from "./BudgetShift";
+
 export { default as Shelf } from "./Shelf";
 export type { ShelfProps } from "./Shelf";
 

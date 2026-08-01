@@ -8,6 +8,7 @@ import {
   BanditLearning,
   BigNumber,
   Body,
+  BudgetShift,
   Caption,
   Display,
   Eyebrow,
@@ -266,6 +267,26 @@ const STEPS: {
   },
 ];
 
+const DIFFERENCE: { label: string; title: string; body: string }[] = [
+  {
+    label: "An ad generator",
+    title: "Gives you four ads and stops.",
+    body: "You still have to guess which one is working, how long to wait before calling it, and how much of the budget it has already eaten while you waited.",
+  },
+  {
+    label: "banditd",
+    title: "Decides where the money goes.",
+    body: "It reads the traffic, holds the call until the evidence clears four gates, moves the budget onto the ad that is winning, and pays for the next round of work itself.",
+  },
+];
+
+const REASONING_ARMS: { label: string; angle: string; ctr: string; lead: boolean }[] = [
+  { label: "A", angle: "Price", ctr: "5.3%", lead: true },
+  { label: "B", angle: "Ritual", ctr: "2.1%", lead: false },
+  { label: "C", angle: "Gift", ctr: "1.8%", lead: false },
+  { label: "D", angle: "Quality", ctr: "2.4%", lead: false },
+];
+
 const GUARDRAILS: { label: string; detail: string }[] = [
   { label: "Max spend", detail: "A ceiling the card network itself refuses to cross." },
   { label: "Allowed merchant", detail: "One listed merchant, and nothing else." },
@@ -353,52 +374,49 @@ export default function Home() {
 
       <main className="relative z-10 flex-1">
         <section className="relative overflow-hidden border-b border-border">
-          <MeshField variant="contour" intensity="soft" parallax position="absolute" />
+          <MeshField variant="flow" intensity="soft" parallax position="absolute" />
           <div className="relative mx-auto w-full max-w-5xl px-gutter pb-16 pt-12 sm:pb-24 sm:pt-16 lg:pb-28 lg:pt-16">
             <div className="enter max-w-4xl">
-              <Eyebrow className="text-muted">Agentic commerce</Eyebrow>
+              <Eyebrow className="text-muted">Every ad dollar should work harder</Eyebrow>
               <Display className={`mt-4 ${DISPLAY_XL}`}>
-                An agent that runs your ads and spends its own money on the ones that work.
+                Stop paying for ads that don&apos;t work. banditd moves your budget to the ones that
+                do.
               </Display>
               <Lead className="mt-5 max-w-2xl">
-                Give it a product. It researches the market, writes the ads, watches which one
-                actually wins, and once the evidence is statistical it buys more render credits by
-                itself through Prava, inside the limits you set.
+                Hand it a product. It writes four different ads, puts them in front of real traffic,
+                finds the one buyers actually respond to, and moves the money onto that one by
+                itself, inside the limits you set.
               </Lead>
+              <Caption className="mt-5 max-w-xl text-muted">
+                Meta estimates that 54% of ad spend across its platforms goes to creative that is
+                not fit for purpose.{" "}
+                <a
+                  href="https://bravebison.com/insights/creative-is-the-new-targeting-how-to-ensure-your-performance-media-actually/"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="focus-ring underline decoration-border-strong underline-offset-2 hover:text-foreground"
+                >
+                  Meta estimate, reported by Brave Bison, June 2025
+                </a>
+              </Caption>
             </div>
 
-            <dl
-              className="enter mt-8 flex flex-wrap gap-x-10 gap-y-5 border-t border-border pt-5 sm:mt-9"
-              style={{ animationDelay: "80ms" }}
-            >
-              {HERO_STATS.map((stat) => (
-                <div key={stat.label} className="min-w-0">
-                  <dd className="t-num text-[clamp(1.5rem,3vw,2.125rem)] font-semibold leading-none tracking-[-0.03em]">
-                    {stat.value}
-                  </dd>
-                  <Eyebrow as="dt" className="mt-2 text-muted">
-                    {stat.label}
-                  </Eyebrow>
-                </div>
-              ))}
-            </dl>
-
-            <div className="mt-9 grid items-start gap-6 sm:mt-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,23rem)] lg:gap-10">
-              <div className="enter order-2 min-w-0 lg:order-1" style={{ animationDelay: "200ms" }}>
+            <div className="mt-8 grid items-start gap-6 sm:mt-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,23rem)] lg:gap-10">
+              <div className="enter order-1 min-w-0" style={{ animationDelay: "120ms" }}>
                 <Surface level="raised" className="overflow-hidden">
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-4 py-3 sm:px-5">
                     <Eyebrow as="span" className="min-w-0 text-muted">
-                      Four beliefs, narrowing
+                      Where the money goes
                     </Eyebrow>
-                    <Mono className="min-w-0 text-muted">simulated traffic</Mono>
+                    <Mono className="min-w-0 text-muted">illustration</Mono>
                   </div>
-                  <div className="px-3 py-4 sm:px-4 sm:py-5">
-                    <BanditLearning caption="belief per ad" allocationLabel="traffic share" />
+                  <div className="px-4 py-5 sm:px-5 sm:py-6">
+                    <BudgetShift />
                   </div>
                 </Surface>
               </div>
 
-              <div className="enter order-1 min-w-0 lg:order-2" style={{ animationDelay: "120ms" }}>
+              <div className="enter order-2 min-w-0" style={{ animationDelay: "200ms" }}>
                 <Surface level="feature" id="start" className="scroll-mt-24 p-5 sm:p-6">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -489,6 +507,62 @@ export default function Home() {
                 </Surface>
               </div>
             </div>
+
+            <dl
+              className="enter mt-10 flex flex-wrap gap-x-10 gap-y-5 border-t border-border pt-6 sm:mt-12"
+              style={{ animationDelay: "260ms" }}
+            >
+              {HERO_STATS.map((stat) => (
+                <div key={stat.label} className="min-w-0">
+                  <dd className="t-num text-[clamp(1.5rem,3vw,2.125rem)] font-semibold leading-none tracking-[-0.03em]">
+                    {stat.value}
+                  </dd>
+                  <Eyebrow as="dt" className="mt-2 text-muted">
+                    {stat.label}
+                  </Eyebrow>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+
+        <section className={`border-b border-border ${SECTION_PAD}`}>
+          <div className="mx-auto w-full max-w-5xl px-gutter">
+            <Rise>
+              <Eyebrow className="text-muted">What makes it different</Eyebrow>
+              <Headline className="mt-4 max-w-3xl">
+                Plenty of tools write ads. This one decides where the money goes.
+              </Headline>
+              <Body className="mt-5 max-w-2xl text-muted">
+                A generator hands you four files and leaves you the expensive part, which one
+                deserves the budget and when that answer can be trusted. That is the part banditd
+                does.
+              </Body>
+            </Rise>
+
+            <div className="mt-10 grid gap-4 lg:grid-cols-2">
+              {DIFFERENCE.map((item, i) => (
+                <Rise key={item.label} delay={i * 70}>
+                  <Surface
+                    level={i === 1 ? "feature" : "quiet"}
+                    className="h-full p-6 sm:p-8"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`size-1.5 shrink-0 rounded-full ${i === 1 ? "bg-accent" : "bg-border-strong"}`}
+                      />
+                      <Eyebrow as="span" className="min-w-0 text-muted">
+                        {item.label}
+                      </Eyebrow>
+                    </div>
+                    <Title as="h3" className="mt-4 text-[clamp(1.25rem,2.6vw,1.625rem)]">
+                      {item.title}
+                    </Title>
+                    <Small className="mt-3 text-muted">{item.body}</Small>
+                  </Surface>
+                </Rise>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -577,6 +651,96 @@ export default function Home() {
                 </li>
               ))}
             </ol>
+
+            <Rise delay={80}>
+              <Surface level="raised" className="mt-4 overflow-hidden">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-4 py-3 sm:px-5">
+                  <Eyebrow as="span" className="min-w-0 text-muted">
+                    Four beliefs, narrowing
+                  </Eyebrow>
+                  <Mono className="min-w-0 text-muted">simulated traffic</Mono>
+                </div>
+                <div className="px-3 py-4 sm:px-4 sm:py-5">
+                  <BanditLearning caption="belief per ad" allocationLabel="traffic share" />
+                </div>
+              </Surface>
+            </Rise>
+          </div>
+        </section>
+
+        <section className={`border-b border-border ${SECTION_PAD}`}>
+          <div className="mx-auto w-full max-w-5xl px-gutter">
+            <Rise>
+              <Eyebrow className="text-muted">The reasoning, in the open</Eyebrow>
+              <Headline className="mt-4 max-w-3xl">
+                You can read the decision before the money moves.
+              </Headline>
+              <Body className="mt-5 max-w-2xl text-muted">
+                Every charge the agent makes carries one plain sentence naming the winning ad, the
+                probability behind it, and the traffic it was measured on. Your run writes its own.
+                This is the shape of it.
+              </Body>
+            </Rise>
+
+            <Rise delay={80}>
+              <Surface level="feature" className="mt-10 overflow-hidden">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-5 py-3.5 sm:px-7">
+                  <Eyebrow as="span" className="min-w-0 text-muted">
+                    Example decision
+                  </Eyebrow>
+                  <Mono className="min-w-0 text-muted">not from a live run</Mono>
+                </div>
+
+                <div className="px-5 py-6 sm:px-7 sm:py-8">
+                  <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                    {REASONING_ARMS.map((arm) => (
+                      <div
+                        key={arm.label}
+                        className="flex items-baseline justify-between gap-4 border-b border-border py-2.5"
+                      >
+                        <dt className="flex min-w-0 items-baseline gap-2">
+                          <Mono
+                            className={`font-medium ${arm.lead ? "text-accent" : "text-muted"}`}
+                          >
+                            {arm.label}
+                          </Mono>
+                          <span className="min-w-0 truncate text-sm text-muted">{arm.angle}</span>
+                        </dt>
+                        <dd
+                          className={`shrink-0 font-mono text-sm tabular-nums ${arm.lead ? "font-semibold text-accent" : "text-muted"}`}
+                        >
+                          CTR {arm.ctr}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+
+                  <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2">
+                    <Mono className="text-muted">probability A is best 96.4%</Mono>
+                    <Mono className="text-muted">1,840 impressions</Mono>
+                    <Mono className="text-muted">gates 4 of 4</Mono>
+                  </div>
+
+                  <div className="mt-6 border-t border-border pt-6">
+                    <Eyebrow className="text-muted">What it does about it</Eyebrow>
+                    <Body className="mt-3 max-w-2xl">
+                      Traffic share moves to A, 70%, and the other three hold at 10% while they stay
+                      in the test. It charges $4.00 for another pack of render credits to make more
+                      variants of A.
+                    </Body>
+                    <blockquote className="mt-5 border-l-2 border-accent pl-4 text-[0.9375rem] leading-relaxed text-muted">
+                      &ldquo;Variant A, the price angle, leads with 5.3% CTR against 2.4% for the
+                      next best, and it is best with 96.4% probability across 1,840 impressions, so
+                      I am buying more render credits to build on it.&rdquo;
+                    </blockquote>
+                    <Caption className="mt-4 text-muted">
+                      Written in the shape the model returns on a real run. The numbers here are an
+                      example, the dashboard shows the sentence and the figures from your own run.
+                    </Caption>
+                  </div>
+                </div>
+              </Surface>
+            </Rise>
           </div>
         </section>
 
@@ -680,14 +844,14 @@ export default function Home() {
         <section className={`border-b border-border ${SECTION_PAD}`}>
           <div className="mx-auto w-full max-w-5xl px-gutter">
             <Rise>
-              <Eyebrow className="text-muted">The limits you set</Eyebrow>
+              <Eyebrow className="text-muted">Why you can trust it with money</Eyebrow>
               <Headline className="mt-4 max-w-3xl">
-                It spends without asking, and it cannot spend outside the mandate.
+                Four limits it cannot cross, and a card number it never sees.
               </Headline>
               <Body className="mt-5 max-w-xl text-muted">
                 A <Glossary term="mandate" /> is a signed permission, not a stored card. You sign it
-                once with a passkey. Every charge after that is agent initiated, with nobody in the
-                loop.
+                once with a passkey and it carries your ceiling, your merchant, and your expiry.
+                Every charge after that is agent initiated, and none of them can leave those limits.
               </Body>
             </Rise>
 
@@ -710,18 +874,19 @@ export default function Home() {
             <Rise delay={140}>
               <Surface level="base" className="mt-4 grid gap-6 p-6 sm:grid-cols-2 sm:gap-10 sm:p-8">
                 <div className="min-w-0">
+                  <Eyebrow className="text-muted">The card number</Eyebrow>
+                  <Small className="mt-3">
+                    Never touches the agent. Every charge mints a single use credential that dies
+                    with that charge, and the dashboard shows which one was burned on what. There is
+                    no stored card for an agent to leak or reuse.
+                  </Small>
+                </div>
+                <div className="min-w-0">
                   <Eyebrow className="text-muted">Over the ceiling</Eyebrow>
                   <Small className="mt-3">
                     The over cap charge is not blocked by our code. It is sent, the card network
                     refuses it, and the decline comes back with a reason a seller can act on.
                     Nothing is spent and the mandate stays live.
-                  </Small>
-                </div>
-                <div className="min-w-0">
-                  <Eyebrow className="text-muted">The card number</Eyebrow>
-                  <Small className="mt-3">
-                    Never touches the agent. Each charge mints a single use credential, and the
-                    dashboard shows which one was burned on what.
                   </Small>
                 </div>
               </Surface>
