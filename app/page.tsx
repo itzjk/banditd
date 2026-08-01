@@ -598,6 +598,7 @@ export default function Home() {
                     value={44.5}
                     decimals={1}
                     suffix="%"
+                    countUp={false}
                     label="Probability rule alone"
                     detail="Checked after every batch of traffic, which is what an agent actually does."
                   />
@@ -612,6 +613,7 @@ export default function Home() {
                     value={0.5}
                     decimals={1}
                     suffix="%"
+                    countUp={false}
                     tone="accent"
                     label="The four gates"
                     detail="Same ads, same number of looks, same 200 runs against known truth."
@@ -636,6 +638,7 @@ export default function Home() {
                     className="mt-4"
                     value={100}
                     suffix="%"
+                    countUp={false}
                     tone="accent"
                     label="Correct ad, every time"
                     detail="The ad the gates point at is the truly best ad, across the same runs against known truth."
@@ -655,7 +658,7 @@ export default function Home() {
                         <Small as="dt" className="min-w-0">
                           {item.label}
                         </Small>
-                        <dd className="t-num shrink-0 font-mono text-base font-medium">
+                        <dd className="t-num min-w-0 text-right font-mono text-base font-medium">
                           {item.value}
                         </dd>
                       </div>

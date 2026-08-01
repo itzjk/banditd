@@ -16,7 +16,7 @@ export interface InViewOptions {
 export function useInView<T extends HTMLElement>(
   options: InViewOptions = {},
 ): [RefObject<T | null>, boolean] {
-  const { threshold = 0.2, rootMargin = "0px 0px -10% 0px", once = true } = options;
+  const { threshold = 0.2, rootMargin = "200000px 0px -10% 0px", once = true } = options;
   const ref = useRef<T | null>(null);
   const [inView, setInView] = useState(false);
 
