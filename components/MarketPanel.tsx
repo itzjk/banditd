@@ -63,13 +63,13 @@ function Shell({ children }: { children: React.ReactNode }) {
 function Marker({ citation, number, after }: { citation: Citation; number: number; after: boolean }) {
   return (
     <sup className="whitespace-nowrap text-[9px] font-semibold leading-none tabular-nums">
-      {after ? <span className="text-zinc-500">,</span> : null}
+      {after ? <span className="text-zinc-400">,</span> : null}
       <a
         href={citation.url}
         target="_blank"
         rel="noopener noreferrer"
         title={`Source ${number}: ${domainOf(citation.url)}`}
-        className="ml-px rounded-sm px-px text-emerald-300 underline decoration-emerald-300/40 underline-offset-2 transition-colors hover:text-emerald-200 hover:decoration-emerald-200"
+        className="ml-px rounded-sm px-px text-zinc-200 underline decoration-white/40 underline-offset-2 transition-colors hover:text-white hover:decoration-white"
       >
         {number}
       </a>
@@ -150,7 +150,6 @@ export default function MarketPanel({ research, productName }: Props) {
     return (
       <Shell>
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <h2 className="text-sm font-semibold tracking-tight text-white">Market research</h2>
           <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
             Not run yet
           </span>
@@ -171,15 +170,14 @@ export default function MarketPanel({ research, productName }: Props) {
     <Shell>
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold tracking-tight text-white">Market research</h2>
-          <p className="mt-0.5 break-words text-[11px] leading-snug text-zinc-400 [overflow-wrap:anywhere]">
+          <p className="break-words text-[11px] leading-snug text-zinc-400 [overflow-wrap:anywhere]">
             {productName ? `Evidence behind the ads for ${productName}` : "Evidence behind the ads"}
           </p>
         </div>
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-emerald-300">
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-300">
           <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-zinc-300 opacity-60" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-zinc-200" />
           </span>
           Live web search
         </span>
@@ -288,7 +286,7 @@ export default function MarketPanel({ research, productName }: Props) {
           Where your price lands
         </div>
         {parsed.price.text ? (
-          <div className="mt-2 rounded-xl border border-emerald-400/25 bg-emerald-400/[0.06] p-3">
+          <div className="mt-2 rounded-xl border border-white/15 bg-white/[0.04] p-3">
             <p className="break-words text-[14px] leading-relaxed text-zinc-100 [overflow-wrap:anywhere]">
               <Cited
                 value={parsed.price.text}
@@ -296,7 +294,7 @@ export default function MarketPanel({ research, productName }: Props) {
                 numberOf={registry.numberOf}
               />
             </p>
-            <p className="mt-2 text-[11px] leading-snug text-emerald-300/80">
+            <p className="mt-2 text-[11px] leading-snug text-zinc-400">
               This is the claim the price angle ads argue from.
             </p>
           </div>

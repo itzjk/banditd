@@ -30,12 +30,7 @@ interface Link {
 
 const PENDING = "pending-generation";
 
-const ANGLE_STYLE: Record<string, string> = {
-  price: "border-sky-400/30 bg-sky-400/10 text-sky-300",
-  ritual: "border-violet-400/30 bg-violet-400/10 text-violet-300",
-  gift: "border-pink-400/30 bg-pink-400/10 text-pink-300",
-  quality: "border-amber-400/30 bg-amber-400/10 text-amber-300",
-};
+const ANGLE_STYLE = "border-white/15 bg-white/[0.06] text-zinc-300";
 
 function buildRows(creatives: Creative[], winnerId?: string | null): Row[] {
   const byGeneration = new Map<number, Creative[]>();
@@ -83,7 +78,6 @@ function Node({
   register: (id: string, el: HTMLDivElement | null) => void;
 }) {
   const rate = ctr(creative.arm.impressions, creative.arm.clicks);
-  const angle = ANGLE_STYLE[creative.angle] ?? "border-zinc-500/30 bg-white/5 text-zinc-300";
 
   return (
     <div
@@ -92,18 +86,18 @@ function Node({
       }}
       className={`relative flex flex-col gap-1.5 rounded-xl border p-2 transition-colors ${
         isWinner
-          ? "border-emerald-400/60 bg-emerald-400/[0.08] shadow-[0_0_0_1px_rgba(52,211,153,0.2)]"
+          ? "border-white/45 bg-white/[0.07] shadow-[0_0_0_1px_rgba(255,255,255,0.15)]"
           : "border-white/10 bg-zinc-950"
       }`}
     >
       <div className="flex items-center justify-between gap-1">
         <span
-          className={`rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${angle}`}
+          className={`rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider ${ANGLE_STYLE}`}
         >
           {creative.angle}
         </span>
         {isWinner ? (
-          <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-emerald-300">
+          <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-white">
             Winner
           </span>
         ) : null}
@@ -121,12 +115,12 @@ function Node({
       <div className="mt-auto flex items-baseline justify-between gap-1">
         <span
           className={`text-[13px] font-semibold tabular-nums ${
-            isWinner ? "text-emerald-300" : "text-zinc-200"
+            isWinner ? "text-white" : "text-zinc-200"
           }`}
         >
           {creative.arm.impressions ? pct(rate, 2) : "no data"}
         </span>
-        <span className="text-[9px] uppercase tracking-wider text-amber-400/70">sim CTR</span>
+        <span className="text-[9px] uppercase tracking-wider text-zinc-400">sim CTR</span>
       </div>
 
       <div className="text-[9px] tabular-nums text-zinc-400">
@@ -242,8 +236,7 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
   if (!rows.length) {
     return (
       <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
-        <h2 className="text-sm font-semibold tracking-tight text-white">Lineage</h2>
-        <div className="mt-3 rounded-xl border border-dashed border-white/12 p-6 text-center">
+        <div className="rounded-xl border border-dashed border-white/12 p-6 text-center">
           <p className="text-[13px] text-zinc-400">
             The family tree draws itself here as soon as the agent writes its first four creatives.
           </p>
@@ -256,19 +249,12 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
 
   return (
     <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-sm font-semibold tracking-tight text-white">
-          Lineage of the winners
-        </h2>
-        <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="text-[11px] text-zinc-400 sm:hidden">Swipe the tree sideways.</span>
+        <span className="ml-auto rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
           CTR simulated
         </span>
       </div>
-      <p className="mt-1 text-[12px] leading-relaxed text-zinc-400">
-        One row per generation. The winner of each row is the parent of the next one, so the whole
-        loop reads top to bottom.
-      </p>
-      <p className="mt-1 text-[11px] text-zinc-400 sm:hidden">Swipe the tree sideways.</p>
 
       <div className="mt-3 overflow-x-auto pb-1">
         <div ref={containerRef} className="relative min-w-[32rem] sm:min-w-0">
@@ -286,9 +272,9 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
                   d={link.d}
                   stroke={
                     link.pending
-                      ? "rgba(52,211,153,0.3)"
+                      ? "rgba(255,255,255,0.28)"
                       : link.strong
-                        ? "rgba(52,211,153,0.55)"
+                        ? "rgba(255,255,255,0.5)"
                         : "rgba(255,255,255,0.12)"
                   }
                   strokeWidth={link.strong || link.pending ? 1.5 : 1}
@@ -301,7 +287,7 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
                   cx={link.x}
                   cy={link.y}
                   r={2}
-                  fill={link.strong || link.pending ? "rgba(52,211,153,0.75)" : "rgba(255,255,255,0.2)"}
+                  fill={link.strong || link.pending ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.2)"}
                 />
               </g>
             ))}
@@ -340,7 +326,7 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
                       {row.nodes.length} {row.nodes.length === 1 ? "variant" : "variants"}
                     </span>
                     {row.winner && row.winner.arm.impressions ? (
-                      <span className="text-[11px] tabular-nums text-emerald-300/80">
+                      <span className="text-[11px] tabular-nums text-zinc-300">
                         best {pct(winnerRate, 2)}
                       </span>
                     ) : null}
@@ -362,13 +348,13 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
                       <div
                         className={`sticky left-0 max-w-full rounded-full border bg-zinc-950 px-3 py-1.5 text-center ${
                           paidGenerations.has(row.generation)
-                            ? "border-emerald-400/25"
+                            ? "border-white/25"
                             : "border-white/12"
                         }`}
                       >
                         <p className="text-[10px] leading-snug text-zinc-300 sm:text-[11px]">
                           {paidGenerations.has(row.generation) ? (
-                            <span className="font-semibold text-emerald-300">
+                            <span className="font-semibold text-white">
                               Agent bought render credits
                             </span>
                           ) : (
@@ -391,9 +377,9 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
                   ref={(el) => {
                     register(PENDING, el);
                   }}
-                  className="rounded-xl border border-dashed border-emerald-400/25 bg-emerald-400/[0.03] px-3 py-4 text-center"
+                  className="rounded-xl border border-dashed border-white/15 bg-white/[0.02] px-3 py-4 text-center"
                 >
-                  <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-300/70">
+                  <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                     Gen 1
                   </div>
                   <p className="mx-auto mt-1 max-w-md text-[12px] leading-relaxed text-zinc-400">

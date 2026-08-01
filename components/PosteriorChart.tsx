@@ -19,6 +19,7 @@ interface Curve {
   line: string;
   area: string;
   color: string;
+  dash?: string;
   label: string;
   mean: number;
   impressions: number;
@@ -42,14 +43,9 @@ const TOP = 16;
 const BASE = 294;
 const EDGE = 1e-4;
 
-const PALETTE: Record<string, string[]> = {
-  price: ["#38bdf8", "#7dd3fc", "#0ea5e9", "#bae6fd"],
-  ritual: ["#a78bfa", "#c4b5fd", "#8b5cf6", "#ddd6fe"],
-  gift: ["#f472b6", "#f9a8d4", "#ec4899", "#fbcfe8"],
-  quality: ["#fbbf24", "#fcd34d", "#f59e0b", "#fde68a"],
-};
+const RAMP = ["#f8fafc", "#cbd5e1", "#94a3b8", "#64748b"];
 
-const NEUTRAL = ["#a1a1aa", "#d4d4d8", "#71717a", "#e4e4e7"];
+const DASH = ["", "7 4", "2 3", "10 3 2 3"];
 
 function paramsOf(c: Creative): Params {
   return {
@@ -112,6 +108,10 @@ function buildView(params: Params[], creatives: Creative[]): View {
     lo = clamp(mid - 0.001, 0, 1);
     hi = clamp(mid + 0.001, 0, 1);
   }
+  if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi <= lo) {
+    lo = 0;
+    hi = 1;
+  }
 
   const grids = params.map((p, i) => {
     const s = stats[i];
@@ -140,7 +140,6 @@ function buildView(params: Params[], creatives: Creative[]): View {
 
   const curves = grids.map((g, i) => {
     const creative = creatives[i];
-    const family = PALETTE[creative?.angle] ?? NEUTRAL;
     const twin = creatives.filter((c, k) => k < i && c.angle === creative?.angle).length;
     const points: [number, number][] = g.xs.map((x, k) => {
       const value = Math.exp(Math.min(0, g.logs[k] - peak));
@@ -155,7 +154,8 @@ function buildView(params: Params[], creatives: Creative[]): View {
     return {
       line,
       area,
-      color: family[twin % family.length],
+      color: RAMP[i % RAMP.length],
+      dash: DASH[i % DASH.length] || undefined,
       label: `${creative?.angle ?? "variant"}${twin > 0 ? ` ${twin + 1}` : ""}`,
       mean: meanOf(params[i]),
       impressions,
@@ -248,14 +248,22 @@ export default function PosteriorChart({ creatives, winnerIndex }: Props) {
               winner === null || winner === i ? "opacity-100" : "opacity-45"
             }`}
           >
-            <span
-              className="h-2 w-2 shrink-0 rounded-full"
-              style={{ backgroundColor: c.color, boxShadow: `0 0 8px ${c.color}66` }}
-            />
+            <svg viewBox="0 0 18 6" aria-hidden="true" className="h-1.5 w-[18px] shrink-0">
+              <line
+                x1="0"
+                y1="3"
+                x2="18"
+                y2="3"
+                stroke={c.color}
+                strokeWidth="2.5"
+                strokeDasharray={c.dash}
+                strokeLinecap="round"
+              />
+            </svg>
             <span className="font-semibold capitalize text-zinc-200">{c.label}</span>
             <span className="tabular-nums text-zinc-400">{pct(c.rate, 2)}</span>
             {winner === i ? (
-              <span className="rounded-full bg-emerald-400/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-300">
+              <span className="rounded-full bg-white px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-zinc-950">
                 Candidate
               </span>
             ) : null}
@@ -274,7 +282,7 @@ export default function PosteriorChart({ creatives, winnerIndex }: Props) {
           <defs>
             {view.curves.map((c, i) => (
               <linearGradient key={i} id={`posterior-fill-${i}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={c.color} stopOpacity="0.34" />
+                <stop offset="0%" stopColor={c.color} stopOpacity="0.22" />
                 <stop offset="100%" stopColor={c.color} stopOpacity="0.02" />
               </linearGradient>
             ))}
@@ -313,6 +321,7 @@ export default function PosteriorChart({ creatives, winnerIndex }: Props) {
                   fill="none"
                   stroke={c.color}
                   strokeWidth={winner === i ? 2.75 : 1.75}
+                  strokeDasharray={c.dash}
                   strokeLinejoin="round"
                   strokeLinecap="round"
                   vectorEffect="non-scaling-stroke"

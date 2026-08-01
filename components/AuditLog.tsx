@@ -9,42 +9,16 @@ interface Props {
   initial?: number;
 }
 
+const CHIP = "border-white/12 bg-white/[0.05] text-zinc-300";
+
 const KIND: Record<string, { label: string; dot: string; chip: string }> = {
-  product: {
-    label: "Product",
-    dot: "bg-zinc-400",
-    chip: "border-zinc-400/30 bg-zinc-400/10 text-zinc-300",
-  },
-  research: {
-    label: "Research",
-    dot: "bg-sky-400",
-    chip: "border-sky-400/30 bg-sky-400/10 text-sky-300",
-  },
-  creatives: {
-    label: "Creatives",
-    dot: "bg-violet-400",
-    chip: "border-violet-400/30 bg-violet-400/10 text-violet-300",
-  },
-  simulate: {
-    label: "Traffic",
-    dot: "bg-amber-400",
-    chip: "border-amber-400/30 bg-amber-400/10 text-amber-300",
-  },
-  decision: {
-    label: "Decision",
-    dot: "bg-emerald-400",
-    chip: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300",
-  },
-  purchase: {
-    label: "Purchase",
-    dot: "bg-rose-400",
-    chip: "border-rose-400/30 bg-rose-400/10 text-rose-300",
-  },
-  mandate: {
-    label: "Mandate",
-    dot: "bg-sky-300",
-    chip: "border-sky-300/30 bg-sky-300/10 text-sky-200",
-  },
+  product: { label: "Product", dot: "bg-zinc-600", chip: CHIP },
+  research: { label: "Research", dot: "bg-zinc-500", chip: CHIP },
+  creatives: { label: "Creatives", dot: "bg-zinc-400", chip: CHIP },
+  simulate: { label: "Traffic", dot: "bg-zinc-500", chip: CHIP },
+  decision: { label: "Decision", dot: "bg-zinc-300", chip: CHIP },
+  purchase: { label: "Purchase", dot: "bg-zinc-200", chip: CHIP },
+  mandate: { label: "Mandate", dot: "bg-zinc-400", chip: CHIP },
 };
 
 export default function AuditLog({ entries, initial = 8 }: Props) {
@@ -53,24 +27,17 @@ export default function AuditLog({ entries, initial = 8 }: Props) {
 
   return (
     <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
-      <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-sm font-semibold tracking-tight text-white">Audit log</h2>
-        <span className="text-[11px] text-zinc-400">
-          {entries.length} {entries.length === 1 ? "entry" : "entries"}, newest first
-        </span>
-      </div>
-
       {entries.length === 0 ? (
-        <p className="mt-3 text-[13px] text-zinc-400">
+        <p className="text-[13px] text-zinc-400">
           Nothing yet. Every move the agent makes lands here, in the order it made them.
         </p>
       ) : (
-        <ol className="mt-3 space-y-0">
+        <ol className="space-y-0">
           {shown.map((entry, i) => {
             const kind = KIND[entry.kind] ?? {
               label: entry.kind,
-              dot: "bg-zinc-500",
-              chip: "border-zinc-500/30 bg-white/5 text-zinc-400",
+              dot: "bg-zinc-600",
+              chip: CHIP,
             };
             return (
               <li key={`${entry.at}-${i}`} className="relative flex gap-3 pb-4 last:pb-0">

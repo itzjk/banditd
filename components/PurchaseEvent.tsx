@@ -48,7 +48,7 @@ const DECLINES: Record<string, { title: string; plain: string }> = {
 
 function SimTag() {
   return (
-    <span className="rounded border border-amber-400/30 bg-amber-400/10 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300">
+    <span className="rounded border border-white/12 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-zinc-400">
       Sim
     </span>
   );
@@ -140,7 +140,7 @@ export default function PurchaseEventItem({ event, winnerHeadline, latest }: Pro
                   {"•••• "}
                   {event.cardLast4}
                 </span>
-                <span className="rounded border border-sky-400/30 bg-sky-400/10 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-sky-300">
+                <span className="rounded border border-white/12 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-zinc-400">
                   Single use
                 </span>
               </div>

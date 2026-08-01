@@ -19,19 +19,7 @@ interface Props {
   index?: number;
 }
 
-const ANGLE_STYLE: Record<string, string> = {
-  price: "border-sky-400/30 bg-sky-400/10 text-sky-300",
-  ritual: "border-violet-400/30 bg-violet-400/10 text-violet-300",
-  gift: "border-pink-400/30 bg-pink-400/10 text-pink-300",
-  quality: "border-amber-400/30 bg-amber-400/10 text-amber-300",
-};
-
-const ANGLE_GLOW: Record<string, string> = {
-  price: "from-sky-500/25",
-  ritual: "from-violet-500/25",
-  gift: "from-pink-500/25",
-  quality: "from-amber-500/25",
-};
+const ANGLE_STYLE = "border-white/20 bg-black/55 text-zinc-200";
 
 function Metric({ label, value, tint }: { label: string; value: string; tint?: string }) {
   return (
@@ -57,7 +45,6 @@ export default function CreativeCard({
   const rate = ctr(creative.arm.impressions, creative.arm.clicks);
   const reference = bestCtr && bestCtr > 0 ? bestCtr : rate;
   const fill = reference > 0 ? Math.max(0.04, Math.min(1, rate / reference)) : 0;
-  const angleStyle = ANGLE_STYLE[creative.angle] ?? "border-zinc-500/30 bg-white/5 text-zinc-300";
 
   const shownImpressions = useCountUp(creative.arm.impressions);
   const shownClicks = useCountUp(creative.arm.clicks);
@@ -75,20 +62,20 @@ export default function CreativeCard({
         style={depth ? { transformStyle: "preserve-3d" } : undefined}
         className={`relative flex h-full flex-col rounded-2xl border transition-colors ${
           isWinner
-            ? "border-emerald-400/60 bg-emerald-400/[0.06] shadow-[0_0_0_1px_rgba(52,211,153,0.25),0_18px_40px_-24px_rgba(16,185,129,0.8)]"
+            ? "border-white/45 bg-white/[0.06] shadow-[0_0_0_1px_rgba(255,255,255,0.18),0_18px_44px_-26px_rgba(255,255,255,0.35)]"
             : "border-white/10 bg-white/[0.02]"
         }`}
       >
         {isWinner ? (
           <div
             style={depthLayer(12, depth)}
-            className="flex items-center justify-between gap-2 rounded-t-[15px] bg-emerald-400/15 px-3 py-1.5"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-t-[15px] bg-white px-3 py-1.5"
           >
-            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-300">
+            <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-950">
               Winning candidate
             </span>
             {typeof probabilityBest === "number" ? (
-              <span className="text-[11px] font-semibold tabular-nums text-emerald-200">
+              <span className="text-[11px] font-semibold tabular-nums text-zinc-700">
                 {pct(probabilityBest)} probability best
               </span>
             ) : null}
@@ -115,11 +102,7 @@ export default function CreativeCard({
                 className="object-cover"
               />
             ) : (
-              <div
-                className={`flex h-full w-full items-center justify-center bg-gradient-to-br ${
-                  ANGLE_GLOW[creative.angle] ?? "from-zinc-500/20"
-                } to-transparent`}
-              >
+              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white/[0.08] to-transparent">
                 <span className="text-[11px] uppercase tracking-[0.2em] text-zinc-400">
                   No image returned
                 </span>
@@ -131,7 +114,7 @@ export default function CreativeCard({
             className="absolute left-2 top-2 flex flex-wrap gap-1.5"
           >
             <span
-              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider backdrop-blur ${angleStyle}`}
+              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider backdrop-blur ${ANGLE_STYLE}`}
             >
               {creative.angle}
             </span>
@@ -167,7 +150,7 @@ export default function CreativeCard({
 
           <div className="mt-auto" style={depthLayer(12, depth)}>
             <div className="mb-1.5 flex items-center gap-1.5">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-400/80">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                 Simulated performance
               </span>
             </div>
@@ -177,12 +160,12 @@ export default function CreativeCard({
               <Metric
                 label="CTR"
                 value={pct(shownRate, 2)}
-                tint={isWinner ? "text-emerald-300" : "text-zinc-100"}
+                tint={isWinner ? "text-white" : "text-zinc-100"}
               />
             </div>
             <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white/10">
               <div
-                className={`bar-fill h-full w-full ${isWinner ? "bg-emerald-400" : "bg-zinc-500"}`}
+                className={`bar-fill h-full w-full ${isWinner ? "bg-white" : "bg-zinc-600"}`}
                 style={{ transform: `scaleX(${fill})` }}
               />
             </div>
@@ -194,7 +177,7 @@ export default function CreativeCard({
               onClick={() => onEvolve(creative.id)}
               disabled={evolving}
               style={depthLayer(22, depth)}
-              className="mt-1 w-full rounded-xl border border-emerald-400/40 bg-emerald-400/10 px-3 py-2 text-[13px] font-semibold text-emerald-200 transition-colors hover:bg-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-1 w-full rounded-xl border border-white/25 bg-white/[0.08] px-3 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-white/[0.16] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {evolving ? "Breeding the next generation" : "Breed 4 variants from this one"}
             </button>

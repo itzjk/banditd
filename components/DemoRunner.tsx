@@ -286,10 +286,10 @@ function RoundTrack({ rounds }: { rounds: Round[] }) {
   return (
     <div className="border-t border-white/10 px-3 py-3 sm:px-4">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
           Anytime valid frontier
         </span>
-        <span className="text-[11px] tabular-nums text-zinc-500">
+        <span className="text-[11px] tabular-nums text-zinc-400">
           Look {latest.n} of {MAX_ROUNDS}
         </span>
       </div>
@@ -297,24 +297,24 @@ function RoundTrack({ rounds }: { rounds: Round[] }) {
       <div className="mt-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
         <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
           <div className="min-w-0">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
               Evidence strength
             </div>
             <div className="flex flex-wrap items-baseline gap-x-1.5">
               <span
                 className={`text-2xl font-semibold tabular-nums sm:text-3xl ${
-                  latest.eValue >= EVIDENCE_TARGET ? "text-emerald-300" : "text-white"
+                  latest.eValue >= EVIDENCE_TARGET ? "text-white" : "text-zinc-400"
                 }`}
               >
                 {strength(latest.eValue)}
               </span>
-              <span className="text-[11px] text-zinc-500">of {EVIDENCE_TARGET} needed</span>
+              <span className="text-[11px] text-zinc-400">of {EVIDENCE_TARGET} needed</span>
             </div>
           </div>
           <span
             className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] ${
               climbing
-                ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300"
+                ? "border-white/25 bg-white/10 text-zinc-100"
                 : "border-white/15 bg-white/5 text-zinc-400"
             }`}
           >
@@ -325,20 +325,20 @@ function RoundTrack({ rounds }: { rounds: Round[] }) {
         <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
           <div
             className={`bar-fill h-full w-full ${
-              latest.eValue >= EVIDENCE_TARGET ? "bg-emerald-400" : "bg-amber-400"
+              latest.eValue >= EVIDENCE_TARGET ? "bg-white" : "bg-zinc-500"
             }`}
             style={{ transform: `scaleX(${evidenceFill(latest.eValue)})` }}
           />
         </div>
 
-        <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
+        <p className="mt-2 text-[11px] leading-relaxed text-zinc-400">
           Every round is another look at the same test. Only new traffic moves this number, which is
           what makes looking again and again safe.
         </p>
       </div>
 
       <div className="mt-2 overflow-hidden rounded-xl border border-white/10">
-        <div className="grid grid-cols-[1.6rem_1fr_3rem_3.4rem] gap-1 border-b border-white/10 bg-white/[0.03] px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-zinc-500">
+        <div className="grid grid-cols-[1.6rem_1fr_3rem_3.4rem] gap-1 border-b border-white/10 bg-white/[0.03] px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-zinc-400">
           <span>Rd</span>
           <span>Impressions</span>
           <span className="text-right">Best</span>
@@ -350,12 +350,12 @@ function RoundTrack({ rounds }: { rounds: Round[] }) {
               key={row.n}
               className="enter-soft grid grid-cols-[1.6rem_1fr_3rem_3.4rem] items-baseline gap-1 px-2 py-1.5 text-[11px] tabular-nums"
             >
-              <span className="text-zinc-600">{row.n}</span>
+              <span className="text-zinc-400">{row.n}</span>
               <span className="text-zinc-300">{row.impressions.toLocaleString()}</span>
               <span className="text-right text-zinc-300">{pct(row.probabilityBest, 0)}</span>
               <span
                 className={`text-right font-semibold ${
-                  row.eValue >= EVIDENCE_TARGET ? "text-emerald-300" : "text-zinc-400"
+                  row.eValue >= EVIDENCE_TARGET ? "text-white" : "text-zinc-400"
                 }`}
               >
                 {strength(row.eValue)}
@@ -367,7 +367,7 @@ function RoundTrack({ rounds }: { rounds: Round[] }) {
 
       <p
         className={`mt-2 text-[11px] leading-relaxed ${
-          latest.cleared ? "text-emerald-300" : "text-amber-200/90"
+          latest.cleared ? "text-zinc-100" : "text-zinc-400"
         }`}
       >
         {latest.cleared
@@ -382,17 +382,17 @@ function StatusDot({ status }: { status: Status }) {
   if (status === "running") {
     return (
       <span className="relative mt-0.5 flex h-3 w-3 shrink-0">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-        <span className="relative inline-flex h-3 w-3 rounded-full bg-emerald-400" />
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-zinc-300 opacity-75" />
+        <span className="relative inline-flex h-3 w-3 rounded-full bg-zinc-200" />
       </span>
     );
   }
 
   const tone =
     status === "done"
-      ? "border-emerald-400/50 bg-emerald-400/20 text-emerald-300"
+      ? "border-white/40 bg-white/20 text-white"
       : status === "held"
-        ? "border-amber-400/50 bg-amber-400/20 text-amber-300"
+        ? "border-white/20 bg-white/10 text-zinc-300"
         : status === "blocked" || status === "failed"
           ? "border-rose-400/50 bg-rose-500/20 text-rose-300"
           : "border-white/15 bg-white/10 text-zinc-500";
@@ -432,7 +432,7 @@ function TimelineRow({ entry }: { entry: Entry }) {
       : entry.status === "running"
         ? "text-white"
         : entry.status === "held"
-          ? "text-amber-100"
+          ? "text-zinc-200"
           : entry.status === "blocked" || entry.status === "failed"
             ? "text-rose-100"
             : "text-zinc-400";
@@ -444,14 +444,14 @@ function TimelineRow({ entry }: { entry: Entry }) {
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           <span className={`text-[13px] font-semibold ${title}`}>{entry.label}</span>
           {typeof entry.seconds === "number" ? (
-            <span className="text-[10px] tabular-nums text-zinc-600">{entry.seconds}s</span>
+            <span className="text-[10px] tabular-nums text-zinc-400">{entry.seconds}s</span>
           ) : null}
         </div>
         {entry.detail ? (
           <p className="mt-0.5 text-[12px] leading-relaxed text-zinc-400">{entry.detail}</p>
         ) : null}
         {entry.note ? (
-          <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-500">{entry.note}</p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-400">{entry.note}</p>
         ) : null}
       </div>
     </li>
@@ -948,25 +948,25 @@ export default function DemoRunner({
 
   const endingTone = useMemo(() => {
     if (!ending) return "";
-    if (ending.kind === "complete") return "border-emerald-400/40 bg-emerald-400/[0.08]";
-    if (ending.kind === "held") return "border-amber-400/40 bg-amber-400/[0.08]";
+    if (ending.kind === "complete") return "border-white/25 bg-white/[0.06]";
+    if (ending.kind === "held") return "border-white/12 bg-white/[0.03]";
     if (ending.kind === "stopped") return "border-white/15 bg-white/[0.04]";
     return "border-rose-400/40 bg-rose-500/[0.08]";
   }, [ending]);
 
   const endingLabel = useMemo(() => {
     if (!ending) return "";
-    if (ending.kind === "complete") return "text-emerald-300";
-    if (ending.kind === "held") return "text-amber-300";
+    if (ending.kind === "complete") return "text-white";
+    if (ending.kind === "held") return "text-zinc-300";
     if (ending.kind === "stopped") return "text-zinc-400";
     return "text-rose-300";
   }, [ending]);
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-emerald-400/30 bg-emerald-400/[0.05]">
+    <section className="overflow-hidden rounded-2xl border border-white/15 bg-white/[0.04]">
       <div className="p-3 sm:p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-md bg-emerald-400/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-300">
+          <span className="rounded-md bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-950">
             One click
           </span>
           <h2 className="text-[15px] font-semibold tracking-tight text-white sm:text-base">
@@ -995,13 +995,13 @@ export default function DemoRunner({
             type="button"
             onClick={() => void start()}
             disabled={!ready || disabled}
-            className="mt-3 w-full rounded-xl bg-emerald-400 px-4 py-3.5 text-[15px] font-bold text-zinc-950 transition-colors hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-40 sm:text-base"
+            className="mt-3 w-full rounded-xl bg-white px-4 py-3.5 text-[15px] font-bold text-zinc-950 transition-colors hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40 sm:text-base"
           >
             {entries.length > 0 ? "Run the full demo again" : "Run the full demo"}
           </button>
         )}
 
-        <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
+        <p className="mt-2 text-[11px] leading-relaxed text-zinc-400">
           {ready
             ? "Live run: real web search, real image generation and a real sandbox charge against the signed mandate."
             : "Submit a product on the home page first, then this runs the whole story on its own."}
@@ -1014,7 +1014,7 @@ export default function DemoRunner({
             <AgentStatus title={AGENT_STEPS[active.task].title} steps={AGENT_STEPS[active.task].steps} />
           </div>
           {patience ? (
-            <p className="mt-2 text-[11px] leading-relaxed text-amber-200/90">
+            <p className="mt-2 text-[11px] leading-relaxed text-zinc-400">
               {active.task === "simulate"
                 ? `Still working after ${waited}s. The loop keeps serving traffic and re-reading the frontier every round, this is the test running, not a hang.`
                 : `Still working after ${waited}s. The web search and the image renders regularly take more than a minute, this is waiting, not broken.`}
@@ -1028,10 +1028,10 @@ export default function DemoRunner({
       {entries.length > 0 ? (
         <>
           <div className="flex items-center justify-between gap-2 border-t border-white/10 px-3 pt-3 sm:px-4">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
               What the agent did
             </span>
-            <span className="text-[11px] tabular-nums text-zinc-500">
+            <span className="text-[11px] tabular-nums text-zinc-400">
               {entries.filter((e) => e.status !== "running").length} of{" "}
               {Math.max(TOTAL_STEPS, entries.length)}
             </span>
