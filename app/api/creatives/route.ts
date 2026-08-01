@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import { openSession, commit, logAudit } from "@/lib/store";
-import { generateVariants, generateImage, startBudget, failureBody } from "@/lib/openai";
+import { generateVariants, startBudget, failureBody } from "@/lib/openai";
 import type { Creative } from "@/lib/store";
 
 export const maxDuration = 300;
 
 const TEXT_BUDGET_MS = Number(process.env.CREATIVES_TEXT_BUDGET_MS ?? 70000);
-const IMAGE_BUDGET_MS = Number(process.env.CREATIVES_IMAGE_BUDGET_MS ?? 90000);
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { parentId?: string; state?: unknown };
@@ -46,12 +45,6 @@ export async function POST(req: Request) {
     return NextResponse.json(payload, { status });
   }
 
-  const imageBudget = startBudget("Image render", IMAGE_BUDGET_MS);
-  const images = await Promise.all(
-    specs.map((spec) => generateImage(spec.imagePrompt, imageBudget)),
-  );
-  const rendered = images.filter(Boolean).length;
-
   const generation = parent ? parent.generation + 1 : 0;
   const stamp = Date.now();
 
@@ -64,23 +57,18 @@ export async function POST(req: Request) {
     body: spec.body,
     imagePrompt: spec.imagePrompt,
     targetEmotion: spec.targetEmotion,
-    imageData: images[i],
+    imageData: null,
     arm: { impressions: 0, clicks: 0 },
   }));
 
   state.creatives.push(...created);
 
-  const imageNote =
-    rendered === created.length
-      ? ""
-      : `, ${created.length - rendered} image(s) ran out of render time and were left blank`;
-
   logAudit(
     state,
     "creatives",
     parent
-      ? `Generated ${created.length} variants from the winner "${parent.headline}"${imageNote}`
-      : `Generated ${created.length} variants across ${created.map((c) => c.angle).join(", ")}${imageNote}`,
+      ? `Generated ${created.length} variants from the winner "${parent.headline}", images requested one by one`
+      : `Generated ${created.length} variants across ${created.map((c) => c.angle).join(", ")}, images requested one by one`,
   );
 
   return NextResponse.json(commit(session));

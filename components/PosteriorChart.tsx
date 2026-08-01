@@ -43,7 +43,7 @@ const TOP = 16;
 const BASE = 294;
 const EDGE = 1e-4;
 
-const RAMP = ["#f8fafc", "#cbd5e1", "#94a3b8", "#64748b"];
+const RAMP = ["var(--curve-1)", "var(--curve-2)", "var(--curve-3)", "var(--curve-4)"];
 
 const DASH = ["", "7 4", "2 3", "10 3 2 3"];
 
@@ -245,7 +245,7 @@ export default function PosteriorChart({ creatives, winnerIndex }: Props) {
           <span
             key={`${c.label}-${i}`}
             className={`flex items-center gap-1.5 text-[11px] transition-opacity ${
-              winner === null || winner === i ? "opacity-100" : "opacity-45"
+              winner === null || winner === i ? "opacity-100" : "opacity-60"
             }`}
           >
             <svg viewBox="0 0 18 6" aria-hidden="true" className="h-1.5 w-[18px] shrink-0">
@@ -282,7 +282,7 @@ export default function PosteriorChart({ creatives, winnerIndex }: Props) {
           <defs>
             {view.curves.map((c, i) => (
               <linearGradient key={i} id={`posterior-fill-${i}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={c.color} stopOpacity="0.22" />
+                <stop offset="0%" stopColor={c.color} stopOpacity={winner === i ? 0.34 : 0.18} />
                 <stop offset="100%" stopColor={c.color} stopOpacity="0.02" />
               </linearGradient>
             ))}
@@ -314,13 +314,13 @@ export default function PosteriorChart({ creatives, winnerIndex }: Props) {
           {view.curves.map((c, i) => {
             const dim = winner !== null && winner !== i;
             return (
-              <g key={i} opacity={dim ? 0.32 : 1}>
+              <g key={i} opacity={dim ? 0.5 : 1}>
                 <path d={c.area} fill={`url(#posterior-fill-${i})`} />
                 <path
                   d={c.line}
                   fill="none"
                   stroke={c.color}
-                  strokeWidth={winner === i ? 2.75 : 1.75}
+                  strokeWidth={winner === i ? 3 : 1.6}
                   strokeDasharray={c.dash}
                   strokeLinejoin="round"
                   strokeLinecap="round"

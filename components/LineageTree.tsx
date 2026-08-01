@@ -348,13 +348,13 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
                       <div
                         className={`sticky left-0 max-w-full rounded-full border bg-zinc-950 px-3 py-1.5 text-center ${
                           paidGenerations.has(row.generation)
-                            ? "border-white/25"
+                            ? "border-emerald-400/35"
                             : "border-white/12"
                         }`}
                       >
                         <p className="text-[10px] leading-snug text-zinc-300 sm:text-[11px]">
                           {paidGenerations.has(row.generation) ? (
-                            <span className="font-semibold text-white">
+                            <span className="font-semibold text-emerald-300">
                               Agent bought render credits
                             </span>
                           ) : (

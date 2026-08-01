@@ -138,12 +138,12 @@ function GateRow({
   const badge = !resolved
     ? "border-white/10 bg-white/5 text-zinc-300"
     : gate.met
-      ? "border-white/35 bg-white text-zinc-950"
+      ? "border-emerald-400/40 bg-emerald-400/15 text-emerald-300"
       : blocking
-        ? "border-white/25 bg-white/10 text-zinc-200"
+        ? "border-amber-400/40 bg-amber-400/15 text-amber-200"
         : "border-white/10 bg-white/5 text-zinc-300";
 
-  const bar = gate.met ? "bg-white" : blocking ? "bg-zinc-400" : "bg-zinc-700";
+  const bar = gate.met ? "bg-emerald-400" : blocking ? "bg-amber-400" : "bg-zinc-700";
   const veil = resolved ? "opacity-100" : "opacity-40";
 
   return (
@@ -362,9 +362,9 @@ export default function GatesPanel({
                 i >= revealed
                   ? "bg-white/10"
                   : gate.met
-                    ? "bg-white"
+                    ? "bg-emerald-400"
                     : gate.id === blocker?.id
-                      ? "bg-zinc-400"
+                      ? "bg-amber-400"
                       : "bg-white/10"
               }`}
             />
@@ -377,8 +377,8 @@ export default function GatesPanel({
           className={`mt-3 transition-opacity duration-200 ${verdictOut ? "opacity-100" : "opacity-0"}`}
         >
           {ready ? (
-            <div className="rounded-xl border border-white/25 bg-white/[0.06] px-3 py-2.5">
-              <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white">
+            <div className="rounded-xl border border-emerald-400/30 bg-emerald-400/[0.07] px-3 py-2.5">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-300">
                 <CheckIcon />
                 All four gates cleared
               </div>
@@ -388,8 +388,8 @@ export default function GatesPanel({
               </p>
             </div>
           ) : (
-            <div className="rounded-xl border border-white/14 bg-white/[0.03] px-3 py-2.5">
-              <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-200">
+            <div className="rounded-xl border border-amber-400/25 bg-amber-400/[0.06] px-3 py-2.5">
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-200">
                 <WaitIcon />
                 Waiting on: {blocker ? blocker.name : "one more check"}
               </div>

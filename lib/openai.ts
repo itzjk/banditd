@@ -402,6 +402,8 @@ For each variant also write an imagePrompt describing a photographic product ima
 }
 
 const MIN_IMAGE_MS = 15000;
+const IMAGE_QUALITY = (process.env.OPENAI_IMAGE_QUALITY ?? "medium") as "low" | "medium" | "high";
+const IMAGE_COMPRESSION = Number(process.env.OPENAI_IMAGE_COMPRESSION ?? 72);
 
 export async function generateImage(prompt: string, budget: Budget): Promise<string | null> {
   const left = msLeft(budget);
@@ -415,6 +417,9 @@ export async function generateImage(prompt: string, budget: Budget): Promise<str
         model: IMAGE_MODEL,
         prompt,
         size: "1024x1024",
+        quality: IMAGE_QUALITY,
+        output_format: "jpeg",
+        output_compression: IMAGE_COMPRESSION,
         n: 1,
       },
       { signal: AbortSignal.timeout(left) },
@@ -424,7 +429,7 @@ export async function generateImage(prompt: string, budget: Budget): Promise<str
       console.error("image generation returned no data for prompt:", prompt.slice(0, 60));
       return null;
     }
-    return `data:image/png;base64,${b64}`;
+    return `data:image/jpeg;base64,${b64}`;
   } catch (e) {
     console.error("image generation failed:", e instanceof Error ? e.message : e);
     return null;

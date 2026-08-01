@@ -69,6 +69,14 @@ export default function MandateBar({ mandateId, cap, purchases, facts, working }
   const shownRemaining = useCountUp(remaining);
   const shownSpent = useCountUp(spent);
 
+  const meterFill = !armed
+    ? "bg-zinc-700"
+    : left > 0.5
+      ? "bg-emerald-400"
+      : left > 0.15
+        ? "bg-amber-400"
+        : "bg-rose-400";
+
   const live = Boolean(facts?.live);
   const remainingLabel = live && facts?.remaining ? facts.remaining : `$${money(shownRemaining)}`;
   const scopeLabel = (live && facts?.scope) || "Render credits only, one merchant";
@@ -82,13 +90,13 @@ export default function MandateBar({ mandateId, cap, purchases, facts, working }
           <div className="flex items-center gap-3">
             <span
               className={`relative flex h-2 w-2 shrink-0 rounded-full ${
-                armed ? "bg-white" : "bg-zinc-600"
+                armed ? "bg-emerald-400" : "bg-zinc-600"
               }`}
             >
               {working ? (
                 <span
                   className={`absolute inset-0 animate-ping rounded-full ${
-                    armed ? "bg-white" : "bg-zinc-500"
+                    armed ? "bg-emerald-400" : "bg-zinc-500"
                   }`}
                 />
               ) : null}
@@ -105,7 +113,7 @@ export default function MandateBar({ mandateId, cap, purchases, facts, working }
               <div className="hidden min-w-0 items-center gap-2 sm:flex">
                 <div className="h-1 w-24 shrink-0 overflow-hidden rounded-full bg-white/12 md:w-32">
                   <div
-                    className="bar-fill h-full w-full bg-zinc-300"
+                    className={`bar-fill h-full w-full ${meterFill}`}
                     style={{ transform: `scaleX(${armed ? left : 0})` }}
                   />
                 </div>
@@ -137,7 +145,7 @@ export default function MandateBar({ mandateId, cap, purchases, facts, working }
 
         <div className="h-[3px] w-full overflow-hidden bg-white/10 sm:hidden">
           <div
-            className="bar-fill h-full w-full bg-zinc-300"
+            className={`bar-fill h-full w-full ${meterFill}`}
             style={{ transform: `scaleX(${armed ? left : 0})` }}
           />
         </div>

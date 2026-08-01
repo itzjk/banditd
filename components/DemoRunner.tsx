@@ -73,7 +73,7 @@ export const AGENT_STEPS: Record<Task, { title: string; steps: string[] }> = {
     steps: [
       "Picking 4 angles out of the research",
       "Writing headlines and body copy",
-      "Rendering 4 images",
+      "Sending 4 image prompts to render",
       "Loading every variant into the bandit",
     ],
   },
@@ -82,7 +82,7 @@ export const AGENT_STEPS: Record<Task, { title: string; steps: string[] }> = {
     steps: [
       "Taking the winning creative apart",
       "Writing 4 mutations of that angle",
-      "Rendering the new images",
+      "Sending the new image prompts to render",
       "Opening generation two",
     ],
   },
@@ -774,9 +774,8 @@ export default function DemoRunner({
         held.current = absorb(next);
         const cohort = cohortOf(held.current);
         return {
-          detail: `Wrote ${cohort.length} ads with rendered images: ${cohort
-            .map((c) => c.angle)
-            .join(", ")}`,
+          detail: `Wrote ${cohort.length} ads: ${cohort.map((c) => c.angle).join(", ")}`,
+          note: "The images render one per request and land on the cards as they arrive",
         };
       });
 

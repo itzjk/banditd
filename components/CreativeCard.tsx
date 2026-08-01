@@ -17,6 +17,7 @@ interface Props {
   onEvolve?: (id: string) => void;
   evolving?: boolean;
   index?: number;
+  rendering?: boolean;
 }
 
 const ANGLE_STYLE = "border-white/20 bg-black/55 text-zinc-200";
@@ -41,6 +42,7 @@ export default function CreativeCard({
   onEvolve,
   evolving,
   index = 0,
+  rendering,
 }: Props) {
   const rate = ctr(creative.arm.impressions, creative.arm.clicks);
   const reference = bestCtr && bestCtr > 0 ? bestCtr : rate;
@@ -101,6 +103,12 @@ export default function CreativeCard({
                 sizes="(max-width: 640px) 100vw, 320px"
                 className="object-cover"
               />
+            ) : rendering ? (
+              <div className="flex h-full w-full animate-pulse items-center justify-center bg-gradient-to-br from-white/[0.10] to-transparent">
+                <span className="text-[11px] uppercase tracking-[0.2em] text-zinc-300">
+                  Rendering the image
+                </span>
+              </div>
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-white/[0.08] to-transparent">
                 <span className="text-[11px] uppercase tracking-[0.2em] text-zinc-400">
@@ -165,8 +173,11 @@ export default function CreativeCard({
             </div>
             <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white/10">
               <div
-                className={`bar-fill h-full w-full ${isWinner ? "bg-white" : "bg-zinc-600"}`}
-                style={{ transform: `scaleX(${fill})` }}
+                className="bar-fill h-full w-full"
+                style={{
+                  transform: `scaleX(${fill})`,
+                  backgroundColor: retired ? "#52525b" : `var(--curve-${(index % 4) + 1})`,
+                }}
               />
             </div>
           </div>

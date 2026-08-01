@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type {
   AuditEntry,
@@ -342,9 +342,16 @@ function Fold({
   );
 }
 
+interface ImageResponse {
+  creativeId: string;
+  imageData: string;
+}
+
 export default function Dashboard() {
   const [state, setState] = useState<State | null>(null);
   const [images, setImages] = useState<Images>({});
+  const [rendering, setRendering] = useState<Set<string>>(() => new Set());
+  const requested = useRef<Set<string>>(new Set());
   const [busy, setBusy] = useState<Task | null>("load");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -439,6 +446,44 @@ export default function Dashboard() {
     (c: Creative): Creative => ({ ...c, imageData: c.imageData ?? images[c.id] ?? null }),
     [images],
   );
+
+  const settle = useCallback((id: string) => {
+    setRendering((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const missing = creatives.filter(
+      (c) => !c.imageData && !images[c.id] && c.imagePrompt && !requested.current.has(c.id),
+    );
+    if (missing.length === 0) return;
+
+    missing.forEach((c) => requested.current.add(c.id));
+    setRendering((prev) => {
+      const next = new Set(prev);
+      missing.forEach((c) => next.add(c.id));
+      return next;
+    });
+
+    missing.forEach((c) => {
+      const draw = async () => {
+        try {
+          const res = await api<ImageResponse>("/api/image", {
+            creativeId: c.id,
+            imagePrompt: c.imagePrompt,
+          });
+          setImages((prev) => ({ ...prev, [c.id]: res.imageData }));
+        } finally {
+          settle(c.id);
+        }
+      };
+      void draw().catch(() => settle(c.id));
+    });
+  }, [creatives, images, settle]);
 
   const winner = winnerId ? byId.get(winnerId) : undefined;
   const cohortImpressions = cohort.reduce((sum, c) => sum + c.arm.impressions, 0);
@@ -727,6 +772,7 @@ export default function Dashboard() {
                   key={c.id}
                   index={i}
                   creative={dressed(c)}
+                  rendering={rendering.has(c.id)}
                   isWinner={c.id === winnerId}
                   isLeader={c.id !== winnerId && c.id === leaderId}
                   probabilityBest={freshEvaluation?.probabilityBest ?? null}
@@ -757,6 +803,7 @@ export default function Dashboard() {
                     <CreativeCard
                       key={c.id}
                       creative={dressed(c)}
+                      rendering={rendering.has(c.id)}
                       retired
                       bestCtr={bestCtr}
                       parentHeadline={c.parentId ? (byId.get(c.parentId)?.headline ?? null) : null}
