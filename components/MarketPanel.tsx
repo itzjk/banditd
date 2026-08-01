@@ -2,10 +2,16 @@
 
 import { useMemo, useState } from "react";
 import type { Research } from "@/lib/store";
+import { citedSegments, extractCitations, sentencesOf, type Citation } from "./format";
 
 interface Props {
   research: Research | null;
   productName?: string | null;
+}
+
+interface SourceEntry {
+  title: string;
+  url: string;
 }
 
 const ANGLES_SHOWN = 4;
@@ -36,10 +42,7 @@ function paragraphs(value: string): string[] {
 
   if (blocks.length > 1) return blocks;
 
-  const sentences = (blocks[0] ?? "")
-    .split(/(?<=[.!?])\s+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const sentences = sentencesOf(blocks[0] ?? "");
 
   if (sentences.length < 3) return sentences.length ? [sentences.join(" ")] : [];
 
@@ -57,27 +60,91 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
+function Marker({ citation, number, after }: { citation: Citation; number: number; after: boolean }) {
+  return (
+    <sup className="whitespace-nowrap text-[9px] font-semibold leading-none tabular-nums">
+      {after ? <span className="text-zinc-500">,</span> : null}
+      <a
+        href={citation.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={`Source ${number}: ${domainOf(citation.url)}`}
+        className="ml-px rounded-sm px-px text-emerald-300 underline decoration-emerald-300/40 underline-offset-2 transition-colors hover:text-emerald-200 hover:decoration-emerald-200"
+      >
+        {number}
+      </a>
+    </sup>
+  );
+}
+
+function Cited({
+  value,
+  citations,
+  numberOf,
+}: {
+  value: string;
+  citations: Citation[];
+  numberOf: (url: string) => number;
+}) {
+  const segments = useMemo(() => citedSegments(value), [value]);
+
+  return (
+    <>
+      {segments.map((segment, i) => {
+        if (segment.kind === "text") return <span key={i}>{segment.value}</span>;
+        const citation = citations[segment.index];
+        if (!citation) return null;
+        return (
+          <Marker
+            key={i}
+            citation={citation}
+            number={numberOf(citation.url)}
+            after={segments[i - 1]?.kind === "cite"}
+          />
+        );
+      })}
+    </>
+  );
+}
+
 export default function MarketPanel({ research, productName }: Props) {
   const [allAngles, setAllAngles] = useState(false);
   const [allSources, setAllSources] = useState(false);
 
-  const angles = useMemo(
-    () => (research?.competitorAngles ?? []).map((a) => a.trim()).filter(Boolean),
-    [research],
-  );
-
-  const sources = useMemo(() => {
-    const seen = new Set<string>();
-    return (research?.sources ?? []).filter((s) => {
-      if (!s.url || seen.has(s.url)) return false;
-      seen.add(s.url);
-      return true;
-    });
+  const parsed = useMemo(() => {
+    const profile = extractCitations(research?.buyerProfile ?? "");
+    const price = extractCitations(research?.pricePositioning ?? "");
+    const angles = (research?.competitorAngles ?? [])
+      .map((a) => extractCitations(a.trim()))
+      .filter((a) => a.text.length > 0);
+    return { profile, price, angles };
   }, [research]);
 
-  const domains = useMemo(() => new Set(sources.map((s) => domainOf(s.url))).size, [sources]);
+  const registry = useMemo(() => {
+    const number = new Map<string, number>();
+    const entries: SourceEntry[] = [];
 
-  const profile = useMemo(() => paragraphs(research?.buyerProfile ?? ""), [research]);
+    const add = (title: string, url: string) => {
+      if (!url || number.has(url)) return;
+      number.set(url, entries.length + 1);
+      entries.push({ title: title.trim(), url });
+    };
+
+    for (const source of research?.sources ?? []) add(source.title ?? "", source.url ?? "");
+    for (const citation of [
+      ...parsed.profile.citations,
+      ...parsed.angles.flatMap((a) => a.citations),
+      ...parsed.price.citations,
+    ]) {
+      add(citation.label, citation.url);
+    }
+
+    return { entries, numberOf: (url: string) => number.get(url) ?? 0 };
+  }, [research, parsed]);
+
+  const sources = registry.entries;
+  const domains = useMemo(() => new Set(sources.map((s) => domainOf(s.url))).size, [sources]);
+  const profile = useMemo(() => paragraphs(parsed.profile.text), [parsed]);
 
   if (!research) {
     return (
@@ -96,6 +163,7 @@ export default function MarketPanel({ research, productName }: Props) {
     );
   }
 
+  const angles = parsed.angles;
   const shownAngles = allAngles ? angles : angles.slice(0, ANGLES_SHOWN);
   const shownSources = allSources ? sources : sources.slice(0, SOURCES_SHOWN);
 
@@ -104,7 +172,7 @@ export default function MarketPanel({ research, productName }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
         <div className="min-w-0">
           <h2 className="text-sm font-semibold tracking-tight text-white">Market research</h2>
-          <p className="mt-0.5 break-words text-[11px] leading-snug text-zinc-400">
+          <p className="mt-0.5 break-words text-[11px] leading-snug text-zinc-400 [overflow-wrap:anywhere]">
             {productName ? `Evidence behind the ads for ${productName}` : "Evidence behind the ads"}
           </p>
         </div>
@@ -118,7 +186,7 @@ export default function MarketPanel({ research, productName }: Props) {
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2">
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2">
+        <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2">
           <div className="text-base font-semibold tabular-nums leading-none text-white">
             {sources.length}
           </div>
@@ -126,13 +194,13 @@ export default function MarketPanel({ research, productName }: Props) {
             Sources read
           </div>
         </div>
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2">
+        <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2">
           <div className="text-base font-semibold tabular-nums leading-none text-white">
             {domains}
           </div>
           <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-zinc-400">Sites</div>
         </div>
-        <div className="rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2">
+        <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2">
           <div className="text-base font-semibold tabular-nums leading-none text-white">
             {angles.length}
           </div>
@@ -141,7 +209,8 @@ export default function MarketPanel({ research, productName }: Props) {
       </div>
 
       <p className="mt-2 text-[11px] leading-relaxed text-zinc-400">
-        Pulled from pages fetched during this run, not from model memory.
+        Pulled from pages fetched during this run, not from model memory. Numbers in the text link to
+        the source they came from.
       </p>
 
       <div className="mt-4 border-t border-white/10 pt-4">
@@ -153,11 +222,15 @@ export default function MarketPanel({ research, productName }: Props) {
             {profile.map((block, i) => (
               <p
                 key={i}
-                className={`break-words leading-relaxed ${
+                className={`break-words leading-relaxed [overflow-wrap:anywhere] ${
                   i === 0 ? "text-[14px] text-zinc-100" : "text-[13px] text-zinc-400"
                 }`}
               >
-                {block}
+                <Cited
+                  value={block}
+                  citations={parsed.profile.citations}
+                  numberOf={registry.numberOf}
+                />
               </p>
             ))}
           </div>
@@ -180,12 +253,16 @@ export default function MarketPanel({ research, productName }: Props) {
           <>
             <ol className="mt-2 divide-y divide-white/[0.06]">
               {shownAngles.map((angle, i) => (
-                <li key={`${angle}-${i}`} className="flex gap-2.5 py-2 first:pt-0 last:pb-0">
+                <li key={`${angle.text}-${i}`} className="flex gap-2.5 py-2 first:pt-0 last:pb-0">
                   <span className="mt-[3px] w-5 shrink-0 font-mono text-[10px] tabular-nums text-zinc-400">
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  <span className="min-w-0 flex-1 break-words text-[13px] leading-relaxed text-zinc-300">
-                    {angle}
+                  <span className="min-w-0 flex-1 break-words text-[13px] leading-relaxed text-zinc-300 [overflow-wrap:anywhere]">
+                    <Cited
+                      value={angle.text}
+                      citations={angle.citations}
+                      numberOf={registry.numberOf}
+                    />
                   </span>
                 </li>
               ))}
@@ -210,10 +287,14 @@ export default function MarketPanel({ research, productName }: Props) {
         <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
           Where your price lands
         </div>
-        {research.pricePositioning ? (
+        {parsed.price.text ? (
           <div className="mt-2 rounded-xl border border-emerald-400/25 bg-emerald-400/[0.06] p-3">
-            <p className="break-words text-[14px] leading-relaxed text-zinc-100">
-              {research.pricePositioning}
+            <p className="break-words text-[14px] leading-relaxed text-zinc-100 [overflow-wrap:anywhere]">
+              <Cited
+                value={parsed.price.text}
+                citations={parsed.price.citations}
+                numberOf={registry.numberOf}
+              />
             </p>
             <p className="mt-2 text-[11px] leading-snug text-emerald-300/80">
               This is the claim the price angle ads argue from.
@@ -237,7 +318,7 @@ export default function MarketPanel({ research, productName }: Props) {
         {sources.length ? (
           <>
             <ol className="mt-2 space-y-1.5">
-              {shownSources.map((source, i) => {
+              {shownSources.map((source) => {
                 const domain = domainOf(source.url);
                 const path = pathOf(source.url);
                 return (
@@ -248,15 +329,15 @@ export default function MarketPanel({ research, productName }: Props) {
                       rel="noopener noreferrer"
                       className="group flex items-start gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2 transition-colors hover:border-white/20 hover:bg-white/[0.07]"
                     >
-                      <span className="mt-[1px] flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/[0.06] font-mono text-[10px] uppercase text-zinc-400">
-                        {domain.charAt(0) || String(i + 1)}
+                      <span className="mt-[1px] flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/[0.06] font-mono text-[10px] tabular-nums text-zinc-400 group-hover:text-zinc-200">
+                        {registry.numberOf(source.url)}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block break-words text-[13px] leading-snug text-zinc-200 group-hover:text-white">
+                        <span className="block break-words text-[13px] leading-snug text-zinc-200 group-hover:text-white [overflow-wrap:anywhere]">
                           {source.title || domain}
                         </span>
-                        <span className="mt-0.5 flex min-w-0 items-baseline gap-1">
-                          <span className="shrink-0 font-mono text-[11px] text-zinc-400">
+                        <span className="mt-0.5 flex min-w-0 flex-wrap items-baseline gap-x-1">
+                          <span className="min-w-0 break-all font-mono text-[11px] text-zinc-400">
                             {domain}
                           </span>
                           {path ? (

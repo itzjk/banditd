@@ -17,8 +17,24 @@
   --warn: #8a5a00;
   --warn-soft: rgba(138, 90, 0, 0.12);
   --grid-line: rgba(11, 12, 13, 0.055);
+  --grid-fine: rgba(11, 12, 13, 0.026);
   --ring: rgba(11, 12, 13, 0.5);
   --card-shadow: 0 1px 2px rgba(11, 12, 13, 0.05), 0 16px 40px -28px rgba(11, 12, 13, 0.35);
+
+  --surface-raised: #ffffff;
+  --surface-feature-a: #ffffff;
+  --surface-feature-b: #f2f2f0;
+  --edge-hi: rgba(255, 255, 255, 0.95);
+  --edge-lo: rgba(11, 12, 13, 0.1);
+  --shadow-base: 0 1px 1px rgba(11, 12, 13, 0.03);
+  --shadow-raised: 0 1px 2px rgba(11, 12, 13, 0.05), 0 10px 26px -18px rgba(11, 12, 13, 0.32);
+  --shadow-feature: 0 2px 4px rgba(11, 12, 13, 0.05), 0 28px 64px -34px rgba(11, 12, 13, 0.45);
+  --shadow-lift: 0 6px 14px rgba(11, 12, 13, 0.07), 0 36px 76px -36px rgba(11, 12, 13, 0.5);
+
+  --arm-1: #0284c7;
+  --arm-2: #7c3aed;
+  --arm-3: #db2777;
+  --arm-4: #b45309;
 
   --display-size: 2.125rem;
   --gutter: 1.25rem;
@@ -43,8 +59,24 @@
     --warn: #f4b942;
     --warn-soft: rgba(244, 185, 66, 0.12);
     --grid-line: rgba(255, 255, 255, 0.045);
+    --grid-fine: rgba(255, 255, 255, 0.021);
     --ring: rgba(241, 243, 244, 0.6);
     --card-shadow: 0 1px 0 rgba(255, 255, 255, 0.03), 0 24px 48px -32px rgba(0, 0, 0, 0.9);
+
+    --surface-raised: #14171a;
+    --surface-feature-a: #181c20;
+    --surface-feature-b: #0d1012;
+    --edge-hi: rgba(255, 255, 255, 0.15);
+    --edge-lo: rgba(255, 255, 255, 0.015);
+    --shadow-base: 0 1px 0 rgba(255, 255, 255, 0.02);
+    --shadow-raised: 0 1px 0 rgba(255, 255, 255, 0.035), 0 18px 40px -28px rgba(0, 0, 0, 0.9);
+    --shadow-feature: 0 1px 0 rgba(255, 255, 255, 0.05), 0 30px 70px -34px rgba(0, 0, 0, 1);
+    --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.07), 0 40px 84px -36px rgba(0, 0, 0, 1);
+
+    --arm-1: #38bdf8;
+    --arm-2: #a78bfa;
+    --arm-3: #f472b6;
+    --arm-4: #fbbf24;
   }
 }
 
@@ -60,6 +92,7 @@
   --color-background: var(--background);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-surface-raised: var(--surface-raised);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-subtle: var(--subtle);
@@ -84,6 +117,9 @@
   --spacing-section: var(--section);
 
   --shadow-card: var(--card-shadow);
+  --shadow-panel: var(--shadow-raised);
+  --shadow-hero: var(--shadow-feature);
+  --shadow-lifted: var(--shadow-lift);
 }
 
 @layer base {

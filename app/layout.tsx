@@ -12,35 +12,65 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const title = "banditd, an agent that runs your ads and buys its own credits";
+
 const description =
   "banditd researches your market, writes four ad creatives, measures which one actually wins, and buys more render credits by itself through Prava, inside the limits you set.";
 
+const site = "https://banditd.vercel.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(site),
   title: {
-    default: "banditd, an agent that runs your ads and buys its own credits",
+    default: title,
     template: "%s | banditd",
   },
   description,
   applicationName: "banditd",
+  category: "technology",
   keywords: [
     "agentic commerce",
     "autonomous agent",
     "ad creatives",
     "multi-armed bandit",
     "Thompson sampling",
+    "anytime-valid inference",
     "Prava",
+    "Visa Intelligent Commerce",
     "spend mandate",
   ],
   authors: [{ name: "itzjk", url: "https://github.com/itzjk" }],
+  creator: "itzjk",
+  publisher: "itzjk",
+  alternates: {
+    canonical: "/",
+  },
+  formatDetection: {
+    telephone: false,
+    email: false,
+    address: false,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   openGraph: {
-    title: "banditd",
-    description,
-    siteName: "banditd",
     type: "website",
+    url: "/",
+    siteName: "banditd",
+    locale: "en_US",
+    title,
+    description,
   },
   twitter: {
-    card: "summary_large_image",
-    title: "banditd",
+    card: "summary",
+    title,
     description,
   },
 };
@@ -64,9 +94,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full scroll-smooth antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body className="flex min-h-full flex-col overflow-x-hidden bg-background text-foreground">
         {children}
       </body>
     </html>
