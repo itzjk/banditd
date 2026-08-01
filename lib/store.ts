@@ -167,8 +167,14 @@ function coerceCreative(value: unknown): Creative | null {
     imagePrompt: text(c.imagePrompt),
     targetEmotion: text(c.targetEmotion),
     imageData: typeof c.imageData === "string" ? c.imageData : null,
-    arm: { impressions: count(arm?.impressions), clicks: count(arm?.clicks) },
+    arm: coerceArm(arm),
   };
+}
+
+function coerceArm(raw: Record<string, unknown> | null): Arm {
+  const impressions = Math.max(0, Math.floor(count(raw?.impressions)));
+  const clicks = Math.max(0, Math.floor(count(raw?.clicks)));
+  return { impressions, clicks: Math.min(clicks, impressions) };
 }
 
 function coercePurchase(value: unknown): PurchaseEvent | null {
@@ -200,8 +206,6 @@ export function coerceState(value: unknown): State | null {
   const raw = record(value);
   if (!raw) return null;
 
-  const envMandate = process.env.PRAVA_MANDATE_ID ?? null;
-
   return {
     product: coerceProduct(raw.product),
     research: coerceResearch(raw.research),
@@ -215,7 +219,7 @@ export function coerceState(value: unknown): State | null {
       .map(coerceAudit)
       .filter((a): a is AuditEntry => a !== null)
       .slice(0, MAX_AUDIT),
-    mandateId: typeof raw.mandateId === "string" ? raw.mandateId : envMandate,
+    mandateId: typeof raw.mandateId === "string" ? raw.mandateId : null,
     simulatedImpressions: count(raw.simulatedImpressions),
   };
 }

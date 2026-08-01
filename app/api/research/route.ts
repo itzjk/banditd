@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { openSession, commit, logAudit } from "@/lib/store";
-import { researchMarket } from "@/lib/openai";
+import { researchMarket, startBudget, failureBody } from "@/lib/openai";
 
-export const maxDuration = 120;
+export const maxDuration = 300;
+
+const BUDGET_MS = Number(process.env.RESEARCH_BUDGET_MS ?? 100000);
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as { state?: unknown };
@@ -13,14 +15,26 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "no product submitted yet" }, { status: 400 });
   }
 
-  const research = await researchMarket(product);
-  session.state.research = research;
+  const budget = startBudget("Market research", BUDGET_MS);
+  const started = Date.now();
 
-  logAudit(
-    session.state,
-    "research",
-    `Searched the live web and read ${research.sources.length} sources on ${product.name}`,
-  );
+  try {
+    const research = await researchMarket(product, budget);
+    session.state.research = research;
 
-  return NextResponse.json(commit(session));
+    logAudit(
+      session.state,
+      "research",
+      `Searched the live web and read ${research.sources.length} sources on ${product.name}`,
+    );
+
+    return NextResponse.json(commit(session));
+  } catch (err) {
+    const { status, body: payload } = failureBody(err);
+    console.error(
+      `research gave up after ${Math.round((Date.now() - started) / 1000)}s: ${payload.code}`,
+      err,
+    );
+    return NextResponse.json(payload, { status });
+  }
 }

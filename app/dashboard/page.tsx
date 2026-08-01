@@ -638,9 +638,10 @@ export default function Dashboard() {
 
           {hasCreatives ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {cohort.map((c) => (
+              {cohort.map((c, i) => (
                 <CreativeCard
                   key={c.id}
+                  index={i}
                   creative={dressed(c)}
                   isWinner={c.id === winnerId}
                   isLeader={c.id !== winnerId && c.id === leaderId}
@@ -692,10 +693,11 @@ export default function Dashboard() {
 
           {state?.purchases.length ? (
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              {state.purchases.map((p) => (
+              {state.purchases.map((p, i) => (
                 <PurchaseEventItem
                   key={p.id}
                   event={p}
+                  latest={i === 0}
                   winnerHeadline={byId.get(p.winnerId)?.headline ?? null}
                 />
               ))}

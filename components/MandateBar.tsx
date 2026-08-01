@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { PurchaseEvent } from "@/lib/store";
 import { money, shortId, toNumber } from "./format";
+import { useCountUp } from "./motion";
 
 export interface MandateFacts {
   remaining?: string | null;
@@ -52,10 +53,13 @@ export default function MandateBar({ mandateId, cap, purchases, facts, working }
   const blocked = purchases.filter((p) => !p.ok).length;
   const charges = purchases.filter((p) => p.ok).length;
   const remaining = Math.max(0, cap - spent);
-  const used = cap > 0 ? Math.min(1, spent / cap) : 0;
+  const left = cap > 0 ? Math.max(0, Math.min(1, remaining / cap)) : 0;
   const armed = Boolean(mandateId);
+  const shownRemaining = useCountUp(remaining);
+  const shownSpent = useCountUp(spent);
+  const low = armed && left <= 0.2;
 
-  const remainingLabel = facts?.remaining ? facts.remaining : `$${money(remaining)}`;
+  const remainingLabel = facts?.remaining ? facts.remaining : `$${money(shownRemaining)}`;
   const scopeLabel = facts?.scope ?? "Render credits only, one merchant";
   const expiryLabel = facts?.expiry ?? "Not reported by Prava";
 
@@ -121,20 +125,20 @@ export default function MandateBar({ mandateId, cap, purchases, facts, working }
         <div className="mt-2 sm:mt-3">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
             <div
-              className={`h-full rounded-full transition-[width] duration-700 ${
-                armed ? "bg-gradient-to-r from-emerald-400 to-emerald-300" : "bg-amber-400/40"
+              className={`bar-fill h-full w-full ${
+                low ? "bg-amber-400" : "bg-gradient-to-r from-emerald-400 to-emerald-300"
               }`}
-              style={{ width: `${armed ? Math.max(used * 100, spent > 0 ? 3 : 0) : 0}%` }}
+              style={{ transform: `scaleX(${armed ? left : 0})` }}
             />
           </div>
           <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-zinc-500">
             <span className="truncate">
               {armed
-                ? `$${money(spent)} spent by the agent`
+                ? `$${money(shownRemaining)} left of the $${money(cap)} ceiling`
                 : "The agent cannot spend a cent yet"}
             </span>
             <span className="shrink-0 tabular-nums">
-              {armed ? `$${money(cap)} ceiling` : "Nothing approved yet"}
+              {armed ? `$${money(shownSpent)} spent` : "Nothing approved yet"}
             </span>
           </div>
         </div>

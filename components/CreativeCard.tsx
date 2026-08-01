@@ -3,6 +3,7 @@
 import Image from "next/image";
 import type { Creative } from "@/lib/store";
 import { ctr, pct, shortId } from "./format";
+import { useCountUp } from "./motion";
 
 interface Props {
   creative: Creative;
@@ -14,6 +15,7 @@ interface Props {
   retired?: boolean;
   onEvolve?: (id: string) => void;
   evolving?: boolean;
+  index?: number;
 }
 
 const ANGLE_STYLE: Record<string, string> = {
@@ -49,19 +51,25 @@ export default function CreativeCard({
   retired,
   onEvolve,
   evolving,
+  index = 0,
 }: Props) {
   const rate = ctr(creative.arm.impressions, creative.arm.clicks);
   const reference = bestCtr && bestCtr > 0 ? bestCtr : rate;
-  const width = reference > 0 ? Math.max(4, Math.min(100, (rate / reference) * 100)) : 0;
+  const fill = reference > 0 ? Math.max(0.04, Math.min(1, rate / reference)) : 0;
   const angleStyle = ANGLE_STYLE[creative.angle] ?? "border-zinc-500/30 bg-white/5 text-zinc-300";
+
+  const shownImpressions = useCountUp(creative.arm.impressions);
+  const shownClicks = useCountUp(creative.arm.clicks);
+  const shownRate = useCountUp(rate);
 
   return (
     <article
-      className={`relative flex flex-col overflow-hidden rounded-2xl border transition-colors ${
+      style={retired ? undefined : { animationDelay: `${Math.min(index, 7) * 70}ms` }}
+      className={`${retired ? "opacity-60" : "enter"} relative flex flex-col overflow-hidden rounded-2xl border transition-colors ${
         isWinner
           ? "border-emerald-400/60 bg-emerald-400/[0.06] shadow-[0_0_0_1px_rgba(52,211,153,0.25),0_18px_40px_-24px_rgba(16,185,129,0.8)]"
           : "border-white/10 bg-white/[0.02]"
-      } ${retired ? "opacity-60" : ""}`}
+      }`}
     >
       {isWinner ? (
         <div className="flex items-center justify-between gap-2 bg-emerald-400/15 px-3 py-1.5">
@@ -137,20 +145,18 @@ export default function CreativeCard({
             </span>
           </div>
           <div className="grid grid-cols-3 gap-1.5">
-            <Metric label="Impr." value={creative.arm.impressions.toLocaleString()} />
-            <Metric label="Clicks" value={creative.arm.clicks.toLocaleString()} />
+            <Metric label="Impr." value={Math.round(shownImpressions).toLocaleString()} />
+            <Metric label="Clicks" value={Math.round(shownClicks).toLocaleString()} />
             <Metric
               label="CTR"
-              value={pct(rate, 2)}
+              value={pct(shownRate, 2)}
               tint={isWinner ? "text-emerald-300" : "text-zinc-100"}
             />
           </div>
           <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white/10">
             <div
-              className={`h-full rounded-full transition-[width] duration-700 ${
-                isWinner ? "bg-emerald-400" : "bg-zinc-500"
-              }`}
-              style={{ width: `${width}%` }}
+              className={`bar-fill h-full w-full ${isWinner ? "bg-emerald-400" : "bg-zinc-500"}`}
+              style={{ transform: `scaleX(${fill})` }}
             />
           </div>
         </div>

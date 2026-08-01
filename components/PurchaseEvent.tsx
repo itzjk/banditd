@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import type { PurchaseEvent } from "@/lib/store";
 import { clock, money, pct, shortId, timeAgo } from "./format";
 
 interface Props {
   event: PurchaseEvent;
   winnerHeadline?: string | null;
+  latest?: boolean;
 }
 
 const DECLINES: Record<string, { title: string; plain: string }> = {
@@ -60,13 +62,18 @@ function explain(code: string | null): { title: string; plain: string } {
   };
 }
 
-export default function PurchaseEventItem({ event, winnerHeadline }: Props) {
+export default function PurchaseEventItem({ event, winnerHeadline, latest }: Props) {
   const ok = event.ok;
   const reason = explain(event.errorCode);
+  const [entrance] = useState(
+    () => Boolean(latest) && Date.now() - Date.parse(event.at) < 15000,
+  );
 
   return (
     <article
-      className={`overflow-hidden rounded-2xl border ${
+      className={`relative overflow-hidden rounded-2xl border ${
+        entrance ? (ok ? "event-in" : "event-in-blocked") : ""
+      } ${
         ok
           ? "border-emerald-400/35 bg-emerald-400/[0.05]"
           : "border-rose-400/40 bg-rose-400/[0.06]"

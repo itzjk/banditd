@@ -23,6 +23,7 @@ interface Link {
   y: number;
   strong: boolean;
   pending: boolean;
+  delay: number;
 }
 
 const PENDING = "pending-generation";
@@ -157,6 +158,7 @@ export default function LineageTree({ creatives, winnerId }: Props) {
       to: HTMLDivElement,
       strong: boolean,
       pending: boolean,
+      delay: number,
     ) => {
       const a = from.getBoundingClientRect();
       const b = to.getBoundingClientRect();
@@ -172,27 +174,28 @@ export default function LineageTree({ creatives, winnerId }: Props) {
         y: y1,
         strong,
         pending,
+        delay,
       });
     };
 
     for (let i = 0; i < rows.length - 1; i += 1) {
       const winner = rows[i].winner;
-      for (const child of rows[i + 1].nodes) {
+      rows[i + 1].nodes.forEach((child, index) => {
         const sourceId =
           child.parentId && elements.current.has(child.parentId) ? child.parentId : winner?.id;
-        if (!sourceId) continue;
+        if (!sourceId) return;
         const from = elements.current.get(sourceId);
         const to = elements.current.get(child.id);
-        if (!from || !to) continue;
-        curve(`${sourceId}-${child.id}`, from, to, sourceId === winner?.id, false);
-      }
+        if (!from || !to) return;
+        curve(`${sourceId}-${child.id}`, from, to, sourceId === winner?.id, false, index * 60);
+      });
     }
 
     const last = rows[rows.length - 1];
     const ghost = elements.current.get(PENDING);
     if (last?.winner && ghost) {
       const from = elements.current.get(last.winner.id);
-      if (from) curve(PENDING, from, ghost, true, true);
+      if (from) curve(PENDING, from, ghost, true, true, 0);
     }
 
     setLinks(drawn);
@@ -251,6 +254,9 @@ export default function LineageTree({ creatives, winnerId }: Props) {
             {links.map((link) => (
               <g key={link.key}>
                 <path
+                  className={link.pending ? "enter-soft" : "link-draw"}
+                  style={{ animationDelay: `${link.delay}ms` }}
+                  pathLength={link.pending ? undefined : 1}
                   d={link.d}
                   stroke={
                     link.pending
@@ -264,6 +270,8 @@ export default function LineageTree({ creatives, winnerId }: Props) {
                   strokeLinecap="round"
                 />
                 <circle
+                  className="enter-soft"
+                  style={{ animationDelay: `${link.delay}ms` }}
                   cx={link.x}
                   cy={link.y}
                   r={2}

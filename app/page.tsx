@@ -104,7 +104,7 @@ export default function Home() {
 
   return (
     <div className="grid-bg flex min-h-full flex-1 flex-col">
-      <header className="border-b border-border">
+      <header className="enter border-b border-border">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-gutter py-4">
           <div className="flex items-baseline gap-2">
             <span className="text-lg font-semibold tracking-tight">banditd</span>
@@ -118,7 +118,7 @@ export default function Home() {
       </header>
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-gutter pb-16 pt-10 sm:pt-14">
-        <div className="max-w-2xl">
+        <div className="enter max-w-2xl" style={{ animationDelay: "60ms" }}>
           <p className="eyebrow">Agentic commerce</p>
           <h1 className="mt-3 text-display font-semibold">
             An agent that runs your ads and spends its own money on the ones that work.
@@ -133,8 +133,12 @@ export default function Home() {
         <div className="mt-10 grid gap-10 lg:mt-14 lg:grid-cols-[1fr_minmax(0,26rem)] lg:gap-12">
           <section className="order-2 lg:order-1">
             <ol className="space-y-6">
-              {STEPS.map((step) => (
-                <li key={step.n} className="flex gap-4">
+              {STEPS.map((step, i) => (
+                <li
+                  key={step.n}
+                  className="enter flex gap-4"
+                  style={{ animationDelay: `${180 + i * 55}ms` }}
+                >
                   <span className="mt-0.5 font-mono text-xs font-medium text-accent">
                     {step.n}
                   </span>
@@ -146,7 +150,7 @@ export default function Home() {
               ))}
             </ol>
 
-            <div className="mt-8 border-t border-border pt-6">
+            <div className="enter mt-8 border-t border-border pt-6" style={{ animationDelay: "400ms" }}>
               <p className="eyebrow">The limits you set</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {GUARDRAILS.map((g) => (
@@ -166,7 +170,7 @@ export default function Home() {
           </section>
 
           <section className="order-1 lg:order-2">
-            <div className="card p-5 sm:p-6">
+            <div className="enter card p-5 sm:p-6" style={{ animationDelay: "120ms" }}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-base font-semibold tracking-tight">Start with a product</h2>
@@ -258,7 +262,7 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="border-t border-border">
+      <footer className="enter border-t border-border" style={{ animationDelay: "460ms" }}>
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-1 px-gutter py-6 text-xs text-subtle sm:flex-row sm:items-center sm:justify-between">
           <span>Built at the Agentic Commerce Hackathon, 2026.</span>
           <span className="font-mono">OpenAI and Prava on Visa Intelligent Commerce</span>

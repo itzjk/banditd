@@ -1,7 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { pct } from "./format";
+import { reducedMotion } from "./motion";
 
 export interface GateEvaluation {
   candidateIndex?: number;
@@ -37,6 +38,8 @@ interface Gate {
   action: string;
   progress: number;
 }
+
+const SETTLED = 5;
 
 const GATE_COPY = [
   {
@@ -106,35 +109,54 @@ function WaitIcon() {
   );
 }
 
-function GateRow({ gate, blocking }: { gate: Gate; blocking: boolean }) {
-  const tone = gate.met
-    ? "border-emerald-400/25 bg-emerald-400/[0.05]"
-    : blocking
-      ? "border-amber-400/40 bg-amber-400/[0.07]"
-      : "border-white/10 bg-white/[0.02]";
+function GateRow({
+  gate,
+  blocking,
+  resolved,
+}: {
+  gate: Gate;
+  blocking: boolean;
+  resolved: boolean;
+}) {
+  const tone = !resolved
+    ? "border-white/10 bg-white/[0.02]"
+    : gate.met
+      ? "border-emerald-400/25 bg-emerald-400/[0.05]"
+      : blocking
+        ? "border-amber-400/40 bg-amber-400/[0.07]"
+        : "border-white/10 bg-white/[0.02]";
 
-  const badge = gate.met
-    ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300"
-    : blocking
-      ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
-      : "border-white/10 bg-white/5 text-zinc-500";
+  const badge = !resolved
+    ? "border-white/10 bg-white/5 text-zinc-500"
+    : gate.met
+      ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300"
+      : blocking
+        ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
+        : "border-white/10 bg-white/5 text-zinc-500";
 
   const bar = gate.met ? "bg-emerald-400" : blocking ? "bg-amber-400" : "bg-zinc-600";
+  const veil = resolved ? "opacity-100" : "opacity-40";
 
   return (
-    <li className={`rounded-xl border p-3 transition-colors ${tone}`}>
+    <li className={`rounded-xl border p-3 transition-colors duration-200 ${tone}`}>
       <div className="flex items-start justify-between gap-2">
         <h4 className="min-w-0 text-[13px] font-semibold leading-snug text-zinc-100">{gate.name}</h4>
         <span
-          className={`flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${badge}`}
+          className={`flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition-opacity duration-200 ${badge} ${veil}`}
         >
           {gate.met ? <CheckIcon /> : <WaitIcon />}
           {gate.met ? "Cleared" : "Pending"}
         </span>
       </div>
 
-      <div className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-[12px] tabular-nums">
-        <span className={gate.met ? "font-semibold text-emerald-300" : "font-semibold text-zinc-100"}>
+      <div
+        className={`mt-1.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 text-[12px] tabular-nums transition-opacity duration-200 ${veil}`}
+      >
+        <span
+          className={
+            resolved && gate.met ? "font-semibold text-emerald-300" : "font-semibold text-zinc-100"
+          }
+        >
           {gate.current}
         </span>
         <span className="text-zinc-600">of</span>
@@ -143,15 +165,23 @@ function GateRow({ gate, blocking }: { gate: Gate; blocking: boolean }) {
 
       <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white/10">
         <div
-          className={`h-full rounded-full transition-[width] duration-700 ${bar}`}
-          style={{ width: `${Math.max(gate.progress > 0 ? 3 : 0, gate.progress * 100)}%` }}
+          className={`bar-fill h-full w-full ${bar}`}
+          style={{
+            transform: `scaleX(${
+              resolved ? Math.max(gate.progress > 0 ? 0.03 : 0, gate.progress) : 0
+            })`,
+          }}
         />
       </div>
 
       <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">{gate.meaning}</p>
 
       {!gate.met && blocking ? (
-        <p className="mt-1.5 text-[11px] font-medium leading-relaxed text-amber-200/90">{gate.action}</p>
+        <p
+          className={`mt-1.5 text-[11px] font-medium leading-relaxed text-amber-200/90 transition-opacity duration-200 ${veil}`}
+        >
+          {gate.action}
+        </p>
       ) : null}
     </li>
   );
@@ -177,6 +207,31 @@ export default function GatesPanel({
   alpha = 0.05,
   candidateLabel,
 }: Props) {
+  const signature = evaluation
+    ? [
+        evaluation.totalImpressions ?? 0,
+        evaluation.probabilityBest ?? 0,
+        evaluation.expectedLoss ?? 0,
+        evaluation.eValue ?? 0,
+      ].join("|")
+    : "";
+  const [reveal, setReveal] = useState({ sig: signature, step: SETTLED });
+
+  if (reveal.sig !== signature) {
+    setReveal({ sig: signature, step: signature && !reducedMotion() ? 1 : SETTLED });
+  }
+  const revealed = reveal.step;
+
+  useEffect(() => {
+    if (!signature || reducedMotion()) return;
+    const timers = [2, 3, 4, 5].map((step) =>
+      window.setTimeout(() => {
+        setReveal((prev) => (prev.sig === signature ? { sig: signature, step } : prev));
+      }, (step - 1) * 80),
+    );
+    return () => timers.forEach((id) => window.clearTimeout(id));
+  }, [signature]);
+
   if (!evaluation) {
     return (
       <Shell>
@@ -269,6 +324,8 @@ export default function GatesPanel({
   const allMet = cleared === gates.length;
   const ready = evaluation.sufficientEvidence ?? allMet;
   const blocker = ready ? null : (gates.find((g) => !g.met) ?? null);
+  const clearedSoFar = gates.slice(0, revealed).filter((g) => g.met).length;
+  const verdictOut = revealed > gates.length;
 
   return (
     <Shell>
@@ -278,22 +335,32 @@ export default function GatesPanel({
             Decision gates
           </div>
           <div className="text-[11px] font-semibold tabular-nums text-zinc-400">
-            {cleared} of {gates.length} cleared
+            {clearedSoFar} of {gates.length} cleared
           </div>
         </div>
 
         <div className="mt-2 flex gap-1" aria-hidden="true">
-          {gates.map((gate) => (
+          {gates.map((gate, i) => (
             <span
               key={gate.id}
-              className={`h-1 flex-1 rounded-full ${
-                gate.met ? "bg-emerald-400" : gate.id === blocker?.id ? "bg-amber-400" : "bg-white/10"
+              className={`h-1 flex-1 rounded-full transition-colors duration-200 ${
+                i >= revealed
+                  ? "bg-white/10"
+                  : gate.met
+                    ? "bg-emerald-400"
+                    : gate.id === blocker?.id
+                      ? "bg-amber-400"
+                      : "bg-white/10"
               }`}
             />
           ))}
         </div>
 
-        <div role="status" aria-live="polite" className="mt-3">
+        <div
+          role="status"
+          aria-live="polite"
+          className={`mt-3 transition-opacity duration-200 ${verdictOut ? "opacity-100" : "opacity-0"}`}
+        >
           {ready ? (
             <div className="rounded-xl border border-emerald-400/40 bg-emerald-400/[0.08] px-3 py-2.5">
               <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-emerald-300">
@@ -323,8 +390,13 @@ export default function GatesPanel({
       </div>
 
       <ul className="grid gap-2 p-3 sm:p-4">
-        {gates.map((gate) => (
-          <GateRow key={gate.id} gate={gate} blocking={gate.id === blocker?.id} />
+        {gates.map((gate, i) => (
+          <GateRow
+            key={gate.id}
+            gate={gate}
+            blocking={gate.id === blocker?.id}
+            resolved={i < revealed}
+          />
         ))}
       </ul>
     </Shell>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { openSession, commit, logAudit } from "@/lib/store";
 import { evaluate } from "@/lib/bandit";
-import { decideSpend } from "@/lib/openai";
+import { decideSpend, startBudget, failureBody } from "@/lib/openai";
 import { getMandate, listMandates } from "@/lib/prava";
 import { mandateQueue } from "@/lib/mandate";
 import type { DecisionContext } from "@/lib/openai";
@@ -9,6 +9,7 @@ import type { Mandate } from "@/lib/prava";
 
 export const maxDuration = 300;
 
+const BUDGET_MS = Number(process.env.DECIDE_BUDGET_MS ?? 80000);
 const CREDIT_PRICE = process.env.RENDER_CREDIT_PRICE ?? "4.00";
 const NO_MANDATE = "no mandate yet";
 const UNREACHABLE = "unknown (Prava unavailable)";
@@ -135,7 +136,21 @@ export async function POST(req: Request) {
     creditPrice: CREDIT_PRICE,
   };
 
-  const decision = await decideSpend(context);
+  const budget = startBudget("The spend decision", BUDGET_MS);
+  const started = Date.now();
+
+  let decision;
+  try {
+    decision = await decideSpend(context, budget);
+  } catch (err) {
+    const { status, body: payload } = failureBody(err);
+    console.error(
+      `decide gave up after ${Math.round((Date.now() - started) / 1000)}s: ${payload.code}`,
+      err,
+    );
+    return NextResponse.json(payload, { status });
+  }
+
   const candidate = cohort[evaluation.candidateIndex];
 
   if (decision.shouldBuy) {

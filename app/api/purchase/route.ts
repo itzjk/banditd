@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { openSession, commit, logAudit } from "@/lib/store";
+import { evaluate } from "@/lib/bandit";
 import { reportCharge } from "@/lib/prava";
 import {
   mandateQueue,
@@ -45,16 +46,51 @@ function normalizeAmount(raw: string | undefined): string | null {
   return n.toFixed(2);
 }
 
-function toNumber(value: unknown): number {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
-}
-
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as PurchaseBody;
 
   const session = openSession(body.state);
   const state = session.state;
+
+  const generation = state.creatives.length
+    ? Math.max(...state.creatives.map((c) => c.generation))
+    : -1;
+  const cohort = state.creatives.filter((c) => c.generation === generation);
+
+  if (cohort.length === 0) {
+    return NextResponse.json(
+      {
+        error:
+          "there is nothing to buy for: the request carries no creatives, so no evidence can justify a charge. The agent only spends against a cohort it has measured.",
+        code: "NO_EVIDENCE",
+      },
+      { status: 400 },
+    );
+  }
+
+  const force = body.force === true;
+
+  const verdict = evaluate(
+    cohort.map((c) => c.arm),
+    { samples: 20000, candidateRule: "probabilityBest" },
+  );
+
+  if (!force && !verdict.sufficientEvidence) {
+    return NextResponse.json(
+      {
+        error:
+          "the evidence does not justify a charge. The agent re-checks the bandit on the server before it spends, and the gates are not open on this cohort.",
+        code: "EVIDENCE_INSUFFICIENT",
+        evaluation: verdict,
+      },
+      { status: 409 },
+    );
+  }
+
+  const provenWinner = cohort[verdict.candidateIndex]?.id ?? null;
+  const provenProbability = verdict.probabilityBest;
+  const provenImpressions = verdict.totalImpressions;
+
   if (!state.mandateId) {
     return NextResponse.json(
       {
@@ -66,7 +102,6 @@ export async function POST(req: Request) {
   }
 
   const preferredId = state.mandateId;
-  const force = body.force === true;
   const requested = normalizeAmount(body.amount);
 
   if (!force && !requested) {
@@ -85,14 +120,14 @@ export async function POST(req: Request) {
   const attempts = force ? (target ? [target] : []) : queue.candidates;
 
   const amount = force ? overCapAmount(target) : requested!;
-  const winnerId = body.winnerId?.trim() || "unknown_creative";
+  const winnerId = provenWinner ?? body.winnerId?.trim() ?? "unknown_creative";
   const reason =
     body.reason?.trim() ||
     (force
       ? `Deliberate over-cap charge of ${amount} to prove the mandate ceiling holds`
       : "Bandit called the winner and bought more render credits");
-  const probabilityBest = toNumber(body.probabilityBest);
-  const impressions = toNumber(body.impressions);
+  const probabilityBest = provenProbability;
+  const impressions = provenImpressions;
   const baseReference = `banditd_${Date.now()}_${winnerId}`;
 
   if (queue.listError) {

@@ -67,13 +67,13 @@ npm run prava list
 Copy the mandate id into `.env.local`:
 
 ```
-PRAVA_MANDATE_ID=mnd_...
+PRAVA_MANDATE_ID=mdt_...
 ```
 
 The demo also fires a deliberate over-cap charge to show the ceiling holding. It uses the smallest signed mandate for that, or the one you pin:
 
 ```
-PRAVA_REJECTION_MANDATE_ID=mnd_...
+PRAVA_REJECTION_MANDATE_ID=mdt_...
 PRAVA_REJECTION_MANDATE_AMOUNT=5.00
 ```
 
