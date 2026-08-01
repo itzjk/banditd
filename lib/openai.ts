@@ -14,7 +14,7 @@ function openai(): OpenAI {
   if (!client) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) throw new Error("OPENAI_API_KEY is not set");
-    client = new OpenAI({ apiKey, maxRetries: 6, timeout: 180000 });
+    client = new OpenAI({ apiKey, maxRetries: 2, timeout: 90000 });
   }
   return client;
 }

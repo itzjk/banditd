@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getState, update, audit } from "@/lib/store";
+import { openSession, commit, logAudit } from "@/lib/store";
 import { chargeMandate, reportCharge } from "@/lib/prava";
 import type { PurchaseEvent } from "@/lib/store";
 
@@ -12,6 +12,7 @@ interface PurchaseBody {
   probabilityBest?: number;
   impressions?: number;
   force?: boolean;
+  state?: unknown;
 }
 
 const DECLINE_MESSAGES: Record<string, string> = {
@@ -49,7 +50,8 @@ function toNumber(value: unknown): number {
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as PurchaseBody;
 
-  const state = getState();
+  const session = openSession(body.state);
+  const state = session.state;
   if (!state.mandateId) {
     return NextResponse.json(
       {
@@ -83,7 +85,8 @@ export async function POST(req: Request) {
   const reference = `banditd_${Date.now()}_${winnerId}`;
 
   if (force) {
-    audit(
+    logAudit(
+      state,
       "purchase",
       `Forcing a ${amount} charge against a ${mandateCap().toFixed(2)} per-charge cap to show the guardrail rejecting the agent`,
     );
@@ -108,17 +111,16 @@ export async function POST(req: Request) {
       transactionId: result.transactionId ?? null,
     };
 
-    const declined = update((st) => {
-      st.purchases.unshift(event);
-    });
+    state.purchases.unshift(event);
 
-    audit(
+    logAudit(
+      state,
       "purchase",
       `Declined ${amount} on mandate ${mandateId}: ${result.code}. ${message} (upstream HTTP ${result.httpStatus}, reference ${reference})`,
     );
 
     return NextResponse.json({
-      ...declined,
+      ...commit(session),
       lastPurchase: {
         ok: false,
         amount,
@@ -166,24 +168,24 @@ export async function POST(req: Request) {
     transactionId,
   };
 
-  const s = update((st) => {
-    st.purchases.unshift(event);
-  });
+  state.purchases.unshift(event);
 
-  audit(
+  logAudit(
+    state,
     "purchase",
     `Charged ${amount} on mandate ${mandateId} for "${reason}" on card ending ${cardLast4 ?? "????"}${result.deduplicated ? ", deduplicated by reference" : ""} (txn ${transactionId ?? "n/a"}, reference ${reference})`,
   );
 
   if (reportError) {
-    audit(
+    logAudit(
+      state,
       "purchase",
       `The charge went through but reporting it back to the mandate failed: ${reportError}. The mandate may still count this charge as open.`,
     );
   }
 
   return NextResponse.json({
-    ...s,
+    ...commit(session),
     lastPurchase: {
       ok: true,
       amount,

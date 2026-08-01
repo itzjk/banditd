@@ -2,6 +2,23 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import type { State } from "@/lib/store";
+
+const STORAGE_KEY = "banditd_state";
+
+function saveState(value: State) {
+  try {
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        ...value,
+        creatives: (value.creatives ?? []).map((c) => ({ ...c, imageData: null })),
+      }),
+    );
+  } catch {
+    return;
+  }
+}
 
 const EXAMPLE = {
   name: "Cold-Pressed Coffee Concentrate",
@@ -60,12 +77,13 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, price, description }),
       });
+      const data = (await res.json().catch(() => null)) as (State & { error?: string }) | null;
       if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as { error?: string } | null;
         setError(data?.error ?? "Could not save the product. Try again.");
         setBusy(false);
         return;
       }
+      if (data) saveState(data);
       router.push("/dashboard");
     } catch {
       setError("Network error. Try again.");

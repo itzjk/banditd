@@ -13,11 +13,16 @@ export default function AgentStatus({ title, steps, intervalMs = 2200 }: Props) 
   const [elapsed, setElapsed] = useState(0);
 
   const key = steps.join("|");
+  const [track, setTrack] = useState(key);
+
+  if (track !== key) {
+    setTrack(key);
+    setIndex(0);
+    setElapsed(0);
+  }
 
   useEffect(() => {
     const total = key.split("|").length;
-    setIndex(0);
-    setElapsed(0);
     const step = setInterval(() => {
       setIndex((i) => (i + 1 < total ? i + 1 : i));
     }, intervalMs);

@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
-import { getState, update, audit, reset } from "@/lib/store";
+import { getState, openSession, commit, logAudit, emptyState } from "@/lib/store";
+
+interface ProductBody {
+  name?: string;
+  price?: string;
+  description?: string;
+  state?: unknown;
+}
 
 export async function GET() {
   return NextResponse.json(getState());
 }
 
 export async function POST(req: Request) {
-  const body = (await req.json()) as { name?: string; price?: string; description?: string };
+  const body = (await req.json().catch(() => ({}))) as ProductBody;
 
   if (!body.name || !body.price || !body.description) {
     return NextResponse.json(
@@ -15,19 +22,24 @@ export async function POST(req: Request) {
     );
   }
 
-  const mandateId = getState().mandateId;
-  reset();
+  const session = openSession(body.state);
+  const mandateId = session.state.mandateId;
 
-  const s = update((state) => {
-    state.mandateId = mandateId;
-    state.product = {
-      name: body.name!.trim(),
-      price: body.price!.trim(),
-      description: body.description!.trim(),
-    };
-  });
+  session.state = {
+    ...emptyState(),
+    mandateId,
+    product: {
+      name: body.name.trim(),
+      price: body.price.trim(),
+      description: body.description.trim(),
+    },
+  };
 
-  audit("product", `Seller submitted "${s.product!.name}" at ${s.product!.price}`);
+  logAudit(
+    session.state,
+    "product",
+    `Seller submitted "${session.state.product!.name}" at ${session.state.product!.price}`,
+  );
 
-  return NextResponse.json(s);
+  return NextResponse.json(commit(session));
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import type { Creative, State } from "@/lib/store";
 import MandateBar from "@/components/MandateBar";
 import CreativeCard from "@/components/CreativeCard";
@@ -10,6 +11,46 @@ import AgentStatus from "@/components/AgentStatus";
 import { ctr, money, pct } from "@/components/format";
 
 const MANDATE_CAP = 50;
+const STORAGE_KEY = "banditd_state";
+
+type Images = Record<string, string>;
+
+function split(input: State): { clean: State; images: Images } {
+  const images: Images = {};
+  const creatives = input.creatives.map((c) => {
+    if (c.imageData) images[c.id] = c.imageData;
+    return { ...c, imageData: null };
+  });
+  const clean: State = {
+    product: input.product,
+    research: input.research,
+    creatives,
+    purchases: input.purchases,
+    audit: input.audit,
+    mandateId: input.mandateId,
+    simulatedImpressions: input.simulatedImpressions,
+  };
+  return { clean, images };
+}
+
+function save(value: State) {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+  } catch {
+    return;
+  }
+}
+
+function restore(): State | null {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as State;
+    return parsed && typeof parsed === "object" && Array.isArray(parsed.creatives) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
 
 type Task =
   | "load"
@@ -183,12 +224,20 @@ function Action({
 
 export default function Dashboard() {
   const [state, setState] = useState<State | null>(null);
+  const [images, setImages] = useState<Images>({});
   const [busy, setBusy] = useState<Task | null>("load");
   const [error, setError] = useState<string | null>(null);
   const [decision, setDecision] = useState<Decision | null>(null);
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [receipt, setReceipt] = useState<LastPurchase | null>(null);
   const [impressions, setImpressions] = useState(1000);
+
+  const absorb = useCallback((next: State) => {
+    const { clean, images: found } = split(next);
+    setState(clean);
+    if (Object.keys(found).length > 0) setImages((prev) => ({ ...prev, ...found }));
+    save(clean);
+  }, []);
 
   const run = useCallback(async (task: Task, fn: () => Promise<void>) => {
     setBusy(task);
@@ -203,12 +252,32 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    run("load", async () => {
-      setState(await api<State>("/api/product"));
-    });
-  }, [run]);
+    let alive = true;
+    const boot = async () => {
+      const stored = restore();
+      if (stored) {
+        if (alive) {
+          setState(stored);
+          setBusy(null);
+        }
+        return;
+      }
+      try {
+        const fresh = await api<State>("/api/product");
+        if (alive) absorb(fresh);
+      } catch (e) {
+        if (alive) setError(e instanceof Error ? e.message : "Could not reach the agent");
+      } finally {
+        if (alive) setBusy(null);
+      }
+    };
+    void boot();
+    return () => {
+      alive = false;
+    };
+  }, [absorb]);
 
-  const creatives = state?.creatives ?? [];
+  const creatives = useMemo(() => state?.creatives ?? [], [state]);
   const generation = creatives.length ? Math.max(...creatives.map((c) => c.generation)) : 0;
   const cohort = useMemo(
     () => creatives.filter((c) => c.generation === generation),
@@ -234,6 +303,11 @@ export default function Dashboard() {
     () => cohort.reduce((max, c) => Math.max(max, ctr(c.arm.impressions, c.arm.clicks)), 0),
     [cohort],
   );
+  const dressed = useCallback(
+    (c: Creative): Creative => ({ ...c, imageData: c.imageData ?? images[c.id] ?? null }),
+    [images],
+  );
+
   const winner = winnerId ? byId.get(winnerId) : undefined;
   const cohortImpressions = cohort.reduce((sum, c) => sum + c.arm.impressions, 0);
 
@@ -245,25 +319,25 @@ export default function Dashboard() {
 
   const research = () =>
     run("research", async () => {
-      setState(await api<State>("/api/research", {}));
+      absorb(await api<State>("/api/research", { state }));
     });
 
   const generate = (parentId?: string) =>
     run(parentId ? "evolve" : "creatives", async () => {
-      setState(await api<State>("/api/creatives", parentId ? { parentId } : {}));
+      absorb(await api<State>("/api/creatives", parentId ? { parentId, state } : { state }));
       setDecision(null);
       setEvaluation(null);
     });
 
   const simulate = () =>
     run("simulate", async () => {
-      setState(await api<State>("/api/simulate", { impressions }));
+      absorb(await api<State>("/api/simulate", { impressions, state }));
     });
 
   const decide = () =>
     run("decide", async () => {
-      const res = await api<DecideResponse>("/api/decide", {});
-      setState(res.state);
+      const res = await api<DecideResponse>("/api/decide", { state });
+      absorb(res.state);
       setDecision(res.decision);
       setEvaluation(res.evaluation);
     });
@@ -276,8 +350,9 @@ export default function Dashboard() {
         winnerId: winnerId ?? cohort[0]?.id,
         probabilityBest: freshEvaluation?.probabilityBest ?? 0,
         impressions: cohortImpressions,
+        state,
       });
-      setState(res);
+      absorb(res);
       setReceipt(res.lastPurchase ?? null);
     });
 
@@ -290,8 +365,9 @@ export default function Dashboard() {
         probabilityBest: freshEvaluation?.probabilityBest ?? 0,
         impressions: cohortImpressions,
         force: true,
+        state,
       });
-      setState(res);
+      absorb(res);
       setReceipt(res.lastPurchase ?? null);
     });
 
@@ -341,12 +417,12 @@ export default function Dashboard() {
                 Submit a product on the home page and the agent takes it from there: research,
                 creatives, traffic, and the spend decision.
               </p>
-              <a
+              <Link
                 href="/"
                 className="mt-3 inline-flex rounded-xl border border-white/15 bg-white/[0.05] px-3 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-white/[0.1]"
               >
                 Go submit a product
-              </a>
+              </Link>
             </div>
           )}
 
@@ -624,7 +700,7 @@ export default function Dashboard() {
               {cohort.map((c) => (
                 <CreativeCard
                   key={c.id}
-                  creative={c}
+                  creative={dressed(c)}
                   isWinner={c.id === winnerId}
                   isLeader={c.id !== winnerId && c.id === leaderId}
                   probabilityBest={freshEvaluation?.probabilityBest ?? null}
@@ -654,7 +730,7 @@ export default function Dashboard() {
                   .map((c) => (
                     <CreativeCard
                       key={c.id}
-                      creative={c}
+                      creative={dressed(c)}
                       retired
                       bestCtr={bestCtr}
                       parentHeadline={c.parentId ? (byId.get(c.parentId)?.headline ?? null) : null}

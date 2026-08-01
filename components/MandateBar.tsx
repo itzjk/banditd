@@ -133,7 +133,9 @@ export default function MandateBar({ mandateId, cap, purchases, facts, working }
                 ? `$${money(spent)} spent by the agent`
                 : "The agent cannot spend a cent yet"}
             </span>
-            <span className="shrink-0 tabular-nums">${money(cap)} ceiling</span>
+            <span className="shrink-0 tabular-nums">
+              {armed ? `$${money(cap)} ceiling` : "Nothing approved yet"}
+            </span>
           </div>
         </div>
 

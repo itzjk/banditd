@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getState, audit } from "@/lib/store";
+import { openSession, commit, logAudit } from "@/lib/store";
 import { evaluate } from "@/lib/bandit";
 import { decideSpend } from "@/lib/openai";
 import { getMandate, listMandates } from "@/lib/prava";
@@ -84,8 +84,10 @@ async function readMandate(id: string | null): Promise<MandateFacts> {
   };
 }
 
-export async function POST() {
-  const state = getState();
+export async function POST(req: Request) {
+  const body = (await req.json().catch(() => ({}))) as { state?: unknown };
+  const session = openSession(body.state);
+  const state = session.state;
 
   if (state.creatives.length === 0) {
     return NextResponse.json({ error: "no creatives to evaluate" }, { status: 400 });
@@ -101,7 +103,7 @@ export async function POST() {
 
   const mandate = await readMandate(state.mandateId);
   if (state.mandateId && !mandate.live) {
-    audit("mandate", "Prava did not answer, deciding without live mandate data");
+    logAudit(state, "mandate", "Prava did not answer, deciding without live mandate data");
   }
 
   const context: DecisionContext = {
@@ -128,12 +130,14 @@ export async function POST() {
   const candidate = cohort[evaluation.candidateIndex];
 
   if (decision.shouldBuy) {
-    audit(
+    logAudit(
+      state,
       "decision",
       `Agent wants to spend ${decision.amount} on render credits for "${candidate?.headline ?? "unknown variant"}" at ${(evaluation.probabilityBest * 100).toFixed(1)}% probability best. ${decision.reason}`,
     );
   } else {
-    audit(
+    logAudit(
+      state,
       "decision",
       `Agent held the money back at ${(evaluation.probabilityBest * 100).toFixed(1)}% probability best over ${evaluation.totalImpressions} impressions. ${decision.abstainedBecause}`,
     );
@@ -142,6 +146,6 @@ export async function POST() {
   return NextResponse.json({
     decision,
     evaluation: { ...evaluation, generation, candidateId: candidate?.id ?? null },
-    state: getState(),
+    state: commit(session),
   });
 }

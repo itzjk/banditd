@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getState, update, audit } from "@/lib/store";
+import { openSession, commit, logAudit } from "@/lib/store";
 import { simulateTraffic } from "@/lib/bandit";
 
 const MIN_RATE = 0.015;
@@ -16,10 +16,12 @@ function hiddenRate(id: string): number {
 }
 
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => ({}))) as { impressions?: number };
+  const body = (await req.json().catch(() => ({}))) as { impressions?: number; state?: unknown };
   const impressions = body.impressions ?? 1000;
 
-  const state = getState();
+  const session = openSession(body.state);
+  const state = session.state;
+
   if (state.creatives.length === 0) {
     return NextResponse.json({ error: "no creatives to simulate" }, { status: 400 });
   }
@@ -35,20 +37,17 @@ export async function POST(req: Request) {
     "thompson",
   );
 
-  const s = update((st) => {
-    live.forEach((c, i) => {
-      const target = st.creatives.find((x) => x.id === c.id);
-      if (!target) return;
-      target.arm.impressions = served[i].impressions;
-      target.arm.clicks = served[i].clicks;
-    });
-    st.simulatedImpressions += impressions;
+  live.forEach((c, i) => {
+    c.arm.impressions = served[i].impressions;
+    c.arm.clicks = served[i].clicks;
   });
+  state.simulatedImpressions += impressions;
 
-  audit(
+  logAudit(
+    state,
     "simulate",
     `Injected ${impressions} impressions across ${live.length} generation ${generation} creatives`,
   );
 
-  return NextResponse.json(s);
+  return NextResponse.json(commit(session));
 }
