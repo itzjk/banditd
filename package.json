@@ -9,7 +9,8 @@
     "lint": "eslint",
     "prava": "node --env-file-if-exists=.env.local scripts/prava.mts",
     "bandit:test": "node scripts/bandit-test.mts",
-    "smoke:openai": "node --env-file-if-exists=.env.local scripts/smoke-openai.mts"
+    "smoke:openai": "node --env-file-if-exists=.env.local scripts/smoke-openai.mts",
+    "deploy": "bash scripts/deploy.sh"
   },
   "dependencies": {
     "next": "16.2.12",
