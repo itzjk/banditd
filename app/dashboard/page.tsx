@@ -22,6 +22,7 @@ import PerformanceChart from "@/components/PerformanceChart";
 import GatesPanel from "@/components/GatesPanel";
 import LineageTree from "@/components/LineageTree";
 import MarketPanel from "@/components/MarketPanel";
+import ProofLab from "@/components/ProofLab";
 import DemoRunner, { AGENT_STEPS } from "@/components/DemoRunner";
 import type { Decision, Evaluation, LastPurchase, Task } from "@/components/DemoRunner";
 import { ctr, money, pct, plain } from "@/components/format";
@@ -927,7 +928,7 @@ export default function Dashboard() {
         <Band
           eyebrow="Evidence"
           title="Why it decided that"
-          summary="Everything the agent read before it was allowed to spend: what it believes about each ad, the four gates it has to clear, the family tree of winners, and the market it researched."
+          summary="Everything the agent read before it was allowed to spend: what it believes about each ad, the four gates it has to clear, the family tree of winners, the market it researched, and a lab that lets you measure the gates against the obvious rule yourself."
         >
           <PosteriorChart
             creatives={cohort}
@@ -958,6 +959,8 @@ export default function Dashboard() {
           >
             <MarketPanel research={state?.research ?? null} productName={state?.product?.name} />
           </Fold>
+
+          <ProofLab tone="panel" folded batchSize={200} />
         </Band>
 
         <Band

@@ -145,7 +145,7 @@ An anytime-valid boundary. The e-value is the probability of being best times a 
 
 Same conditions: false positives drop to 0.5% with two arms over 200 runs, settling near 0.3% at 2000, and to roughly 0.1% with four. And when it does fire, it points at the truly best arm 100% of the time, in every configuration tested.
 
-The 200 run figures are what `scripts/bandit-test.mts` prints, with a confidence interval of [37.8%, 51.4%] on that 44.5%. The larger numbers are where those estimates converge. ProofLab in the dashboard runs the same comparison in the browser, so anyone can push it further and watch it settle.
+The 200 run figures are what `scripts/bandit-test.mts` prints, with a confidence interval of [37.8%, 51.4%] on that 44.5%. The larger numbers are where those estimates converge. ProofLab runs the same comparison in the browser, folded shut under the error rate on the home page and at the end of the evidence band on the dashboard, so anyone can open it, push it further and watch it settle.
 
 You can watch the four gates disagree. On 3 clicks in 220 impressions against 12 in 220, the probability of being best is 0.9936 and the expected loss is tiny, so three of the four gates say buy. The e-value is 1.48 against a bar of 20, so the agent holds. Twelve clicks against three looks decisive and it is not.
 

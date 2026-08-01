@@ -195,7 +195,11 @@ import SeedPresets, { type SeedPreset } from "@/components/SeedPresets";
 
 ## ProofLab
 
-`components/ProofLab.tsx`, semantic tokens, home page.
+`components/ProofLab.tsx`, semantic tokens, mounted on both pages.
+
+Mounted twice: on the home page under the two big error rate figures, and on the dashboard as the
+last item of the evidence band, where it answers the question the band raises. Both mounts are
+folded shut by default.
 
 The interactive version of the error rate the README publishes. The visitor picks a hidden truth
 the ads do not know about, one paired run plays out look by look, and the two decision rules read
@@ -219,13 +223,20 @@ Everything runs on `lib/bandit.ts` in the browser (`evaluate`, `simulateTraffic`
 | `batchSize` | `number` | `100` | Runs added by the repeat button and by the automatic batch. |
 | `autoBatch` | `boolean` | `true` | After the live run, keep going for `batchSize - 1` more runs. |
 | `seed` | `number` | `4000` | First seed. Every run advances it, so repeats are fresh but reproducible. |
+| `tone` | `"auto" \| "panel"` | `"auto"` | `auto` follows light and dark from `globals.css`. `panel` pins the semantic tokens to the dashboard shell, so it reads as part of the dark panel instead of flipping to white. |
+| `folded` | `boolean` | `false` | Wraps the panel in a `<details>` closed by default, with a one line summary inviting a judge to open it. Same fold pattern as the other secondary panels on the dashboard. |
 | `onScore` | `(score: ProofScore) => void` | none | Fires whenever the scoreboard changes. An inline function is safe, it is held in a ref. |
 
 Changing any control resets the scoreboard, because a new scenario is a new measurement. `seed` is
 read at mount and on reset.
 
+`tone="panel"` works by overriding the semantic tokens on the outer element with inline custom
+properties. `@theme inline` in `globals.css` means every `bg-surface-2`, `text-muted`, `text-accent`
+and `var(--danger)` inside the tree resolves against the override, so nothing in the panel had to be
+rewritten to literals and the home page mount is untouched by it.
+
 Also exports `ProofScore` (`runs`, `naiveFalse`, `naiveRight`, `gatedFalse`, `gatedRight`),
-`ProofTruth`, `ProofSetup` and `runProofBatch`.
+`ProofTruth`, `ProofTone`, `ProofSetup` and `runProofBatch`.
 
 ### Example
 
@@ -233,6 +244,8 @@ Also exports `ProofScore` (`runs`, `naiveFalse`, `naiveRight`, `gatedFalse`, `ga
 import ProofLab from "@/components/ProofLab";
 
 <ProofLab />
+
+<ProofLab tone="panel" folded batchSize={200} />
 ```
 
 Reading the score, for example to headline it above the fold:

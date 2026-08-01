@@ -53,6 +53,7 @@ const PANEL_TOKENS = {
   "--border": "rgba(255, 255, 255, 0.1)",
   "--border-strong": "rgba(255, 255, 255, 0.22)",
   "--accent": "#34d399",
+  "--accent-foreground": "#04140c",
   "--accent-soft": "rgba(52, 211, 153, 0.12)",
   "--danger": "#fb7185",
   "--danger-soft": "rgba(251, 113, 133, 0.12)",
@@ -452,13 +453,13 @@ function RuleCard({
     state === "false"
       ? { text: truth === "identical" ? "False winner" : "Wrong ad", css: "border-danger/40 bg-danger-soft text-danger" }
       : state === "right"
-        ? { text: "Correct call", css: "border-accent/40 bg-accent-soft text-accent" }
+        ? { text: "Correct call", css: "border-accent bg-accent text-accent-foreground" }
         : state === "held"
           ? {
               text: truth === "identical" ? "No winner called" : "No call",
               css:
                 truth === "identical"
-                  ? "border-accent/40 bg-accent-soft text-accent"
+                  ? "border-accent bg-accent text-accent-foreground"
                   : "border-border bg-surface-2 text-muted",
             }
           : state === "watching"
@@ -530,7 +531,7 @@ function RuleCard({
               key={name}
               className={`flex min-w-0 items-center gap-1 rounded-md border px-1.5 py-1 text-[0.6875rem] ${
                 verdict.gates[i]
-                  ? "border-accent/35 bg-accent-soft text-accent"
+                  ? "border-accent/45 bg-accent-soft text-foreground"
                   : "border-border bg-surface text-subtle"
               }`}
             >
@@ -597,6 +598,8 @@ export default function ProofLab({
   batchSize = 100,
   autoBatch = true,
   seed = 4000,
+  tone = "auto",
+  folded = false,
   onScore,
 }: Props) {
   const [truth, setTruth] = useState<ProofTruth>(defaultTruth);
@@ -767,16 +770,27 @@ export default function ProofLab({
             naiveFalseRate,
           )} of the time. The four gates: ${pct(gatedRightRate)} right, ${pct(gatedFalseRate)} wrong.`;
 
-  return (
+  const tokens = tone === "panel" ? PANEL_TOKENS : undefined;
+
+  const panel = (
     <section
       aria-label="Proof lab"
-      className={`card overflow-hidden p-4 sm:p-6 ${className}`.trim()}
+      className={`card overflow-hidden p-4 sm:p-6 ${folded ? "mt-3 rounded-2xl" : className}`.trim()}
+      style={folded ? undefined : tokens}
     >
-      <p className="eyebrow">Proof lab, running in your browser</p>
-      <h3 className="mt-2 text-balance text-[1.125rem] font-semibold leading-tight tracking-tight sm:text-[1.375rem]">
-        Same ads, same traffic, two ways to call a winner.
-      </h3>
-      <p className="mt-2 max-w-2xl text-pretty text-[0.875rem] leading-relaxed text-muted">
+      {folded ? null : (
+        <>
+          <p className="eyebrow">Proof lab, running in your browser</p>
+          <h3 className="mt-2 text-balance text-[1.125rem] font-semibold leading-tight tracking-tight sm:text-[1.375rem]">
+            Same ads, same traffic, two ways to call a winner.
+          </h3>
+        </>
+      )}
+      <p
+        className={`max-w-2xl text-pretty text-[0.875rem] leading-relaxed text-muted ${
+          folded ? "" : "mt-2"
+        }`.trim()}
+      >
         The naive rule stops the moment one ad looks 95% likely to be best. Banditd needs four gates
         to clear. Choose a truth the ads do not know about, then watch which rule respects it.
       </p>
@@ -1041,5 +1055,27 @@ export default function ProofLab({
         .
       </p>
     </section>
+  );
+
+  if (!folded) return panel;
+
+  return (
+    <details className={`group ${className}`.trim()} style={tokens}>
+      <summary className="hover-tint focus-ring flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl border border-border bg-surface-2 px-3 py-3 hover:border-border-strong sm:px-4">
+        <span className="min-w-0">
+          <span className="block break-words text-[0.8125rem] font-semibold text-foreground">
+            Check the false winner rate yourself
+          </span>
+          <span className="mt-0.5 block break-words text-[0.6875rem] leading-snug text-muted">
+            Same ads, same traffic, two ways to call a winner. It runs in this browser, calls no API
+            and spends nothing.
+          </span>
+        </span>
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-transform duration-200 group-open:rotate-180">
+          <Caret />
+        </span>
+      </summary>
+      {panel}
+    </details>
   );
 }

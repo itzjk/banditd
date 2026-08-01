@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { useRouter } from "next/navigation";
 import type { State } from "@/lib/store";
 import Glossary from "@/components/Glossary";
+import ProofLab from "@/components/ProofLab";
 import {
   BanditLearning,
   BigNumber,
@@ -792,6 +793,10 @@ export default function Home() {
                   same comparison runs 8.5% down to 0.0%.
                 </Body>
               </Surface>
+            </Rise>
+
+            <Rise delay={140} className="mt-4">
+              <ProofLab folded batchSize={200} />
             </Rise>
 
             <div className="mt-4 grid gap-4 lg:grid-cols-2">
