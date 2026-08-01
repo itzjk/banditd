@@ -26,6 +26,7 @@ import { ctr, money, pct } from "@/components/format";
 
 const MANDATE_CAP = 50;
 const STORAGE_KEY = "banditd_state";
+const IMAGES_KEY = "banditd_images";
 const ANGLES: CreativeAngle[] = ["price", "ritual", "gift", "quality"];
 const MAX_AUDIT = 200;
 
@@ -170,9 +171,38 @@ function save(value: State) {
   }
 }
 
+function saveImages(images: Images) {
+  try {
+    window.localStorage.setItem(IMAGES_KEY, JSON.stringify(images));
+  } catch {
+    try {
+      window.localStorage.removeItem(IMAGES_KEY);
+    } catch {
+      return;
+    }
+  }
+}
+
+function restoreImages(): Images {
+  try {
+    const raw = window.localStorage.getItem(IMAGES_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    const out: Images = {};
+    for (const [id, data] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof data === "string" && data.startsWith("data:image/")) out[id] = data;
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
 function forget() {
   try {
     window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(IMAGES_KEY);
   } catch {
     return;
   }
@@ -367,7 +397,13 @@ export default function Dashboard() {
 
     const { clean, images: found } = split(sane);
     setState(clean);
-    if (Object.keys(found).length > 0) setImages((prev) => ({ ...prev, ...found }));
+    if (Object.keys(found).length > 0) {
+      setImages((prev) => {
+        const merged = { ...prev, ...found };
+        saveImages(merged);
+        return merged;
+      });
+    }
     save(clean);
     return clean;
   }, []);
@@ -392,6 +428,9 @@ export default function Dashboard() {
   useEffect(() => {
     let alive = true;
     const boot = async () => {
+      const cached = restoreImages();
+      if (alive && Object.keys(cached).length > 0) setImages(cached);
+
       const { state: stored, notice: warning } = restore();
       if (alive && warning) setNotice(warning);
       if (stored) {
@@ -476,7 +515,11 @@ export default function Dashboard() {
             creativeId: c.id,
             imagePrompt: c.imagePrompt,
           });
-          setImages((prev) => ({ ...prev, [c.id]: res.imageData }));
+          setImages((prev) => {
+            const merged = { ...prev, [c.id]: res.imageData };
+            saveImages(merged);
+            return merged;
+          });
         } finally {
           settle(c.id);
         }
