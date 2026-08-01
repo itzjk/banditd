@@ -47,7 +47,7 @@ const EXAMPLE = {
 };
 
 const DISPLAY_XL = "text-[clamp(2.25rem,8.4vw,4.5rem)]";
-const SECTION_PAD = "py-20 sm:py-28 lg:py-32";
+const SECTION_PAD = "py-14 sm:py-24 lg:py-32";
 const RISE_EASE = "cubic-bezier(0.22, 0.61, 0.36, 1)";
 
 const riseCallbacks = new WeakMap<Element, () => void>();
@@ -295,6 +295,41 @@ const GUARDRAILS: { label: string; detail: string }[] = [
   { label: "Revocable anytime", detail: "One tap and the agent has nothing left to charge." },
 ];
 
+const BUYER: { label: string; detail: string }[] = [
+  {
+    label: "Sells online",
+    detail:
+      "One store, one catalog, and paid traffic is the main way it grows. Not an agency, not a brand team.",
+  },
+  {
+    label: "Spends $10,000 to $250,000 a month on ads",
+    detail:
+      "Enough that a losing creative is a number you feel. Below that, testing is cheap enough to guess at.",
+  },
+  {
+    label: "Has no data team",
+    detail:
+      "Nobody on staff can tell you whether a test has run long enough, so the call gets made on a hunch and a dashboard.",
+  },
+  {
+    label: "Ships new creative every week",
+    detail:
+      "The ads that lose cost exactly as much as the ads that win, and you only find out which was which afterwards.",
+  },
+];
+
+const PRICING: { price: string; ceiling: string }[] = [
+  { price: "$149", ceiling: "up to $50,000 a month in managed ad spend" },
+  { price: "$399", ceiling: "up to $250,000 a month" },
+  { price: "$999", ceiling: "up to $1,000,000 a month" },
+];
+
+const PAYBACK: { label: string; value: string }[] = [
+  { label: "Ad spend in a month", value: "$20,000" },
+  { label: "Creative not fit for purpose, at the 54% estimate", value: "$10,800" },
+  { label: "banditd, first tier", value: "$149" },
+];
+
 const HERO_STATS: { value: string; label: string }[] = [
   { value: "4", label: "ads per run" },
   { value: "0.5%", label: "false winner rate" },
@@ -365,7 +400,7 @@ export default function Home() {
             </span>
             <a
               href="#start"
-              className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground rounded-lg bg-foreground px-3.5 py-2 text-xs font-semibold text-background transition-opacity hover:opacity-90"
+              className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground inline-flex min-h-11 items-center rounded-lg bg-foreground px-4 text-[0.8125rem] font-semibold text-background transition-opacity hover:opacity-90"
             >
               Start a run
             </a>
@@ -403,7 +438,7 @@ export default function Home() {
             </div>
 
             <div className="mt-8 grid items-start gap-6 sm:mt-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,23rem)] lg:gap-10">
-              <div className="enter order-1 min-w-0" style={{ animationDelay: "120ms" }}>
+              <div className="enter order-2 min-w-0 lg:order-1" style={{ animationDelay: "200ms" }}>
                 <Surface level="raised" className="overflow-hidden">
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-4 py-3 sm:px-5">
                     <Eyebrow as="span" className="min-w-0 text-muted">
@@ -417,8 +452,8 @@ export default function Home() {
                 </Surface>
               </div>
 
-              <div className="enter order-2 min-w-0" style={{ animationDelay: "200ms" }}>
-                <Surface level="feature" id="start" className="scroll-mt-24 p-5 sm:p-6">
+              <div className="enter order-1 min-w-0 lg:order-2" style={{ animationDelay: "120ms" }}>
+                <Surface level="feature" id="start" className="scroll-mt-20 p-5 sm:p-6">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <Title as="h2">Start with a product</Title>
@@ -427,7 +462,7 @@ export default function Home() {
                     <button
                       type="button"
                       onClick={fillExample}
-                      className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground hover-tint shrink-0 rounded-lg border border-border bg-surface-2 px-3 py-2 text-xs font-medium text-muted hover:border-border-strong hover:text-foreground"
+                      className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground hover-tint inline-flex min-h-11 shrink-0 items-center rounded-lg border border-border bg-surface-2 px-3.5 text-[0.8125rem] font-medium text-muted hover:border-border-strong hover:text-foreground"
                     >
                       Use example
                     </button>
@@ -495,7 +530,7 @@ export default function Home() {
                     <button
                       type="submit"
                       disabled={busy}
-                      className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground w-full rounded-lg bg-foreground px-4 py-3 text-sm font-semibold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground min-h-[3.25rem] w-full rounded-lg bg-foreground px-4 text-[0.9375rem] font-semibold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {busy ? "Handing it to the agent" : "Hand it to the agent"}
                     </button>
@@ -619,11 +654,11 @@ export default function Home() {
               </Headline>
             </Rise>
 
-            <ol className="mt-12">
+            <ol className="mt-8 sm:mt-12">
               {STEPS.map((step, i) => (
                 <li key={step.n}>
                   <Rise delay={i * 70}>
-                    <div className="grid gap-5 border-t border-border py-9 sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-8 sm:py-12">
+                    <div className="grid gap-4 border-t border-border py-7 sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-8 sm:py-12">
                       <div className="flex items-center gap-4 sm:flex-col sm:items-start sm:gap-4">
                         <Mono className="font-medium text-accent">{step.n}</Mono>
                         <Surface
@@ -899,6 +934,157 @@ export default function Home() {
           </div>
         </section>
 
+        <section className={`border-b border-border ${SECTION_PAD}`}>
+          <div className="mx-auto w-full max-w-5xl px-gutter">
+            <Rise>
+              <Eyebrow className="text-muted">Who it is for, and what it would cost</Eyebrow>
+              <Headline className="mt-4 max-w-3xl">
+                For the seller who pays for every losing test out of the same budget.
+              </Headline>
+              <Body className="mt-5 max-w-2xl text-muted">
+                Not everyone who runs ads. The one who spends enough that a bad creative is a number
+                they feel, and who has nobody on staff to say when a test has run long enough to act
+                on.
+              </Body>
+            </Rise>
+
+            <div className="mt-10 grid gap-3 sm:grid-cols-2">
+              {BUYER.map((b, i) => (
+                <Rise key={b.label} delay={i * 60}>
+                  <Surface level="quiet" className="h-full p-5">
+                    <div className="flex items-center gap-2">
+                      <span className="size-1.5 shrink-0 rounded-full bg-accent" />
+                      <p className="min-w-0 text-[0.9375rem] font-semibold tracking-tight">
+                        {b.label}
+                      </p>
+                    </div>
+                    <Caption className="mt-2.5 text-muted">{b.detail}</Caption>
+                  </Surface>
+                </Rise>
+              ))}
+            </div>
+
+            <Rise delay={80}>
+              <Surface level="feature" className="mt-4 overflow-hidden">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-5 py-3.5 sm:px-7">
+                  <Eyebrow as="span" className="min-w-0 text-muted">
+                    Proposed pricing
+                  </Eyebrow>
+                  <Mono className="min-w-0 text-muted">nothing is on sale yet</Mono>
+                </div>
+
+                <div className="px-5 py-6 sm:px-7 sm:py-8">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {PRICING.map((tier) => (
+                      <Surface key={tier.price} level="quiet" className="h-full p-5">
+                        <p className="t-num text-[clamp(1.75rem,4vw,2.375rem)] font-semibold leading-none tracking-[-0.03em]">
+                          {tier.price}
+                          <span className="ml-1.5 align-baseline text-sm font-normal text-muted">
+                            a month
+                          </span>
+                        </p>
+                        <Caption className="mt-3 text-muted">{tier.ceiling}</Caption>
+                      </Surface>
+                    ))}
+                  </div>
+
+                  <Body className="mt-6 max-w-2xl text-muted">
+                    Every tier is the same product. The only thing that moves is how much ad spend
+                    the agent is allowed to manage. Above a million a month it stops being a price
+                    list.
+                  </Body>
+
+                  <Caption className="mt-5 max-w-2xl text-muted">
+                    This is a proposal. banditd has no customers, no revenue and nothing for sale
+                    today. The tiers are drawn against what the market already charges for the same
+                    shape of tool:{" "}
+                    <a
+                      href="https://adalysis.com/pricing/"
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="focus-ring underline decoration-border-strong underline-offset-2 hover:text-foreground"
+                    >
+                      Adalysis
+                    </a>{" "}
+                    is $149 a month up to $50,000 of managed spend and $950 up to $1 million,{" "}
+                    <a
+                      href="https://www.optmyzr.com/pricing/"
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="focus-ring underline decoration-border-strong underline-offset-2 hover:text-foreground"
+                    >
+                      Optmyzr
+                    </a>{" "}
+                    starts at $299 up to $25,000. Neither of them buys anything.
+                  </Caption>
+                </div>
+              </Surface>
+            </Rise>
+
+            <Rise delay={140}>
+              <Surface level="raised" className="mt-4 overflow-hidden">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-5 py-3.5 sm:px-7">
+                  <Eyebrow as="span" className="min-w-0 text-muted">
+                    Where the subscription pays for itself
+                  </Eyebrow>
+                  <Mono className="min-w-0 text-muted">a $20,000 a month seller</Mono>
+                </div>
+
+                <div className="grid gap-8 px-5 py-6 sm:px-7 sm:py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,17rem)] lg:gap-12">
+                  <div className="min-w-0">
+                    <dl>
+                      {PAYBACK.map((row) => (
+                        <div
+                          key={row.label}
+                          className="flex items-baseline justify-between gap-4 border-b border-border py-3.5 first:pt-0"
+                        >
+                          <Small as="dt" className="min-w-0">
+                            {row.label}
+                          </Small>
+                          <dd className="t-num min-w-0 text-right font-mono text-base font-medium">
+                            {row.value}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                    <Body className="mt-6 max-w-xl text-muted">
+                      So the subscription is covered the moment it moves 1.4% of that wasted spend
+                      onto creative that works, which is 0.75% of the whole budget. Everything past
+                      that line is the seller&apos;s.
+                    </Body>
+                    <Caption className="mt-4 max-w-xl text-muted">
+                      The 54% is Meta&apos;s estimate of how much creative misses, not a claim about
+                      what banditd recovers.{" "}
+                      <a
+                        href="https://bravebison.com/insights/creative-is-the-new-targeting-how-to-ensure-your-performance-media-actually/"
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="focus-ring underline decoration-border-strong underline-offset-2 hover:text-foreground"
+                      >
+                        Meta estimate, reported by Brave Bison, June 2025
+                      </a>
+                      . We have never run a paid campaign, so we have no recovery figure of our own.
+                      The arithmetic is here so you can size the bet yourself.
+                    </Caption>
+                  </div>
+
+                  <div className="min-w-0 border-t border-border pt-6 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0">
+                    <BigNumber
+                      value={1.4}
+                      decimals={1}
+                      suffix="%"
+                      countUp={false}
+                      tone="accent"
+                      label="of the waste has to come back"
+                      detail="$149 against the $10,800 a month that is going to creative nobody responds to."
+                    />
+                  </div>
+                </div>
+              </Surface>
+            </Rise>
+          </div>
+        </section>
+
         <section className="pb-20 pt-20 sm:pb-24 sm:pt-28">
           <div className="mx-auto w-full max-w-5xl px-gutter">
             <Rise>
@@ -911,7 +1097,7 @@ export default function Home() {
                 </Body>
                 <a
                   href="#start"
-                  className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground mt-8 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-foreground px-6 py-3.5 text-sm font-semibold text-background transition-opacity hover:opacity-90 sm:w-auto"
+                  className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground mt-8 inline-flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-lg bg-foreground px-6 text-[0.9375rem] font-semibold text-background transition-opacity hover:opacity-90 sm:w-auto"
                 >
                   Start a run
                   <ArrowRight className="size-4" />

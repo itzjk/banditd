@@ -90,7 +90,7 @@ function ratio(current: number, target: number): number {
 
 function SimTag() {
   return (
-    <span className="rounded-full border border-white/12 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-zinc-400">
+    <span className="rounded-full border border-white/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
       Simulated traffic
     </span>
   );
@@ -162,7 +162,7 @@ function GateRow({
         className={`h-full border-l-2 px-3 py-3 transition-colors duration-200 sm:px-4 ${edge} ${tint}`}
       >
         <div className="flex items-start justify-between gap-2">
-          <h4 className="min-w-0 break-words text-[13px] font-semibold leading-snug text-zinc-100">
+          <h4 className="min-w-0 break-words text-[14px] font-semibold leading-snug text-zinc-100">
             {gate.name}
           </h4>
           <span
@@ -188,7 +188,7 @@ function GateRow({
               {gate.unit}
             </span>
           </span>
-          <span className="shrink-0 text-[11px] tabular-nums text-zinc-400">{gate.required}</span>
+          <span className="shrink-0 text-[12px] tabular-nums text-zinc-400">{gate.required}</span>
         </div>
 
         <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white/10">
@@ -202,13 +202,13 @@ function GateRow({
           />
         </div>
 
-        <p className="mt-2.5 break-words text-[11px] leading-relaxed text-zinc-400">
+        <p className="mt-2.5 break-words text-[13px] leading-relaxed text-zinc-400">
           {gate.meaning}
         </p>
 
         {!gate.met && blocking ? (
           <p
-            className={`mt-1.5 break-words text-[11px] font-medium leading-relaxed text-zinc-300 transition-opacity duration-200 ${veil}`}
+            className={`mt-1.5 break-words text-[12px] font-medium leading-relaxed text-zinc-300 transition-opacity duration-200 ${veil}`}
           >
             {gate.action}
           </p>
@@ -273,13 +273,13 @@ export default function GatesPanel({
               <h3 className="text-[14px] font-semibold tracking-tight text-white">
                 Decision gates
               </h3>
-              <p className="mt-0.5 break-words text-[11px] leading-snug text-zinc-400">
+              <p className="mt-0.5 break-words text-[12px] leading-snug text-zinc-400">
                 Four conditions. All four clear before a cent moves.
               </p>
             </div>
             <SimTag />
           </div>
-          <p className="mt-2.5 break-words text-[12px] leading-relaxed text-zinc-400">
+          <p className="mt-2.5 break-words text-[13px] leading-relaxed text-zinc-400">
             No evaluation yet. They fill in here once traffic starts.
           </p>
         </div>
@@ -288,14 +288,14 @@ export default function GatesPanel({
             <li key={gate.id} className="bg-zinc-950">
               <div className="h-full border-l-2 border-white/10 px-3 py-3 sm:px-4">
                 <div className="flex items-start justify-between gap-2">
-                  <h4 className="min-w-0 break-words text-[13px] font-semibold leading-snug text-zinc-400">
+                  <h4 className="min-w-0 break-words text-[14px] font-semibold leading-snug text-zinc-400">
                     {gate.name}
                   </h4>
                   <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-300">
                     Not run
                   </span>
                 </div>
-                <p className="mt-2.5 break-words text-[11px] leading-relaxed text-zinc-400">
+                <p className="mt-2.5 break-words text-[13px] leading-relaxed text-zinc-400">
                   {gate.meaning}
                 </p>
               </div>
@@ -380,13 +380,13 @@ export default function GatesPanel({
         <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
           <div className="min-w-0">
             <h3 className="text-[14px] font-semibold tracking-tight text-white">Decision gates</h3>
-            <p className="mt-0.5 break-words text-[11px] leading-snug text-zinc-400">
+            <p className="mt-0.5 break-words text-[12px] leading-snug text-zinc-400">
               Four conditions. All four clear before a cent moves.
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <SimTag />
-            <span className="text-[11px] font-semibold tabular-nums text-zinc-300">
+            <span className="text-[12px] font-semibold tabular-nums text-zinc-300">
               {clearedSoFar} of {gates.length}
             </span>
           </div>
@@ -420,7 +420,7 @@ export default function GatesPanel({
                 <CheckIcon />
                 All four gates cleared
               </div>
-              <p className="mt-1 break-words text-[13px] leading-relaxed text-zinc-200">
+              <p className="mt-1 break-words text-[14px] leading-relaxed text-zinc-200">
                 {candidateLabel ? `"${candidateLabel}"` : "The leading ad"} has earned the budget. The
                 agent is cleared to spend on it.
               </p>
@@ -437,10 +437,10 @@ export default function GatesPanel({
                 <WaitIcon />
                 Waiting on: {blocker ? blocker.name : "one more check"}
               </div>
-              <p className="mt-1 break-words text-[13px] leading-relaxed text-zinc-200">
+              <p className="mt-1 break-words text-[14px] leading-relaxed text-zinc-200">
                 {blocker ? blocker.action : "The agent is holding until every gate clears."}
               </p>
-              <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-400">
+              <p className="mt-1.5 text-[12px] leading-relaxed text-zinc-400">
                 Nothing is broken. The agent is deliberately not spending until this clears.
               </p>
             </div>

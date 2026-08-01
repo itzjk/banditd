@@ -154,7 +154,7 @@ export default function MarketPanel({ research, productName }: Props) {
             Not run yet
           </span>
         </div>
-        <p className="mt-3 text-[13px] leading-relaxed text-zinc-400">
+        <p className="mt-3 text-[14px] leading-relaxed text-zinc-400">
           Run the research and this fills with who buys it, the angles competitors run, where your
           price lands, and every live source the agent read.
         </p>
@@ -170,7 +170,7 @@ export default function MarketPanel({ research, productName }: Props) {
     <Shell>
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
         <div className="min-w-0">
-          <p className="break-words text-[11px] leading-snug text-zinc-400 [overflow-wrap:anywhere]">
+          <p className="break-words text-[12px] leading-snug text-zinc-400 [overflow-wrap:anywhere]">
             {productName ? `Evidence behind the ads for ${productName}` : "Evidence behind the ads"}
           </p>
         </div>
@@ -206,7 +206,7 @@ export default function MarketPanel({ research, productName }: Props) {
         </div>
       </div>
 
-      <p className="mt-2 text-[11px] leading-relaxed text-zinc-400">
+      <p className="mt-2 text-[12px] leading-relaxed text-zinc-400">
         Pulled from pages fetched during this run, not from model memory. Numbers in the text link to
         the source they came from.
       </p>
@@ -221,7 +221,7 @@ export default function MarketPanel({ research, productName }: Props) {
               <p
                 key={i}
                 className={`break-words leading-relaxed [overflow-wrap:anywhere] ${
-                  i === 0 ? "text-[14px] text-zinc-100" : "text-[13px] text-zinc-400"
+                  i === 0 ? "text-[15px] text-zinc-100" : "text-[14px] text-zinc-400"
                 }`}
               >
                 <Cited
@@ -233,7 +233,7 @@ export default function MarketPanel({ research, productName }: Props) {
             ))}
           </div>
         ) : (
-          <p className="mt-2 text-[13px] text-zinc-400">No buyer profile came back.</p>
+          <p className="mt-2 text-[14px] text-zinc-400">No buyer profile came back.</p>
         )}
       </div>
 
@@ -242,7 +242,7 @@ export default function MarketPanel({ research, productName }: Props) {
           <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
             What competitors say
           </div>
-          <span className="text-[11px] tabular-nums text-zinc-400">
+          <span className="text-[12px] tabular-nums text-zinc-400">
             {angles.length} {angles.length === 1 ? "angle" : "angles"} found
           </span>
         </div>
@@ -255,7 +255,7 @@ export default function MarketPanel({ research, productName }: Props) {
                   <span className="mt-[3px] w-5 shrink-0 font-mono text-[10px] tabular-nums text-zinc-400">
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                  <span className="min-w-0 flex-1 break-words text-[13px] leading-relaxed text-zinc-300 [overflow-wrap:anywhere]">
+                  <span className="min-w-0 flex-1 break-words text-[14px] leading-relaxed text-zinc-300 [overflow-wrap:anywhere]">
                     <Cited
                       value={angle.text}
                       citations={angle.citations}
@@ -270,14 +270,14 @@ export default function MarketPanel({ research, productName }: Props) {
                 type="button"
                 aria-expanded={allAngles}
                 onClick={() => setAllAngles((v) => !v)}
-                className="mt-2 w-full cursor-pointer rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[13px] font-medium text-zinc-300 transition-colors hover:bg-white/[0.07]"
+                className="mt-2 min-h-[2.75rem] w-full cursor-pointer rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[14px] font-medium text-zinc-300 transition-colors hover:bg-white/[0.07]"
               >
                 {allAngles ? "Show fewer" : `Show all ${angles.length}`}
               </button>
             ) : null}
           </>
         ) : (
-          <p className="mt-2 text-[13px] text-zinc-400">No competitor angles came back.</p>
+          <p className="mt-2 text-[14px] text-zinc-400">No competitor angles came back.</p>
         )}
       </div>
 
@@ -294,12 +294,12 @@ export default function MarketPanel({ research, productName }: Props) {
                 numberOf={registry.numberOf}
               />
             </p>
-            <p className="mt-2 text-[11px] leading-snug text-zinc-400">
+            <p className="mt-2 text-[12px] leading-snug text-zinc-400">
               This is the claim the price angle ads argue from.
             </p>
           </div>
         ) : (
-          <p className="mt-2 text-[13px] text-zinc-400">No price positioning came back.</p>
+          <p className="mt-2 text-[14px] text-zinc-400">No price positioning came back.</p>
         )}
       </div>
 
@@ -308,7 +308,7 @@ export default function MarketPanel({ research, productName }: Props) {
           <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
             Sources
           </div>
-          <span className="text-[11px] tabular-nums text-zinc-400">
+          <span className="text-[12px] tabular-nums text-zinc-400">
             {sources.length} read across {domains} {domains === 1 ? "site" : "sites"}
           </span>
         </div>
@@ -331,15 +331,15 @@ export default function MarketPanel({ research, productName }: Props) {
                         {registry.numberOf(source.url)}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block break-words text-[13px] leading-snug text-zinc-200 group-hover:text-white [overflow-wrap:anywhere]">
+                        <span className="block break-words text-[14px] leading-snug text-zinc-200 group-hover:text-white [overflow-wrap:anywhere]">
                           {source.title || domain}
                         </span>
                         <span className="mt-0.5 flex min-w-0 flex-wrap items-baseline gap-x-1">
-                          <span className="min-w-0 break-all font-mono text-[11px] text-zinc-400">
+                          <span className="min-w-0 break-all font-mono text-[12px] text-zinc-400">
                             {domain}
                           </span>
                           {path ? (
-                            <span className="min-w-0 truncate font-mono text-[11px] text-zinc-400">
+                            <span className="min-w-0 truncate font-mono text-[12px] text-zinc-400">
                               {path}
                             </span>
                           ) : null}
@@ -347,7 +347,7 @@ export default function MarketPanel({ research, productName }: Props) {
                       </span>
                       <span
                         aria-hidden="true"
-                        className="mt-[1px] shrink-0 text-[11px] text-zinc-400 group-hover:text-zinc-200"
+                        className="mt-[1px] shrink-0 text-[13px] text-zinc-400 group-hover:text-zinc-200"
                       >
                         ↗
                       </span>
@@ -361,14 +361,14 @@ export default function MarketPanel({ research, productName }: Props) {
                 type="button"
                 aria-expanded={allSources}
                 onClick={() => setAllSources((v) => !v)}
-                className="mt-2 w-full cursor-pointer rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[13px] font-medium text-zinc-300 transition-colors hover:bg-white/[0.07]"
+                className="mt-2 min-h-[2.75rem] w-full cursor-pointer rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[14px] font-medium text-zinc-300 transition-colors hover:bg-white/[0.07]"
               >
                 {allSources ? "Show fewer" : `Show all ${sources.length} sources`}
               </button>
             ) : null}
           </>
         ) : (
-          <p className="mt-2 text-[13px] text-zinc-400">
+          <p className="mt-2 text-[14px] text-zinc-400">
             The search returned no citable sources on this run.
           </p>
         )}

@@ -49,10 +49,10 @@ export default function AgentStatus({ title, steps, intervalMs = 2200 }: Props) 
             <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-200">
               {title}
             </div>
-            <div className="truncate text-[13px] text-zinc-200">{steps[index] ?? steps[0]}</div>
+            <div className="truncate text-[14px] text-zinc-200">{steps[index] ?? steps[0]}</div>
           </div>
         </div>
-        <div className="text-[11px] tabular-nums text-zinc-400">{elapsed}s</div>
+        <div className="text-[12px] tabular-nums text-zinc-400">{elapsed}s</div>
       </div>
 
       <div className="h-0.5 w-full overflow-hidden bg-white/10">
@@ -63,7 +63,7 @@ export default function AgentStatus({ title, steps, intervalMs = 2200 }: Props) 
         {steps.map((s, i) => (
           <li
             key={s}
-            className={`flex items-center gap-1.5 text-[11px] ${
+            className={`flex items-center gap-1.5 text-[12px] ${
               i < index ? "text-zinc-400 line-through" : i === index ? "text-zinc-200" : "text-zinc-400"
             }`}
           >

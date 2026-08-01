@@ -120,6 +120,7 @@ export interface Mandate {
   validUntil?: string;
   renewsAt?: string;
   merchantScope?: string;
+  merchantName?: string;
   maxCharges?: number;
 }
 
@@ -137,6 +138,24 @@ export async function getMandate(id: string): Promise<Mandate> {
   const res = await call<Mandate | { data?: Mandate; mandate?: Mandate }>(`/v1/mandates/${id}`, "GET");
   const obj = res as { data?: Mandate; mandate?: Mandate };
   return obj.data ?? obj.mandate ?? (res as Mandate);
+}
+
+export async function cancelMandate(id: string): Promise<Mandate> {
+  const res = await call<Mandate | { data?: Mandate; mandate?: Mandate }>(
+    `/v1/mandates/${id}/cancel`,
+    "POST",
+    {},
+  );
+  const obj = res as { data?: Mandate; mandate?: Mandate };
+  return obj.data ?? obj.mandate ?? (res as Mandate);
+}
+
+export interface ChargeContext {
+  merchantName: string;
+  merchantUrl: string;
+  merchantCountry: string;
+  productDescription: string;
+  unitPrice: string;
 }
 
 export interface ChargeCredentials {
@@ -192,13 +211,31 @@ export async function chargeMandate(
   mandateId: string,
   amount: string,
   reference: string,
+  context?: ChargeContext,
 ): Promise<ChargeResult> {
+  const body: Json = { amount, reference };
+  if (context) {
+    body.purchase_context = [
+      {
+        merchant_details: {
+          name: context.merchantName,
+          url: context.merchantUrl,
+          country_code_iso2: context.merchantCountry,
+        },
+        product_details: [
+          {
+            description: context.productDescription,
+            unit_price: context.unitPrice,
+            quantity: 1,
+          },
+        ],
+      },
+    ];
+  }
+
   let raw: RawCharge;
   try {
-    raw = await call<RawCharge>(`/v1/mandates/${mandateId}/charge`, "POST", {
-      amount,
-      reference,
-    });
+    raw = await call<RawCharge>(`/v1/mandates/${mandateId}/charge`, "POST", body);
   } catch (e) {
     if (e instanceof PravaError) {
       return { ok: false, code: e.code, message: e.message, httpStatus: e.status, mandateId };

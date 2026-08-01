@@ -39,6 +39,32 @@ async function setup() {
   console.log(session.iframe_url);
 }
 
+async function setupMerchant() {
+  const session = await createMandateSession({
+    userId: process.env.PRAVA_USER_ID ?? "seller_demo_1",
+    userEmail: process.env.PRAVA_USER_EMAIL ?? "seller@banditd.dev",
+    amount: "10.00",
+    merchantName: "Allbirds",
+    merchantUrl: "https://www.allbirds.com",
+    merchantCountry: "US",
+    productDescription: "Allbirds Anytime No Show Sock, Rugged Beige",
+    merchantScope: "listed",
+    maxCharges: 10,
+    validUntil: validUntil(30),
+    recurringFrequency: "monthly",
+  });
+
+  console.log("session_id     ", session.session_id);
+  console.log("authorizeOnly  ", session.authorizeOnly);
+  console.log("expires_at     ", session.expires_at);
+  console.log("");
+  console.log("This mandate is scoped to Allbirds only, cap 10.00 USD.");
+  console.log("Open this URL and approve with your passkey:");
+  console.log(session.iframe_url);
+  console.log("");
+  console.log("After signing, pin it with PRAVA_MERCHANT_DEMO_MANDATE_ID or let the agent find it by merchant name.");
+}
+
 async function list() {
   const mandates = await listMandates(process.env.PRAVA_USER_ID ?? "seller_demo_1");
   if (!mandates.length) {
@@ -47,9 +73,15 @@ async function list() {
   }
   for (const m of mandates) {
     console.log(
-      [m.id, m.status, m.state ?? "", m.approvedAmount ?? "", m.remaining ?? "", m.validUntil ?? ""].join(
-        "  ",
-      ),
+      [
+        m.id,
+        m.status,
+        m.state ?? "",
+        m.merchantName ?? "",
+        m.approvedAmount ?? "",
+        m.remaining ?? "",
+        m.validUntil ?? "",
+      ].join("  "),
     );
   }
 }
@@ -85,13 +117,14 @@ async function main() {
   const [cmd, ...rest] = process.argv.slice(2);
   try {
     if (cmd === "setup") return await setup();
+    if (cmd === "setup-merchant") return await setupMerchant();
     if (cmd === "list") return await list();
     if (cmd === "charge") {
       const [id, amount] = rest;
       if (!id) throw new Error("usage: charge <mandate_id> [amount]");
       return await charge(id, amount ?? "4.00");
     }
-    console.log("usage: setup | list | charge <mandate_id> [amount]");
+    console.log("usage: setup | setup-merchant | list | charge <mandate_id> [amount]");
   } catch (e) {
     if (e instanceof PravaError) {
       console.error(`PravaError ${e.status} ${e.code}: ${e.message}`);

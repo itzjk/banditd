@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import Link from "next/link";
 import type {
   AuditEntry,
@@ -9,11 +17,13 @@ import type {
   Product,
   PurchaseEvent,
   Research,
+  Round,
+  RoundArm,
   State,
 } from "@/lib/store";
 import MandateBar from "@/components/MandateBar";
 import CreativeCard from "@/components/CreativeCard";
-import PurchaseEventItem from "@/components/PurchaseEvent";
+import { PurchaseLedger } from "@/components/PurchaseEvent";
 import AuditLog from "@/components/AuditLog";
 import AgentStatus from "@/components/AgentStatus";
 import PosteriorChart from "@/components/PosteriorChart";
@@ -38,6 +48,7 @@ const STORAGE_KEY = "banditd_state";
 const IMAGES_KEY = "banditd_images";
 const ANGLES: CreativeAngle[] = ["price", "ritual", "gift", "quality"];
 const MAX_AUDIT = 200;
+const MAX_ROUNDS = 200;
 
 const UNREADABLE =
   "A saved session in this browser could not be read, so it was discarded. You are starting clean.";
@@ -133,6 +144,29 @@ function safeAudit(value: unknown): AuditEntry | null {
   return { at: text(a.at), kind: text(a.kind), detail: text(a.detail) };
 }
 
+function safeRoundArm(value: unknown): RoundArm | null {
+  const a = record(value);
+  if (!a || typeof a.id !== "string") return null;
+  const impressions = Math.max(0, Math.floor(count(a.impressions)));
+  const clicks = Math.max(0, Math.floor(count(a.clicks)));
+  return { id: a.id, impressions, clicks: Math.min(clicks, impressions) };
+}
+
+function safeRound(value: unknown): Round | null {
+  const r = record(value);
+  if (!r) return null;
+  const arms = list(r.arms)
+    .map(safeRoundArm)
+    .filter((a): a is RoundArm => a !== null);
+  if (arms.length === 0) return null;
+  return {
+    at: text(r.at),
+    generation: Math.max(0, Math.floor(count(r.generation))),
+    served: Math.max(0, Math.floor(count(r.served))),
+    arms,
+  };
+}
+
 function sanitize(value: unknown): State | null {
   const raw = record(value);
   if (!raw) return null;
@@ -149,6 +183,10 @@ function sanitize(value: unknown): State | null {
       .map(safeAudit)
       .filter((a): a is AuditEntry => a !== null)
       .slice(0, MAX_AUDIT),
+    rounds: list(raw.rounds)
+      .map(safeRound)
+      .filter((r): r is Round => r !== null)
+      .slice(-MAX_ROUNDS),
     mandateId: typeof raw.mandateId === "string" ? raw.mandateId : null,
     simulatedImpressions: count(raw.simulatedImpressions),
   };
@@ -166,6 +204,7 @@ function split(input: State): { clean: State; images: Images } {
     creatives,
     purchases: input.purchases,
     audit: input.audit,
+    rounds: input.rounds,
     mandateId: input.mandateId,
     simulatedImpressions: input.simulatedImpressions,
   };
@@ -317,8 +356,24 @@ function Action({
         </span>
         <span className="min-w-0 break-words">{running ? "Working" : label}</span>
       </span>
-      <span className="break-words text-[11px] leading-snug text-zinc-400">{hint}</span>
+      <span className="break-words text-[12px] leading-snug text-zinc-400">{hint}</span>
     </button>
+  );
+}
+
+const WIDE = "(min-width: 640px)";
+
+function subscribeWide(notify: () => void) {
+  const query = window.matchMedia(WIDE);
+  query.addEventListener("change", notify);
+  return () => query.removeEventListener("change", notify);
+}
+
+function useWide(): boolean {
+  return useSyncExternalStore(
+    subscribeWide,
+    () => window.matchMedia(WIDE).matches,
+    () => true,
   );
 }
 
@@ -403,7 +458,7 @@ function Band({
           <h2 className="mt-2 break-words text-lg font-semibold tracking-tight text-white sm:text-xl">
             {title}
           </h2>
-          <p className="mt-1.5 max-w-2xl break-words text-[12px] leading-relaxed text-zinc-400 sm:text-[13px]">
+          <p className="mt-1.5 max-w-2xl break-words text-[13px] leading-relaxed text-zinc-400">
             {summary}
           </p>
         </div>
@@ -416,27 +471,45 @@ function Band({
 function Fold({
   title,
   hint,
+  defaultOpen = false,
   children,
 }: {
   title: string;
   hint: string;
+  defaultOpen?: boolean;
   children: React.ReactNode;
 }) {
+  const [choice, setChoice] = useState<boolean | null>(null);
+  const open = choice ?? defaultOpen;
+  const panel = useId();
+
   return (
-    <details className="group">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.02] px-3 py-3 transition-colors duration-150 hover:border-white/20 hover:bg-white/[0.05] sm:px-4">
+    <section>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panel}
+        onClick={() => setChoice(!open)}
+        className="flex min-h-[3.5rem] w-full cursor-pointer items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.02] px-3 py-3 text-left transition-colors duration-150 hover:border-white/20 hover:bg-white/[0.05] sm:px-4"
+      >
         <span className="min-w-0">
-          <span className="block break-words text-[13px] font-semibold text-zinc-100">{title}</span>
-          <span className="mt-0.5 block break-words text-[11px] leading-snug text-zinc-400">
+          <span className="block break-words text-[14px] font-semibold text-zinc-100">{title}</span>
+          <span className="mt-0.5 block break-words text-[12px] leading-snug text-zinc-400">
             {hint}
           </span>
         </span>
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-white/12 bg-white/[0.05] text-zinc-300 transition-transform duration-200 group-open:rotate-180">
+        <span
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/12 bg-white/[0.05] text-zinc-300 transition-transform duration-200 ${
+            open ? "rotate-180" : ""
+          }`}
+        >
           <Caret />
         </span>
-      </summary>
-      <div className="mt-3">{children}</div>
-    </details>
+      </button>
+      <div id={panel} className={open ? "mt-3" : "hidden"}>
+        {children}
+      </div>
+    </section>
   );
 }
 
@@ -458,6 +531,8 @@ export default function Dashboard() {
   const [receipt, setReceipt] = useState<LastPurchase | null>(null);
   const [impressions, setImpressions] = useState(1000);
   const [autoRunning, setAutoRunning] = useState(false);
+  const [revoked, setRevoked] = useState(false);
+  const wide = useWide();
 
   const absorb = useCallback((next: State) => {
     const sane = sanitize(next);
@@ -673,6 +748,28 @@ export default function Dashboard() {
       setReceipt(res.lastPurchase ?? null);
     });
 
+  const forceMerchantReject = () =>
+    run("scope", async () => {
+      const res = await api<PurchaseResponse>("/api/purchase", {
+        reason:
+          "Deliberate charge for the render credits merchant against the mandate signed for Allbirds, fired by hand to show the merchant lock refusing the agent",
+        winnerId: winnerId ?? cohort[0]?.id,
+        probabilityBest: freshEvaluation?.probabilityBest ?? 0,
+        impressions: cohortImpressions,
+        force: "merchant",
+        state,
+      });
+      absorb(res);
+      setReceipt(res.lastPurchase ?? null);
+    });
+
+  const revoke = () =>
+    run("revoke", async () => {
+      const res = await api<PurchaseResponse>("/api/mandate/revoke", { state });
+      absorb(res);
+      setRevoked(true);
+    });
+
   return (
     <div className="min-h-screen bg-zinc-950 font-sans text-zinc-100">
       <MandateBar
@@ -680,18 +777,20 @@ export default function Dashboard() {
         cap={MANDATE_CAP}
         purchases={purchases}
         working={locked}
-        chargeable={!mandateBlocked}
+        chargeable={!mandateBlocked && !revoked}
+        revoked={revoked}
+        onRevoke={revoke}
       />
 
       <main className="mx-auto w-full max-w-6xl px-4 pb-24 pt-5 sm:px-6 sm:pt-8">
         <div className="space-y-4 sm:space-y-5">
         {notice ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2.5 text-[12px] leading-snug text-zinc-300">
-            <span className="min-w-0 break-words">{notice}</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[13px] leading-snug text-zinc-300">
+            <span className="min-w-0 break-words py-1">{notice}</span>
             <button
               type="button"
               onClick={() => setNotice(null)}
-              className="shrink-0 text-[11px] uppercase tracking-wider text-zinc-400 hover:text-white"
+              className="-mr-2 flex min-h-[2.75rem] shrink-0 items-center px-2 text-[12px] uppercase tracking-wider text-zinc-400 hover:text-white"
             >
               Dismiss
             </button>
@@ -714,7 +813,7 @@ export default function Dashboard() {
                 <h1 className="mt-1.5 break-words text-2xl font-semibold leading-tight tracking-tight text-white [overflow-wrap:anywhere] sm:text-3xl lg:text-4xl">
                   {state.product.name}
                 </h1>
-                <p className="mt-2 max-w-2xl break-words text-[13px] leading-relaxed text-zinc-400 [overflow-wrap:anywhere] sm:text-sm">
+                <p className="mt-2 max-w-2xl break-words text-[14px] leading-relaxed text-zinc-400 [overflow-wrap:anywhere]">
                   {state.product.description}
                 </p>
               </div>
@@ -733,13 +832,13 @@ export default function Dashboard() {
               <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
                 {busy === "load" ? "Loading the agent state" : "No product yet"}
               </h1>
-              <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-zinc-400">
+              <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-zinc-400">
                 Submit a product on the home page and the agent takes it from there: research,
                 creatives, traffic, and the spend decision.
               </p>
               <Link
                 href="/"
-                className="mt-4 inline-flex rounded-xl bg-white px-4 py-2.5 text-[13px] font-semibold text-zinc-950 transition-colors hover:bg-zinc-200"
+                className="mt-4 inline-flex min-h-[2.75rem] items-center rounded-xl bg-white px-5 text-[14px] font-semibold text-zinc-950 transition-colors hover:bg-zinc-200"
               >
                 Go submit a product
               </Link>
@@ -765,13 +864,13 @@ export default function Dashboard() {
 
         {receipt ? (
           <div
-            className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-[13px] ${
+            className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-1.5 text-[14px] ${
               receipt.ok
                 ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
                 : "border-rose-400/40 bg-rose-500/10 text-rose-200"
             }`}
           >
-            <span className="min-w-0">
+            <span className="min-w-0 py-1.5">
               {receipt.ok
                 ? `Charged $${money(receipt.amount)} on a single use card ending ${receipt.cardLast4 ?? "????"}.`
                 : `Blocked at $${money(receipt.amount)}: ${receipt.errorCode ?? "declined"}. Nothing was spent.`}
@@ -779,7 +878,7 @@ export default function Dashboard() {
             <button
               type="button"
               onClick={() => setReceipt(null)}
-              className="text-[11px] uppercase tracking-wider text-zinc-400 hover:text-zinc-200"
+              className="-mr-2 flex min-h-[2.75rem] shrink-0 items-center px-2 text-[12px] uppercase tracking-wider text-zinc-400 hover:text-zinc-200"
             >
               Dismiss
             </button>
@@ -810,11 +909,23 @@ export default function Dashboard() {
               </span>
             </div>
 
-            <p className="mt-2 text-[13px] leading-relaxed text-zinc-200">
+            <p className="mt-2 text-[14px] leading-relaxed text-zinc-200">
               {plain(
                 decision.shouldBuy ? decision.reason : (decision.abstainedBecause ?? decision.reason),
               )}
             </p>
+
+            {!decision.shouldBuy && decision.trafficPlan ? (
+              <div className="mt-3 rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2.5">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                  The agent set the next step itself
+                </div>
+                <p className="mt-1 text-[13px] leading-relaxed text-zinc-200">
+                  It asked for {decision.trafficPlan.targetImpressions.toLocaleString()} impressions
+                  on the board before it reads the evidence again. {plain(decision.trafficPlan.reason)}
+                </p>
+              </div>
+            ) : null}
 
             <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/[0.08] sm:grid-cols-4">
               <Stat label="Probability best" value={pct(freshEvaluation.probabilityBest)} sim />
@@ -836,7 +947,7 @@ export default function Dashboard() {
                 type="button"
                 onClick={purchase}
                 disabled={locked}
-                className="mt-4 w-full rounded-xl bg-white px-4 py-3 text-[15px] font-bold text-zinc-950 transition-colors hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
+                className="mt-4 min-h-[3.25rem] w-full rounded-xl bg-white px-4 py-3 text-[15px] font-bold text-zinc-950 transition-colors hover:bg-zinc-200 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {busy === "purchase"
                   ? "Charging the mandate"
@@ -857,7 +968,12 @@ export default function Dashboard() {
         />
 
         {hasCreatives ? (
-          <PerformanceChart cohort={cohort} winnerId={winnerId} generation={generation} />
+          <PerformanceChart
+            cohort={cohort}
+            winnerId={winnerId}
+            generation={generation}
+            rounds={state?.rounds ?? []}
+          />
         ) : null}
 
         <section className="space-y-4 pt-3">
@@ -868,58 +984,65 @@ export default function Dashboard() {
               </h2>
               <Chip>Simulated traffic</Chip>
             </div>
-            <span className="text-[11px] tabular-nums text-zinc-400">
+            <span className="text-[12px] tabular-nums text-zinc-400">
               {cohort.length} live in generation {generation}, {cohortImpressions.toLocaleString()}{" "}
               simulated impressions
             </span>
           </div>
 
           {hasCreatives ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {cohort.map((c, i) => (
-                <CreativeCard
-                  key={c.id}
-                  index={i}
-                  creative={dressed(c)}
-                  rendering={rendering.has(c.id)}
-                  isWinner={c.id === winnerId}
-                  isLeader={c.id !== winnerId && c.id === leaderId}
-                  probabilityBest={freshEvaluation?.probabilityBest ?? null}
-                  bestCtr={bestCtr}
-                  parentHeadline={c.parentId ? (byId.get(c.parentId)?.headline ?? null) : null}
-                  onEvolve={generate}
-                  evolving={busy === "evolve"}
-                />
-              ))}
-            </div>
+            <>
+              <div className="-mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
+                {cohort.map((c, i) => (
+                  <div key={c.id} className="w-[86%] shrink-0 snap-start sm:w-auto">
+                    <CreativeCard
+                      index={i}
+                      creative={dressed(c)}
+                      rendering={rendering.has(c.id)}
+                      isWinner={c.id === winnerId}
+                      isLeader={c.id !== winnerId && c.id === leaderId}
+                      probabilityBest={freshEvaluation?.probabilityBest ?? null}
+                      bestCtr={bestCtr}
+                      parentHeadline={c.parentId ? (byId.get(c.parentId)?.headline ?? null) : null}
+                      onEvolve={generate}
+                      evolving={busy === "evolve"}
+                    />
+                  </div>
+                ))}
+              </div>
+              <p className="text-[12px] leading-snug text-zinc-400 sm:hidden">
+                Swipe sideways to put the {cohort.length} ads next to each other.
+              </p>
+            </>
           ) : (
             <div className="rounded-2xl border border-dashed border-white/12 bg-white/[0.02] p-6 text-center">
-              <p className="text-[13px] text-zinc-400">
+              <p className="text-[14px] text-zinc-400">
                 No creatives yet. Run the research, then let the agent write four.
               </p>
             </div>
           )}
 
           {creatives.length > cohort.length ? (
-            <details className="rounded-2xl border border-white/10 bg-white/[0.02] p-3">
-              <summary className="cursor-pointer text-[13px] font-medium text-zinc-400">
-                Retired variants from earlier generations ({creatives.length - cohort.length})
-              </summary>
-              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Fold
+              title="Retired variants"
+              hint={`The ${creatives.length - cohort.length} ads from earlier generations, kept so you can see what the winner beat.`}
+            >
+              <div className="-mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
                 {creatives
                   .filter((c) => c.generation !== generation)
                   .map((c) => (
-                    <CreativeCard
-                      key={c.id}
-                      creative={dressed(c)}
-                      rendering={rendering.has(c.id)}
-                      retired
-                      bestCtr={bestCtr}
-                      parentHeadline={c.parentId ? (byId.get(c.parentId)?.headline ?? null) : null}
-                    />
+                    <div key={c.id} className="w-[86%] shrink-0 snap-start sm:w-auto">
+                      <CreativeCard
+                        creative={dressed(c)}
+                        rendering={rendering.has(c.id)}
+                        retired
+                        bestCtr={bestCtr}
+                        parentHeadline={c.parentId ? (byId.get(c.parentId)?.headline ?? null) : null}
+                      />
+                    </div>
                   ))}
               </div>
-            </details>
+            </Fold>
           ) : null}
         </section>
 
@@ -930,17 +1053,33 @@ export default function Dashboard() {
           title="Why it decided that"
           summary="Everything the agent read before it was allowed to spend: what it believes about each ad, the four gates it has to clear, the family tree of winners, the market it researched, and a lab that lets you measure the gates against the obvious rule yourself."
         >
-          <PosteriorChart
-            creatives={cohort}
-            winnerIndex={winnerId ? cohort.findIndex((c) => c.id === winnerId) : null}
-          />
+          <Fold
+            title="The belief curves"
+            hint="How sure the agent is about each ad's click rate. Wide is uncertainty, narrow is confidence."
+            defaultOpen={wide}
+          >
+            <PosteriorChart
+              creatives={cohort}
+              winnerIndex={winnerId ? cohort.findIndex((c) => c.id === winnerId) : null}
+            />
+          </Fold>
 
-          <GatesPanel
-            evaluation={freshEvaluation}
-            candidateImpressions={candidateImpressions}
-            candidateLabel={cohort.find((c) => c.id === winnerId)?.headline}
-            mandateBlocked={mandateBlocked}
-          />
+          <Fold
+            title="The four gates"
+            hint={
+              freshEvaluation
+                ? "Every condition the evidence had to clear before the agent was allowed to spend."
+                : "Nothing measured yet. Open it to read the four conditions the agent has to clear."
+            }
+            defaultOpen={wide || Boolean(freshEvaluation)}
+          >
+            <GatesPanel
+              evaluation={freshEvaluation}
+              candidateImpressions={candidateImpressions}
+              candidateLabel={cohort.find((c) => c.id === winnerId)?.headline}
+              mandateBlocked={mandateBlocked}
+            />
+          </Fold>
 
           <Fold
             title="Lineage of the winners"
@@ -982,25 +1121,10 @@ export default function Dashboard() {
               </span>
             </div>
 
-            {purchases.length ? (
-              <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-2">
-                {purchases.map((p, i) => (
-                  <PurchaseEventItem
-                    key={p.id}
-                    event={p}
-                    latest={i === 0}
-                    winnerHeadline={byId.get(p.winnerId)?.headline ?? null}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-dashed border-white/12 bg-white/[0.02] p-6 text-center">
-                <p className="text-[13px] text-zinc-400">
-                  Nothing charged yet. Every attempt shows up here, the ones that go through and the
-                  ones the mandate refuses.
-                </p>
-              </div>
-            )}
+            <PurchaseLedger
+              events={purchases}
+              headlineFor={(id) => byId.get(id)?.headline ?? null}
+            />
           </section>
 
           <Fold
@@ -1061,7 +1185,7 @@ export default function Dashboard() {
                           key={n}
                           type="button"
                           onClick={() => setImpressions(n)}
-                          className={`rounded-lg border px-3 py-1.5 text-[12px] font-semibold tabular-nums transition-colors ${
+                          className={`min-h-[2.75rem] min-w-[4.5rem] rounded-lg border px-3 text-[13px] font-semibold tabular-nums transition-colors ${
                             impressions === n
                               ? "border-white/30 bg-white/15 text-white"
                               : "border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/[0.07]"
@@ -1077,7 +1201,7 @@ export default function Dashboard() {
                     type="button"
                     onClick={simulate}
                     disabled={locked || !hasCreatives}
-                    className="w-full shrink-0 rounded-xl border border-white/25 bg-white/[0.08] px-5 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-white/[0.15] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+                    className="min-h-[2.75rem] w-full shrink-0 rounded-xl border border-white/25 bg-white/[0.08] px-5 py-2.5 text-[14px] font-semibold text-white transition-colors hover:bg-white/[0.15] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
                   >
                     {busy === "simulate"
                       ? "Serving impressions"
@@ -1095,9 +1219,28 @@ export default function Dashboard() {
                 <span className="text-[13px] font-semibold text-rose-200">
                   {busy === "force" ? "Sending the over cap charge" : "Force a charge over the cap"}
                 </span>
-                <span className="mt-0.5 block break-words text-[11px] leading-snug text-zinc-400">
+                <span className="mt-0.5 block break-words text-[12px] leading-snug text-zinc-400">
                   Fires a charge ten times the ceiling on purpose. The mandate refuses it and the
                   rejection lands above with its reason. Nothing is spent.
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={forceMerchantReject}
+                disabled={locked}
+                className="w-full rounded-xl border border-rose-400/30 bg-rose-500/[0.07] px-3 py-2.5 text-left transition-colors hover:bg-rose-500/[0.14] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <span className="text-[13px] font-semibold text-rose-200">
+                  {busy === "scope"
+                    ? "Sending the off scope charge"
+                    : "Force a charge outside the mandate's merchant"}
+                </span>
+                <span className="mt-0.5 block break-words text-[12px] leading-snug text-zinc-400">
+                  Charges the mandate the seller signed for Allbirds on behalf of the render credits
+                  merchant. Prava refuses it with a 403 because that mandate names one merchant, and
+                  the rejection lands above with its reason. Nothing is spent. If the Allbirds
+                  mandate is not signed yet, the agent says so instead of breaking.
                 </span>
               </button>
             </div>
@@ -1113,7 +1256,7 @@ export default function Dashboard() {
           </Fold>
         </Band>
 
-        <p className="mx-auto mt-10 max-w-3xl break-words text-center text-[12px] leading-relaxed text-zinc-400 sm:mt-14">
+        <p className="mx-auto mt-10 max-w-3xl break-words text-center text-[13px] leading-relaxed text-zinc-400 sm:mt-14">
           Impressions, clicks and click through rates on this page are simulated for the demo.
           Payments run against the Prava sandbox.
         </p>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Creative } from "@/lib/store";
+import type { Creative, Round, RoundArm } from "@/lib/store";
 import { ctr, pct } from "./format";
 
 const RAMP = ["var(--curve-1)", "var(--curve-2)", "var(--curve-3)", "var(--curve-4)"];
@@ -11,10 +11,10 @@ const VW = 1000;
 const VH = 300;
 const TOP = 14;
 const BASE = 286;
-const MAX_ROUNDS = 40;
+const MAX_READINGS = 40;
 const DOT_LIMIT = 12;
 
-interface Round {
+interface Reading {
   served: number;
   rates: number[];
 }
@@ -23,6 +23,7 @@ interface Props {
   cohort: Creative[];
   winnerId: string | null;
   generation: number;
+  rounds: Round[];
 }
 
 function label(cohort: Creative[], index: number): string {
@@ -42,18 +43,18 @@ function ticksOf(count: number): number[] {
   return [...out].sort((a, b) => a - b);
 }
 
-export default function PerformanceChart({ cohort, winnerId, generation }: Props) {
+export default function PerformanceChart({ cohort, winnerId, generation, rounds }: Props) {
   const signature = useMemo(
     () => `${generation}:${cohort.map((c) => c.id).join(",")}`,
     [cohort, generation],
   );
-  const [rounds, setRounds] = useState<Round[]>([]);
+  const [capture, setCapture] = useState<Reading[]>([]);
   const mark = useRef("");
 
   useEffect(() => {
     const served = cohort.reduce((sum, c) => sum + c.arm.impressions, 0);
     const rates = cohort.map((c) => ctr(c.arm.impressions, c.arm.clicks));
-    setRounds((prev) => {
+    setCapture((prev) => {
       const fresh = mark.current !== signature;
       mark.current = signature;
       if (served === 0) return fresh ? [] : prev;
@@ -61,15 +62,40 @@ export default function PerformanceChart({ cohort, winnerId, generation }: Props
       const last = prev[prev.length - 1];
       if (last && last.served === served) return prev;
       const next = [...prev, { served, rates }];
-      return next.length > MAX_ROUNDS ? next.slice(next.length - MAX_ROUNDS) : next;
+      return next.length > MAX_READINGS ? next.slice(next.length - MAX_READINGS) : next;
     });
   }, [cohort, signature]);
+
+  const history = useMemo(() => {
+    if (rounds.length === 0 || cohort.length === 0) return [];
+    const ids = cohort.map((c) => c.id);
+    const readings: Reading[] = [];
+    for (const round of rounds) {
+      if (round.generation !== generation) continue;
+      const byId = new Map(round.arms.map((a) => [a.id, a]));
+      const arms: RoundArm[] = [];
+      for (const id of ids) {
+        const arm = byId.get(id);
+        if (arm) arms.push(arm);
+      }
+      if (arms.length !== ids.length) continue;
+      readings.push({
+        served: arms.reduce((sum, a) => sum + a.impressions, 0),
+        rates: arms.map((a) => ctr(a.impressions, a.clicks)),
+      });
+    }
+    return readings.length > MAX_READINGS
+      ? readings.slice(readings.length - MAX_READINGS)
+      : readings;
+  }, [rounds, cohort, generation]);
 
   const served = cohort.reduce((sum, c) => sum + c.arm.impressions, 0);
   const winner = winnerId ? cohort.findIndex((c) => c.id === winnerId) : -1;
   const current = cohort.map((c) => ctr(c.arm.impressions, c.arm.clicks));
   const peak = Math.max(...current, 0.005);
-  const shown = rounds.length ? rounds : served > 0 ? [{ served, rates: current }] : [];
+  const stored = history.length > 0;
+  const kept = stored ? history : capture;
+  const shown = kept.length ? kept : served > 0 ? [{ served, rates: current }] : [];
 
   const legend = cohort.map((c, i) => ({
     name: label(cohort, i),
@@ -291,8 +317,10 @@ export default function PerformanceChart({ cohort, winnerId, generation }: Props
 
       <p className="mt-2.5 break-words text-[11px] leading-relaxed text-zinc-400">
         Every point is one reading of the click through rate, taken after a round of simulated
-        traffic. The x axis counts impressions served to the live generation. This history is kept in
-        this browser tab while the run is open, a reload starts it over.
+        traffic. The x axis counts impressions served to the live generation.{" "}
+        {stored
+          ? "This history is saved with the run, so a reload keeps it."
+          : "This run started before rounds were saved, so its history lives in this browser tab and a reload starts it over."}
       </p>
     </section>
   );

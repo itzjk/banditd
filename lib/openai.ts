@@ -398,7 +398,17 @@ Winner body: ${parent.body}`
             role: "system",
             content: `You write direct response ad creative and you art direct the photograph that carries it.
 
-Copy: headlines under 60 characters, body under 140 characters, no exclamation marks, no emoji, no hype words.
+Copy: headline 60 characters maximum, body 140 characters maximum. Write headlines around 50 characters and bodies around 115 so you never brush the caps, and cut words if a line runs long. No exclamation marks, no emoji, no em dashes, no hype words.
+
+A headline is one concrete, specific claim about this exact product, in words a buyer would say out loud. If it still works with a rival product's name swapped in, it is too generic, start over. The best headlines land a small twist, a fact the reader did not expect stated plainly. The body adds one new concrete fact or consequence, it never restates the headline. Vary sentence shape across the four variants, no two headlines may open with the same word or construction. Read every line as spoken language, if it would sound stiff or tangled said aloud, rewrite it plainer.
+
+How each angle earns its claim:
+- price: convert the price into a unit the buyer already thinks in, per cup, per workday, per year, or against the familiar thing it replaces or undercuts. Do the arithmetic and put the number in the copy.
+- ritual: drop the reader into one exact moment of use, second person, present tense, the gesture and its small payoff. Anchor the moment by trigger, place or time, whichever fits this product, and never open with a clock time unless nothing else is sharper.
+- gift: speak to the giver, not the recipient. Name who it is for, the occasion, and what the gift says or solves for the person giving it.
+- quality: name one physical, checkable detail that proves the build, a material, a measurement, a construction choice, and let that detail carry the whole claim. Never lean on adjectives like premium, durable or well-made.
+
+Banned anywhere in headline or body: elevate, experience the, unlock, discover, indulge, premium, luxurious, effortless, seamless, game-changer, crafted, elevate your, upgrade your.
 
 Images: the angle has to be legible in the picture alone, with the copy covered up. Never describe the product sitting on a neutral seamless background. Write the imagePrompt as one 30 to 45 word scene that obeys the art direction for its angle:
 
@@ -422,7 +432,7 @@ For each variant also write the imagePrompt: the scene for that angle, following
           },
         ],
         text: { format: zodTextFormat(VariantsSchema, "creative_variants") },
-        max_output_tokens: 2600,
+        max_output_tokens: 3400,
       },
       { signal },
     ),
@@ -493,6 +503,7 @@ export interface SpendDecision {
   amount: string | null;
   reason: string;
   abstainedBecause: string | null;
+  trafficPlan?: { targetImpressions: number; reason: string } | null;
 }
 
 export interface DecisionContext {
@@ -536,6 +547,30 @@ export async function decideSpend(ctx: DecisionContext, budget: Budget): Promise
             },
             strict: true,
           },
+          {
+            type: "function",
+            name: "request_more_traffic",
+            description:
+              "Ask the experiment loop to serve more traffic before deciding again. Call this whenever the evidence is not yet sufficient to buy, instead of abstaining in prose.",
+            parameters: {
+              type: "object",
+              properties: {
+                targetImpressions: {
+                  type: "number",
+                  description:
+                    "Cumulative impressions across all variants the experiment should reach before the next evaluation.",
+                },
+                reason: {
+                  type: "string",
+                  description:
+                    "One plain-language sentence a seller would understand, saying what the extra traffic is meant to settle.",
+                },
+              },
+              required: ["targetImpressions", "reason"],
+              additionalProperties: false,
+            },
+            strict: true,
+          },
         ],
         tool_choice: "auto",
         parallel_tool_calls: false,
@@ -543,7 +578,7 @@ export async function decideSpend(ctx: DecisionContext, budget: Budget): Promise
           {
             role: "system",
             content:
-              "You decide whether to spend a seller's money on more ad render credits. You are spending real money under a mandate the seller set. Buy only when the evidence is sufficient. If it is not, do not call the tool, and explain what you are still waiting for.",
+              "You decide whether to spend a seller's money on more ad render credits. You are spending real money under a mandate the seller set. If the statistical evidence is sufficient, call purchase_render_credits. If it is not, you must call request_more_traffic with a concrete cumulative impression target that would settle the question, never abstain in prose alone. Calling no tool is reserved for rare cases where no action makes sense, for example a mandate with no charge available.",
           },
           {
             role: "user",
@@ -582,6 +617,20 @@ A pack of render credits costs ${ctx.creditPrice}.`,
         amount: args.amount,
         reason: args.reason,
         abstainedBecause: null,
+        trafficPlan: null,
+      };
+    }
+    if (item.type === "function_call" && item.name === "request_more_traffic") {
+      const args = JSON.parse(item.arguments) as { targetImpressions: number; reason: string };
+      return {
+        shouldBuy: false,
+        amount: null,
+        reason: args.reason,
+        abstainedBecause: args.reason,
+        trafficPlan: {
+          targetImpressions: Math.max(1, Math.round(args.targetImpressions)),
+          reason: args.reason,
+        },
       };
     }
   }
@@ -591,5 +640,6 @@ A pack of render credits costs ${ctx.creditPrice}.`,
     amount: null,
     reason: "",
     abstainedBecause: res.output_text || "Evidence is not sufficient yet.",
+    trafficPlan: null,
   };
 }

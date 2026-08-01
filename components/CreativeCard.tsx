@@ -24,9 +24,13 @@ const ANGLE_STYLE = "border-white/20 bg-black/55 text-zinc-200";
 
 function Metric({ label, value, tint }: { label: string; value: string; tint?: string }) {
   return (
-    <div className="rounded-lg bg-white/[0.04] px-2 py-1.5">
+    <div className="rounded-lg bg-white/[0.04] px-2 py-2">
       <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-400">{label}</div>
-      <div className={`text-sm font-semibold tabular-nums ${tint ?? "text-zinc-100"}`}>{value}</div>
+      <div
+        className={`mt-0.5 text-[15px] font-semibold tabular-nums sm:text-sm ${tint ?? "text-zinc-100"}`}
+      >
+        {value}
+      </div>
     </div>
   );
 }
@@ -83,7 +87,7 @@ export default function CreativeCard({
             ) : null}
           </div>
         ) : isLeader ? (
-          <div className="rounded-t-[15px] bg-white/[0.06] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+          <div className="rounded-t-[15px] bg-white/[0.06] px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.16em] text-zinc-300 lg:text-[11px] lg:tracking-[0.12em]">
             Leading on simulated clicks
           </div>
         ) : null}
@@ -134,17 +138,17 @@ export default function CreativeCard({
 
         <div className="flex flex-1 flex-col gap-3 p-3 sm:p-4" style={depthLayer(0, depth, true)}>
           <div style={depthLayer(16, depth)}>
-            <h3 className="break-words text-[15px] font-semibold leading-snug text-white">
+            <h3 className="break-words text-[17px] font-semibold leading-snug text-white sm:text-[15px]">
               {creative.headline}
             </h3>
-            <p className="mt-1 break-words text-[13px] leading-relaxed text-zinc-400">
+            <p className="mt-1.5 break-words text-[14px] leading-relaxed text-zinc-400 sm:mt-1 sm:text-[13px]">
               {creative.body}
             </p>
           </div>
 
           <div
             style={depthLayer(8, depth)}
-            className="break-words text-[11px] leading-relaxed text-zinc-400"
+            className="break-words text-[12px] leading-relaxed text-zinc-400"
           >
             {creative.parentId ? (
               <>
@@ -188,7 +192,7 @@ export default function CreativeCard({
               onClick={() => onEvolve(creative.id)}
               disabled={evolving}
               style={depthLayer(22, depth)}
-              className="mt-1 w-full rounded-xl border border-white/25 bg-white/[0.08] px-3 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-white/[0.16] disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-1 min-h-[2.75rem] w-full rounded-xl border border-white/25 bg-white/[0.08] px-3 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-white/[0.16] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {evolving ? "Breeding the next generation" : "Breed 4 variants from this one"}
             </button>

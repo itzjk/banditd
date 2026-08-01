@@ -49,12 +49,26 @@ export interface AuditEntry {
   detail: string;
 }
 
+export interface RoundArm {
+  id: string;
+  impressions: number;
+  clicks: number;
+}
+
+export interface Round {
+  at: string;
+  generation: number;
+  served: number;
+  arms: RoundArm[];
+}
+
 export interface State {
   product: Product | null;
   research: Research | null;
   creatives: Creative[];
   purchases: PurchaseEvent[];
   audit: AuditEntry[];
+  rounds: Round[];
   mandateId: string | null;
   simulatedImpressions: number;
 }
@@ -66,6 +80,7 @@ export interface Session {
 
 const ANGLES: CreativeAngle[] = ["price", "ritual", "gift", "quality"];
 export const MAX_AUDIT = 200;
+export const MAX_ROUNDS = 200;
 
 export function emptyState(): State {
   return {
@@ -74,6 +89,7 @@ export function emptyState(): State {
     creatives: [],
     purchases: [],
     audit: [],
+    rounds: [],
     mandateId: process.env.PRAVA_MANDATE_ID ?? null,
     simulatedImpressions: 0,
   };
@@ -169,6 +185,29 @@ function coerceAudit(value: unknown): AuditEntry | null {
   return { at: text(a.at), kind: text(a.kind), detail: text(a.detail) };
 }
 
+function coerceRoundArm(value: unknown): RoundArm | null {
+  const a = record(value);
+  if (!a || typeof a.id !== "string") return null;
+  const impressions = Math.max(0, Math.floor(count(a.impressions)));
+  const clicks = Math.max(0, Math.floor(count(a.clicks)));
+  return { id: a.id, impressions, clicks: Math.min(clicks, impressions) };
+}
+
+function coerceRound(value: unknown): Round | null {
+  const r = record(value);
+  if (!r) return null;
+  const arms = list(r.arms)
+    .map(coerceRoundArm)
+    .filter((a): a is RoundArm => a !== null);
+  if (arms.length === 0) return null;
+  return {
+    at: text(r.at),
+    generation: Math.max(0, Math.floor(count(r.generation))),
+    served: Math.max(0, Math.floor(count(r.served))),
+    arms,
+  };
+}
+
 export function coerceState(value: unknown): State | null {
   const raw = record(value);
   if (!raw) return null;
@@ -186,6 +225,10 @@ export function coerceState(value: unknown): State | null {
       .map(coerceAudit)
       .filter((a): a is AuditEntry => a !== null)
       .slice(0, MAX_AUDIT),
+    rounds: list(raw.rounds)
+      .map(coerceRound)
+      .filter((r): r is Round => r !== null)
+      .slice(-MAX_ROUNDS),
     mandateId: typeof raw.mandateId === "string" ? raw.mandateId : null,
     simulatedImpressions: count(raw.simulatedImpressions),
   };

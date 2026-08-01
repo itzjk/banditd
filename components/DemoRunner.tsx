@@ -14,13 +14,16 @@ export type Task =
   | "simulate"
   | "decide"
   | "purchase"
-  | "force";
+  | "force"
+  | "scope"
+  | "revoke";
 
 export interface Decision {
   shouldBuy: boolean;
   amount: string | null;
   reason: string;
   abstainedBecause: string | null;
+  trafficPlan?: { targetImpressions: number; reason: string } | null;
 }
 
 export interface Evaluation {
@@ -118,6 +121,21 @@ export const AGENT_STEPS: Record<Task, { title: string; steps: string[] }> = {
       "Building a charge above the signed ceiling",
       "Sending it at the mandate on purpose",
       "Waiting for the refusal",
+    ],
+  },
+  scope: {
+    title: "Testing the merchant lock",
+    steps: [
+      "Finding the mandate signed for Allbirds",
+      "Charging it for the render credits merchant on purpose",
+      "Waiting for the refusal",
+    ],
+  },
+  revoke: {
+    title: "Revoking the mandate",
+    steps: [
+      "Telling Prava to cancel the authorization",
+      "Confirming nothing can be charged anymore",
     ],
   },
 };
@@ -299,7 +317,7 @@ function RoundTrack({ rounds }: { rounds: Round[] }) {
         <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
           Anytime valid frontier
         </span>
-        <span className="text-[11px] tabular-nums text-zinc-400">
+        <span className="text-[12px] tabular-nums text-zinc-400">
           Look {latest.n} of {MAX_ROUNDS}
         </span>
       </div>
@@ -318,7 +336,7 @@ function RoundTrack({ rounds }: { rounds: Round[] }) {
               >
                 {strength(latest.eValue)}
               </span>
-              <span className="text-[11px] text-zinc-400">of {EVIDENCE_TARGET} needed</span>
+              <span className="text-[12px] text-zinc-400">of {EVIDENCE_TARGET} needed</span>
             </div>
           </div>
           <span
@@ -341,7 +359,7 @@ function RoundTrack({ rounds }: { rounds: Round[] }) {
           />
         </div>
 
-        <p className="mt-2 text-[11px] leading-relaxed text-zinc-400">
+        <p className="mt-2 text-[12px] leading-relaxed text-zinc-400">
           Every round is another look at the same test. Only new traffic moves this number, which is
           what makes looking again and again safe.
         </p>
@@ -358,7 +376,7 @@ function RoundTrack({ rounds }: { rounds: Round[] }) {
           {rounds.map((row) => (
             <li
               key={row.n}
-              className="enter-soft grid grid-cols-[1.6rem_1fr_3rem_3.4rem] items-baseline gap-1 px-2 py-1.5 text-[11px] tabular-nums"
+              className="enter-soft grid grid-cols-[1.6rem_1fr_3rem_3.4rem] items-baseline gap-1 px-2 py-2 text-[12px] tabular-nums"
             >
               <span className="text-zinc-400">{row.n}</span>
               <span className="text-zinc-300">{row.impressions.toLocaleString()}</span>
@@ -376,7 +394,7 @@ function RoundTrack({ rounds }: { rounds: Round[] }) {
       </div>
 
       <p
-        className={`mt-2 text-[11px] leading-relaxed ${
+        className={`mt-2 text-[12px] leading-relaxed ${
           latest.cleared ? "text-zinc-100" : "text-zinc-400"
         }`}
       >
@@ -452,7 +470,7 @@ function TimelineRow({ entry }: { entry: Entry }) {
       <StatusDot status={entry.status} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <span className={`text-[13px] font-semibold ${title}`}>{entry.label}</span>
+          <span className={`text-[14px] font-semibold ${title}`}>{entry.label}</span>
           {typeof entry.seconds === "number" ? (
             <span className="text-[10px] tabular-nums text-zinc-400">{entry.seconds}s</span>
           ) : null}
@@ -461,7 +479,7 @@ function TimelineRow({ entry }: { entry: Entry }) {
           <p className="mt-0.5 text-[12px] leading-relaxed text-zinc-400">{entry.detail}</p>
         ) : null}
         {entry.note ? (
-          <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-400">{entry.note}</p>
+          <p className="mt-0.5 text-[12px] leading-relaxed text-zinc-400">{entry.note}</p>
         ) : null}
       </div>
     </li>
@@ -644,6 +662,7 @@ export default function DemoRunner({
       round: number;
       opened: boolean;
       parentCtr: number;
+      plan: { targetImpressions: number; reason: string } | null;
     } = {
       current: state,
       decision: null,
@@ -654,6 +673,7 @@ export default function DemoRunner({
       round: 0,
       opened: false,
       parentCtr: 0,
+      plan: null,
     };
 
     const serve = async (label: string) => {
@@ -663,7 +683,16 @@ export default function DemoRunner({
 
         while (held.round < MAX_ROUNDS) {
           held.round += 1;
-          const size = roundSize(impressions, held.round);
+          let size = roundSize(impressions, held.round);
+          if (held.plan) {
+            const total = cohortOf(held.current).reduce((sum, c) => sum + c.arm.impressions, 0);
+            const gap = held.plan.targetImpressions - total;
+            if (gap > 0) {
+              size = Math.min(ROUND_CEILING, gap);
+            } else {
+              held.plan = null;
+            }
+          }
           const next = await call<State>(
             "/api/simulate",
             { impressions: size, state: held.current },
@@ -691,6 +720,11 @@ export default function DemoRunner({
 
           if (evaluation.sufficientEvidence) {
             held.opened = true;
+            break;
+          }
+
+          if (held.plan && row.impressions >= held.plan.targetImpressions) {
+            held.plan = null;
             break;
           }
 
@@ -744,8 +778,17 @@ export default function DemoRunner({
           };
         }
 
+        const plan = res.decision.trafficPlan ?? null;
+        held.plan = plan;
         const cleared = gatesCleared(res.evaluation);
         held.gate = cleared ? null : blockingGate(res.evaluation);
+        if (plan) {
+          return {
+            tone: "held" as Tone,
+            detail: `Held the money and set its own target: ${plan.targetImpressions.toLocaleString()} impressions on the board before it reads the evidence again`,
+            note: plain(plan.reason),
+          };
+        }
         return {
           tone: "held" as Tone,
           detail: cleared
@@ -798,7 +841,9 @@ export default function DemoRunner({
         await serve(
           attempt === 1
             ? "Serve traffic and look again until the gates open"
-            : "Serve more traffic and look again",
+            : held.plan
+              ? `Serve the ${held.plan.targetImpressions.toLocaleString()} impressions the agent asked for`
+              : "Serve more traffic and look again",
         );
 
         guard();
@@ -809,7 +854,7 @@ export default function DemoRunner({
 
         const stalled =
           held.decision?.shouldBuy !== true &&
-          held.evaluation?.sufficientEvidence === false &&
+          (held.evaluation?.sufficientEvidence === false || held.plan !== null) &&
           held.round < MAX_ROUNDS &&
           attempt < MAX_DECISIONS;
 
@@ -1000,7 +1045,7 @@ export default function DemoRunner({
           </h2>
         </div>
 
-        <p className="mt-1.5 max-w-2xl text-[12px] leading-relaxed text-zinc-300 sm:text-[13px]">
+        <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-zinc-300">
           End to end: research the market, write four ads with images, then serve traffic in rounds
           starting at {impressions.toLocaleString()} impressions and re-read the evidence after
           every round, up to {MAX_ROUNDS} looks. It spends only when all four gates open, then
@@ -1027,7 +1072,7 @@ export default function DemoRunner({
           </button>
         )}
 
-        <p className="mt-2 text-[11px] leading-relaxed text-zinc-400">
+        <p className="mt-2 text-[12px] leading-relaxed text-zinc-400">
           {ready
             ? "Live run: real web search, real image generation and a real sandbox charge against the signed mandate."
             : "Submit a product on the home page first, then this runs the whole story on its own."}
@@ -1040,7 +1085,7 @@ export default function DemoRunner({
             <AgentStatus title={AGENT_STEPS[active.task].title} steps={AGENT_STEPS[active.task].steps} />
           </div>
           {patience ? (
-            <p className="mt-2 text-[11px] leading-relaxed text-zinc-400">
+            <p className="mt-2 text-[12px] leading-relaxed text-zinc-400">
               {active.task === "simulate"
                 ? `Still working after ${waited}s. The loop keeps serving traffic and re-reading the frontier every round, this is the test running, not a hang.`
                 : `Still working after ${waited}s. The web search and the image renders regularly take more than a minute, this is waiting, not broken.`}
@@ -1057,7 +1102,7 @@ export default function DemoRunner({
             <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
               What the agent did
             </span>
-            <span className="text-[11px] tabular-nums text-zinc-400">
+            <span className="text-[12px] tabular-nums text-zinc-400">
               {entries.filter((e) => e.status !== "running").length} of{" "}
               {Math.max(TOTAL_STEPS, entries.length)}
             </span>
@@ -1078,7 +1123,7 @@ export default function DemoRunner({
             >
               {ending.headline}
             </div>
-            <p className="mt-1 text-[12px] leading-relaxed text-zinc-200 sm:text-[13px]">
+            <p className="mt-1 text-[13px] leading-relaxed text-zinc-200">
               {ending.text}
             </p>
           </div>

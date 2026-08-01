@@ -252,11 +252,11 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
     <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-b border-white/10 pb-3">
         <div className="min-w-0">
-          <div className="text-[12px] font-semibold tabular-nums text-zinc-200">
+          <div className="text-[13px] font-semibold tabular-nums text-zinc-200">
             {rows.length} {rows.length === 1 ? "generation" : "generations"}, {creatives.length}{" "}
             {creatives.length === 1 ? "variant" : "variants"}
           </div>
-          <div className="mt-0.5 text-[11px] leading-snug text-zinc-400">
+          <div className="mt-0.5 text-[12px] leading-snug text-zinc-400">
             <span className="sm:hidden">Swipe the tree sideways. </span>
             Oldest at the top, the winner of each row breeds the next.
           </div>
@@ -332,13 +332,13 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
                     <span className="rounded-md border border-white/10 bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-300">
                       Gen {row.generation}
                     </span>
-                    <span className="text-[11px] tabular-nums text-zinc-400">
+                    <span className="text-[12px] tabular-nums text-zinc-400">
                       {row.nodes.length} {row.nodes.length === 1 ? "variant" : "variants"}
                     </span>
                     {row.winner && row.winner.arm.impressions ? (
                       <>
                         <span aria-hidden="true" className="h-3 w-px self-center bg-white/12" />
-                        <span className="text-[11px] tabular-nums text-zinc-300">
+                        <span className="text-[12px] tabular-nums text-zinc-300">
                           best {pct(winnerRate, 2)}
                         </span>
                       </>
@@ -365,7 +365,7 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
                             : "border-white/12"
                         }`}
                       >
-                        <p className="text-[10px] leading-snug text-zinc-300 sm:text-[11px]">
+                        <p className="text-[11px] leading-snug text-zinc-300 sm:text-[12px]">
                           {paidGenerations.has(row.generation) ? (
                             <span className="font-semibold text-emerald-300">
                               Agent bought render credits
@@ -395,7 +395,7 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
                   <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                     Gen 1
                   </div>
-                  <p className="mx-auto mt-1 max-w-md text-[12px] leading-relaxed text-zinc-400">
+                  <p className="mx-auto mt-1 max-w-md text-[13px] leading-relaxed text-zinc-400">
                     The descendants show up here once the agent buys its own credits and breeds four
                     variants of the winner above.
                   </p>

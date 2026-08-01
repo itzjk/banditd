@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { openSession, commit, logAudit } from "@/lib/store";
+import { openSession, commit, logAudit, logRound } from "@/lib/store";
 import type { Creative } from "@/lib/store";
 import { simulateTraffic } from "@/lib/bandit";
 
@@ -58,6 +58,13 @@ export async function POST(req: Request) {
     c.arm.clicks = served[i].clicks;
   });
   state.simulatedImpressions += impressions;
+
+  logRound(
+    state,
+    generation,
+    impressions,
+    live.map((c) => ({ id: c.id, impressions: c.arm.impressions, clicks: c.arm.clicks })),
+  );
 
   logAudit(
     state,

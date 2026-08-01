@@ -195,6 +195,28 @@ Stack
 
 Next.js 16, React 19, TypeScript, Tailwind 4, OpenAI, the Prava REST API, deployed on Vercel.
 
+Who it's for, and what it would cost
+
+Everything in this section is a proposal. banditd has no customers, no revenue and nothing for sale. It was built in 34 hours at a hackathon. The numbers below are how we would price it, not money anyone has paid.
+
+The buyer is a seller, not an agency and not a brand team. One store, one catalog, paid traffic is how it grows. Spending roughly $10,000 to $250,000 a month on ads, which is the band where a losing creative is a number you feel and there is still nobody on staff who can tell you when a test has run long enough. Below that band, testing is cheap enough to guess at. Above it there is an in-house analyst whose job this already is.
+
+The pricing shape is not ours. The market already charges by tier of managed ad spend: [Adalysis](https://adalysis.com/pricing/) is $149 a month up to $50,000 of spend, $349 to $250,000 and $950 to $1M; [Optmyzr](https://www.optmyzr.com/pricing/) starts at $299 up to $25,000. Neither of them buys anything on your behalf. Priced against those:
+
+| A month | Managed ad spend |
+|---|---|
+| $149 | up to $50,000 |
+| $399 | up to $250,000 |
+| $999 | up to $1,000,000 |
+
+Every tier is the same product. The only thing that moves is how much spend the agent is allowed to manage.
+
+Does the money work? Take a seller seeded at $20,000 a month. Meta estimates 54% of ad spend across its platforms goes to creative that is not fit for purpose ([Meta estimate, reported by Brave Bison, June 2025](https://bravebison.com/insights/creative-is-the-new-targeting-how-to-ensure-your-performance-media-actually/)), which is $10,800 a month landing on ads nobody responds to. The first tier is $149. So the subscription is covered the moment it recovers 1.4% of that waste, or 0.75% of the whole budget.
+
+That 54% is Meta's estimate of the size of the problem. It is not a claim about what banditd recovers, and we do not have a recovery figure of our own because we have never run a paid campaign. The arithmetic is here so the size of the bet is checkable rather than asserted.
+
+What we would be selling is not render credits. It is the layer that governs the spend: a signed mandate, a verifiable criterion for spending, a readable decline when it goes over, and a receipt that says why. Render credits are the smallest thing an agent can buy to exercise that whole circuit end to end.
+
 What's next
 
 Right now it's one seller, creative generation, and buying render credits.

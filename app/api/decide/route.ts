@@ -159,6 +159,12 @@ export async function POST(req: Request) {
       "decision",
       `Agent wants to spend ${decision.amount} on render credits for "${candidate?.headline ?? "unknown variant"}" at ${(evaluation.probabilityBest * 100).toFixed(1)}% probability best. ${decision.reason}`,
     );
+  } else if (decision.trafficPlan) {
+    logAudit(
+      state,
+      "decision",
+      `Agent asked for ${decision.trafficPlan.targetImpressions.toLocaleString("en-US")} impressions before re-reading the evidence: ${decision.trafficPlan.reason}`,
+    );
   } else {
     logAudit(
       state,

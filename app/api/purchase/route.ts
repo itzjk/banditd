@@ -8,9 +8,17 @@ import {
   rejectionTarget,
   overCapAmount,
   exhaustionMessage,
+  merchantDemoTarget,
+  scopeDemoAmount,
+  renderCreditsContext,
   NO_MANDATE_AVAILABLE,
   NO_MANDATE_MESSAGE,
+  MERCHANT_MANDATE_MISSING,
+  MERCHANT_MANDATE_MISSING_MESSAGE,
+  DEMO_MERCHANT_NAME,
 } from "@/lib/mandate";
+import type { MandateQueue, MandateCandidate } from "@/lib/mandate";
+import type { ChargeContext } from "@/lib/prava";
 import type { PurchaseEvent } from "@/lib/store";
 
 export const maxDuration = 60;
@@ -21,7 +29,7 @@ interface PurchaseBody {
   winnerId?: string;
   probabilityBest?: number;
   impressions?: number;
-  force?: boolean;
+  force?: boolean | "merchant";
   state?: unknown;
 }
 
@@ -68,7 +76,9 @@ export async function POST(req: Request) {
     );
   }
 
-  const force = body.force === true;
+  const forceCap = body.force === true;
+  const forceMerchant = body.force === "merchant";
+  const force = forceCap || forceMerchant;
 
   const verdict = evaluate(
     cohort.map((c) => c.arm),
@@ -91,7 +101,7 @@ export async function POST(req: Request) {
   const provenProbability = verdict.probabilityBest;
   const provenImpressions = verdict.totalImpressions;
 
-  if (!state.mandateId) {
+  if (!forceMerchant && !state.mandateId) {
     return NextResponse.json(
       {
         error:
@@ -111,21 +121,42 @@ export async function POST(req: Request) {
     );
   }
 
-  const queue = await mandateQueue(
-    force ? 0 : Number(requested),
-    preferredId,
-    process.env.PRAVA_USER_ID,
-  );
-  const target = force ? rejectionTarget(queue, preferredId) : null;
-  const attempts = force ? (target ? [target] : []) : queue.candidates;
+  let queue: MandateQueue;
+  let attempts: MandateCandidate[];
+  let amount: string;
+  let chargeContext: ChargeContext | undefined;
 
-  const amount = force ? overCapAmount(target) : requested!;
+  if (forceMerchant) {
+    const demo = await merchantDemoTarget(process.env.PRAVA_USER_ID);
+    if (!demo) {
+      return NextResponse.json(
+        { error: MERCHANT_MANDATE_MISSING_MESSAGE, code: MERCHANT_MANDATE_MISSING },
+        { status: 409 },
+      );
+    }
+    queue = { all: [demo], candidates: [demo], skipped: [], reserved: null, listError: null };
+    attempts = [demo];
+    amount = scopeDemoAmount(demo);
+    chargeContext = renderCreditsContext(amount);
+  } else {
+    queue = await mandateQueue(
+      forceCap ? 0 : Number(requested),
+      preferredId,
+      process.env.PRAVA_USER_ID,
+    );
+    const target = forceCap ? rejectionTarget(queue, preferredId) : null;
+    attempts = forceCap ? (target ? [target] : []) : queue.candidates;
+    amount = forceCap ? overCapAmount(target) : requested!;
+  }
+
   const winnerId = provenWinner ?? body.winnerId?.trim() ?? "unknown_creative";
   const reason =
     body.reason?.trim() ||
-    (force
-      ? `Deliberate over-cap charge of ${amount} to prove the mandate ceiling holds`
-      : "Bandit called the winner and bought more render credits");
+    (forceMerchant
+      ? `Deliberate ${amount} charge for a merchant outside the mandate's list to prove the merchant lock holds`
+      : forceCap
+        ? `Deliberate over-cap charge of ${amount} to prove the mandate ceiling holds`
+        : "Bandit called the winner and bought more render credits");
   const probabilityBest = provenProbability;
   const impressions = provenImpressions;
   const baseReference = `banditd_${Date.now()}_${winnerId}`;
@@ -138,11 +169,19 @@ export async function POST(req: Request) {
     );
   }
 
-  if (force && target) {
+  if (forceCap && attempts.length) {
     logAudit(
       state,
       "purchase",
-      `Forcing a ${amount} charge against the ${target.approvedAmount.toFixed(2)} ceiling on reserved mandate ${target.id} to show the guardrail rejecting the agent`,
+      `Forcing a ${amount} charge against the ${attempts[0].approvedAmount.toFixed(2)} ceiling on reserved mandate ${attempts[0].id} to show the guardrail rejecting the agent`,
+    );
+  }
+
+  if (forceMerchant && attempts.length) {
+    logAudit(
+      state,
+      "purchase",
+      `Forcing a ${amount} render credits charge against mandate ${attempts[0].id}, which the seller signed for ${DEMO_MERCHANT_NAME} only, to show the merchant scope guardrail rejecting the agent`,
     );
   }
 
@@ -154,7 +193,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const rotation = await chargeWithRotation(attempts, amount, baseReference);
+  const rotation = await chargeWithRotation(attempts, amount, baseReference, chargeContext);
 
   for (const skipped of rotation.rotated) {
     logAudit(
@@ -253,7 +292,7 @@ export async function POST(req: Request) {
   };
 
   state.purchases.unshift(event);
-  state.mandateId = usedMandateId;
+  if (!forceMerchant) state.mandateId = usedMandateId;
 
   logAudit(
     state,

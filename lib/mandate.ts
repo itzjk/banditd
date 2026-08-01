@@ -1,10 +1,17 @@
 import { listMandates, chargeMandate } from "./prava.ts";
-import type { ChargeResult, Mandate } from "./prava.ts";
+import type { ChargeContext, ChargeResult, Mandate } from "./prava.ts";
 
 export const NO_MANDATE_AVAILABLE = "NO_MANDATE_AVAILABLE";
 
 export const NO_MANDATE_MESSAGE =
   "Every mandate the seller signed has already been charged in this monthly cycle, so there is nothing left to spend against. Nothing was spent on this attempt. A Prava mandate with a monthly frequency allows one charge per cycle: the seller has to sign another mandate for the agent to keep buying before the cycle renews.";
+
+export const MERCHANT_MANDATE_MISSING = "MERCHANT_MANDATE_MISSING";
+
+export const MERCHANT_MANDATE_MISSING_MESSAGE =
+  "The merchant scope demo needs a mandate signed for Allbirds and there is none on the account yet. Nothing was attempted and nothing was spent. Create the session with the setup-merchant script, approve it with the passkey, and the agent will find it by merchant name, or pin it with PRAVA_MERCHANT_DEMO_MANDATE_ID.";
+
+export const DEMO_MERCHANT_NAME = "Allbirds";
 
 interface LastCharge {
   status?: string | null;
@@ -149,6 +156,43 @@ export function overCapAmount(target: MandateCandidate | null): string {
   return (cap * 10).toFixed(2);
 }
 
+export async function merchantDemoTarget(customerId?: string): Promise<MandateCandidate | null> {
+  const pinned = process.env.PRAVA_MERCHANT_DEMO_MANDATE_ID;
+  let listed: ListedMandate[];
+  try {
+    listed = (await listMandates(customerId)) as ListedMandate[];
+  } catch {
+    return pinned ? unknownCandidate(pinned) : null;
+  }
+
+  const match = listed
+    .filter(usable)
+    .find((m) =>
+      pinned
+        ? m.id === pinned
+        : (m.merchantName ?? "").toLowerCase().includes(DEMO_MERCHANT_NAME.toLowerCase()),
+    );
+
+  if (match) return toCandidate(match);
+  return pinned ? unknownCandidate(pinned) : null;
+}
+
+export function scopeDemoAmount(target: MandateCandidate): string {
+  const fallback = toAmount(process.env.RENDER_CREDIT_PRICE ?? "4.00", 4);
+  if (target.approvedAmount <= 0) return fallback.toFixed(2);
+  return Math.min(fallback, target.approvedAmount).toFixed(2);
+}
+
+export function renderCreditsContext(amount: string): ChargeContext {
+  return {
+    merchantName: process.env.RENDER_MERCHANT_NAME ?? "Banditd Render Credits",
+    merchantUrl: process.env.RENDER_MERCHANT_URL ?? "https://render.banditd.dev",
+    merchantCountry: process.env.RENDER_MERCHANT_COUNTRY ?? "US",
+    productDescription: "Ad creative render credits",
+    unitPrice: amount,
+  };
+}
+
 export interface RotationAttempt {
   mandateId: string;
   code: string;
@@ -167,13 +211,14 @@ export async function chargeWithRotation(
   candidates: MandateCandidate[],
   amount: string,
   reference: string,
+  context?: ChargeContext,
 ): Promise<RotationResult> {
   const rotated: RotationAttempt[] = [];
 
   for (const candidate of candidates) {
     const attemptReference =
       candidates.length > 1 ? `${reference}_${candidate.id.slice(-6)}` : reference;
-    const charge = await chargeMandate(candidate.id, amount, attemptReference);
+    const charge = await chargeMandate(candidate.id, amount, attemptReference, context);
 
     if (charge.ok || charge.code !== "CYCLE_ALREADY_CHARGED") {
       return { charge, mandateId: candidate.id, reference: attemptReference, rotated };

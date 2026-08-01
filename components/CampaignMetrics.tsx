@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Creative, PurchaseEvent } from "@/lib/store";
 import { ctr, money, pct, toNumber } from "./format";
 
@@ -51,7 +52,7 @@ function Tile({
   dim?: boolean;
 }) {
   return (
-    <div className="min-w-0 bg-zinc-950 px-3 py-2.5">
+    <div className="min-w-0 bg-zinc-950 px-3 py-3">
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
           {label}
@@ -59,14 +60,14 @@ function Tile({
         {source ? <Tag source={source} /> : null}
       </div>
       <div
-        className={`mt-1 break-words text-[16px] font-semibold leading-tight tabular-nums [overflow-wrap:anywhere] sm:text-[18px] ${
+        className={`mt-1.5 break-words text-[19px] font-semibold leading-tight tabular-nums [overflow-wrap:anywhere] sm:text-[18px] ${
           dim ? "text-zinc-400" : "text-white"
         }`}
       >
         {value}
       </div>
       {hint ? (
-        <div className="mt-0.5 break-words text-[11px] leading-snug text-zinc-400 [overflow-wrap:anywhere]">
+        <div className="mt-1 break-words text-[12px] leading-snug text-zinc-400 [overflow-wrap:anywhere]">
           {hint}
         </div>
       ) : null}
@@ -87,6 +88,8 @@ export default function CampaignMetrics({
   winnerId,
   generation,
 }: Props) {
+  const [allTiles, setAllTiles] = useState(false);
+
   if (creatives.length === 0) return null;
 
   const paid = purchases.filter((p) => p.ok);
@@ -130,30 +133,16 @@ export default function CampaignMetrics({
             Sandbox spend
           </span>
         </div>
-        <span className="text-[11px] tabular-nums text-zinc-400">
+        <span className="text-[12px] tabular-nums text-zinc-400">
           Generation {generation}, {cohort.length} ads live
         </span>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/[0.08] sm:grid-cols-4">
         <Tile
-          label="Budget used"
-          value={`$${money(spent)}`}
-          hint={`of the $${money(cap)} cap, ${pct(used, 0)} used`}
-          source="sandbox"
-          dim={spent === 0}
-        />
-        <Tile
           label="Impressions"
           value={impressions ? impressions.toLocaleString() : "None yet"}
           hint={impressions ? "served across the live ads" : "serve traffic to fill this in"}
-          source="sim"
-          dim={impressions === 0}
-        />
-        <Tile
-          label="Clicks"
-          value={impressions ? clicks.toLocaleString() : "None yet"}
-          hint={impressions ? `on ${impressions.toLocaleString()} impressions` : "no traffic served"}
           source="sim"
           dim={impressions === 0}
         />
@@ -179,35 +168,63 @@ export default function CampaignMetrics({
           dim={!winner || winnerCtr === 0}
         />
         <Tile
-          label="Cost per click"
-          value={cpc !== null ? cost(cpc) : "No spend yet"}
-          hint={
-            cpc !== null
-              ? "sandbox spend over simulated clicks"
-              : "nothing charged, so there is no cost to divide"
-          }
-          source={cpc !== null ? "mixed" : "sandbox"}
-          dim={cpc === null}
+          label="Budget used"
+          value={`$${money(spent)}`}
+          hint={`of the $${money(cap)} cap, ${pct(used, 0)} used`}
+          source="sandbox"
+          dim={spent === 0}
         />
-        <Tile
-          label="Confidence"
-          value={evaluation ? pct(evaluation.probabilityBest, 1) : "Not read yet"}
-          hint={
-            evaluation
-              ? evaluation.sufficientEvidence
-                ? "chance this ad is the best, gates cleared"
-                : "chance this ad is the best, gates still open"
-              : "run the decision step to read it"
-          }
-          source="sim"
-          dim={!evaluation}
-        />
-        <Tile
-          label="Generations"
-          value={String(generations)}
-          hint={`${creatives.length} variants tested, ${paid.length} paid, ${blocked} blocked`}
-        />
+
+        <div className={`${allTiles ? "contents" : "hidden"} sm:contents`}>
+          <Tile
+            label="Clicks"
+            value={impressions ? clicks.toLocaleString() : "None yet"}
+            hint={
+              impressions ? `on ${impressions.toLocaleString()} impressions` : "no traffic served"
+            }
+            source="sim"
+            dim={impressions === 0}
+          />
+          <Tile
+            label="Cost per click"
+            value={cpc !== null ? cost(cpc) : "No spend yet"}
+            hint={
+              cpc !== null
+                ? "sandbox spend over simulated clicks"
+                : "nothing charged, so there is no cost to divide"
+            }
+            source={cpc !== null ? "mixed" : "sandbox"}
+            dim={cpc === null}
+          />
+          <Tile
+            label="Confidence"
+            value={evaluation ? pct(evaluation.probabilityBest, 1) : "Not read yet"}
+            hint={
+              evaluation
+                ? evaluation.sufficientEvidence
+                  ? "chance this ad is the best, gates cleared"
+                  : "chance this ad is the best, gates still open"
+                : "run the decision step to read it"
+            }
+            source="sim"
+            dim={!evaluation}
+          />
+          <Tile
+            label="Generations"
+            value={String(generations)}
+            hint={`${creatives.length} variants tested, ${paid.length} paid, ${blocked} blocked`}
+          />
+        </div>
       </div>
+
+      <button
+        type="button"
+        aria-expanded={allTiles}
+        onClick={() => setAllTiles((v) => !v)}
+        className="mt-2 flex min-h-[2.75rem] w-full items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[13px] font-semibold text-zinc-300 transition-colors hover:bg-white/[0.07] sm:hidden"
+      >
+        {allTiles ? "Show fewer numbers" : "Show 4 more numbers"}
+      </button>
 
       {winner ? (
         <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
@@ -219,20 +236,20 @@ export default function CampaignMetrics({
           <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
             {candidate ? "Winning ad" : "Leading ad"}
           </span>
-          <span className="shrink-0 text-[12px] font-semibold capitalize text-white">
+          <span className="shrink-0 text-[13px] font-semibold capitalize text-white">
             {winner.angle}
             {twin > 0 ? ` ${twin + 1}` : ""}
           </span>
-          <span className="min-w-0 break-words text-[12px] leading-snug text-zinc-300 [overflow-wrap:anywhere]">
+          <span className="min-w-0 break-words text-[13px] leading-snug text-zinc-300 [overflow-wrap:anywhere]">
             {winner.headline}
           </span>
-          <span className="shrink-0 text-[11px] tabular-nums text-zinc-400">
+          <span className="shrink-0 text-[12px] tabular-nums text-zinc-400">
             {pct(winnerCtr, 2)} on {winner.arm.impressions.toLocaleString()} impressions
           </span>
         </div>
       ) : null}
 
-      <p className="mt-2.5 break-words text-[11px] leading-relaxed text-zinc-400">
+      <p className="mt-2.5 break-words text-[12px] leading-relaxed text-zinc-400">
         Impressions, clicks, click through rates and confidence come from simulated traffic, not from
         a live ad platform. Budget used is real money moved through the Prava sandbox. Cost per click
         mixes the two: sandbox spend divided by simulated clicks.
