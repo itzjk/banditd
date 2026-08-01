@@ -531,106 +531,6 @@ export default function Dashboard() {
           onReceipt={setReceipt}
         />
 
-        <section className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
-          <div className="flex items-baseline justify-between gap-2">
-            <h2 className="text-sm font-semibold tracking-tight text-white">
-              Or run it step by step
-            </h2>
-            <span className="text-[11px] text-zinc-400">Generation {generation}</span>
-          </div>
-
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <Action
-              index={1}
-              label="Research the market"
-              hint="Live web search on who buys this"
-              onClick={research}
-              disabled={locked || !hasProduct}
-              running={busy === "research"}
-              done={hasResearch}
-            />
-            <Action
-              index={2}
-              label={hasCreatives ? "Generate 4 more" : "Generate 4 creatives"}
-              hint="Four angles, four images, four arms"
-              onClick={() => generate()}
-              disabled={locked || !hasResearch}
-              running={busy === "creatives"}
-              done={hasCreatives}
-            />
-            <Action
-              index={4}
-              label="Decide the spend"
-              hint="Thompson sampling plus the mandate rules"
-              onClick={decide}
-              disabled={locked || !hasTraffic}
-              running={busy === "decide"}
-              done={Boolean(freshEvaluation)}
-            />
-          </div>
-
-          <div className="rounded-xl border border-amber-400/25 bg-amber-400/[0.06] p-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-4 w-4 items-center justify-center rounded bg-amber-400/20 text-[10px] font-bold text-amber-300">
-                    3
-                  </span>
-                  <h3 className="text-[15px] font-semibold text-white">Simulate traffic</h3>
-                  <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
-                    Simulated
-                  </span>
-                </div>
-                <p className="mt-1 max-w-xl text-[12px] leading-relaxed text-zinc-400">
-                  Fire it yourself. Impressions are allocated by Thompson sampling and clicks come
-                  from a hidden rate per creative. These numbers are generated, not real ad data.
-                </p>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {[500, 1000, 5000].map((n) => (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => setImpressions(n)}
-                      className={`rounded-lg border px-3 py-1.5 text-[12px] font-semibold tabular-nums transition-colors ${
-                        impressions === n
-                          ? "border-amber-400/50 bg-amber-400/20 text-amber-200"
-                          : "border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/[0.07]"
-                      }`}
-                    >
-                      {n.toLocaleString()}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={simulate}
-                disabled={locked || !hasCreatives}
-                className="w-full shrink-0 rounded-xl bg-amber-400 px-5 py-3 text-[15px] font-bold text-zinc-950 transition-colors hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
-              >
-                {busy === "simulate"
-                  ? "Serving impressions"
-                  : `Serve ${impressions.toLocaleString()} impressions`}
-              </button>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={forceReject}
-            disabled={locked}
-            className="w-full rounded-xl border border-rose-400/30 bg-rose-500/[0.07] px-3 py-2.5 text-left transition-colors hover:bg-rose-500/[0.14] disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <span className="text-[13px] font-semibold text-rose-200">
-              {busy === "force" ? "Sending the over cap charge" : "Force a charge over the cap"}
-            </span>
-            <span className="mt-0.5 block text-[11px] leading-snug text-zinc-400">
-              Fires a charge ten times the ceiling on purpose. The mandate refuses it and the
-              rejection lands below with its reason. Nothing is spent.
-            </span>
-          </button>
-        </section>
 
         {busy && busy !== "load" ? (
           <AgentStatus title={AGENT_STEPS[busy].title} steps={AGENT_STEPS[busy].steps} />
@@ -751,25 +651,6 @@ export default function Dashboard() {
           </section>
         ) : null}
 
-        <PosteriorChart
-          creatives={cohort}
-          winnerIndex={winnerId ? cohort.findIndex((c) => c.id === winnerId) : null}
-        />
-
-        <GatesPanel
-          evaluation={freshEvaluation}
-          candidateImpressions={candidateImpressions}
-          candidateLabel={cohort.find((c) => c.id === winnerId)?.headline}
-        />
-
-        <LineageTree
-          creatives={state?.creatives ?? []}
-          winnerId={winnerId}
-          purchases={purchases}
-        />
-
-        <MarketPanel research={state?.research ?? null} productName={state?.product?.name} />
-
         <section className="space-y-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-sm font-semibold tracking-tight text-white">
@@ -828,6 +709,25 @@ export default function Dashboard() {
           ) : null}
         </section>
 
+        <PosteriorChart
+          creatives={cohort}
+          winnerIndex={winnerId ? cohort.findIndex((c) => c.id === winnerId) : null}
+        />
+
+        <GatesPanel
+          evaluation={freshEvaluation}
+          candidateImpressions={candidateImpressions}
+          candidateLabel={cohort.find((c) => c.id === winnerId)?.headline}
+        />
+
+        <LineageTree
+          creatives={state?.creatives ?? []}
+          winnerId={winnerId}
+          purchases={purchases}
+        />
+
+        <MarketPanel research={state?.research ?? null} productName={state?.product?.name} />
+
         <section className="space-y-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-sm font-semibold tracking-tight text-white">Money it moved</h2>
@@ -856,6 +756,107 @@ export default function Dashboard() {
               </p>
             </div>
           )}
+        </section>
+
+        <section className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
+          <div className="flex items-baseline justify-between gap-2">
+            <h2 className="text-sm font-semibold tracking-tight text-white">
+              Or run it step by step
+            </h2>
+            <span className="text-[11px] text-zinc-400">Generation {generation}</span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <Action
+              index={1}
+              label="Research the market"
+              hint="Live web search on who buys this"
+              onClick={research}
+              disabled={locked || !hasProduct}
+              running={busy === "research"}
+              done={hasResearch}
+            />
+            <Action
+              index={2}
+              label={hasCreatives ? "Generate 4 more" : "Generate 4 creatives"}
+              hint="Four angles, four images, four arms"
+              onClick={() => generate()}
+              disabled={locked || !hasResearch}
+              running={busy === "creatives"}
+              done={hasCreatives}
+            />
+            <Action
+              index={4}
+              label="Decide the spend"
+              hint="Thompson sampling plus the mandate rules"
+              onClick={decide}
+              disabled={locked || !hasTraffic}
+              running={busy === "decide"}
+              done={Boolean(freshEvaluation)}
+            />
+          </div>
+
+          <div className="rounded-xl border border-amber-400/25 bg-amber-400/[0.06] p-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-4 w-4 items-center justify-center rounded bg-amber-400/20 text-[10px] font-bold text-amber-300">
+                    3
+                  </span>
+                  <h3 className="text-[15px] font-semibold text-white">Simulate traffic</h3>
+                  <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                    Simulated
+                  </span>
+                </div>
+                <p className="mt-1 max-w-xl text-[12px] leading-relaxed text-zinc-400">
+                  Fire it yourself. Impressions are allocated by Thompson sampling and clicks come
+                  from a hidden rate per creative. These numbers are generated, not real ad data.
+                </p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {[500, 1000, 5000].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setImpressions(n)}
+                      className={`rounded-lg border px-3 py-1.5 text-[12px] font-semibold tabular-nums transition-colors ${
+                        impressions === n
+                          ? "border-amber-400/50 bg-amber-400/20 text-amber-200"
+                          : "border-white/10 bg-white/[0.03] text-zinc-400 hover:bg-white/[0.07]"
+                      }`}
+                    >
+                      {n.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={simulate}
+                disabled={locked || !hasCreatives}
+                className="w-full shrink-0 rounded-xl bg-amber-400 px-5 py-3 text-[15px] font-bold text-zinc-950 transition-colors hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto"
+              >
+                {busy === "simulate"
+                  ? "Serving impressions"
+                  : `Serve ${impressions.toLocaleString()} impressions`}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={forceReject}
+            disabled={locked}
+            className="w-full rounded-xl border border-rose-400/30 bg-rose-500/[0.07] px-3 py-2.5 text-left transition-colors hover:bg-rose-500/[0.14] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <span className="text-[13px] font-semibold text-rose-200">
+              {busy === "force" ? "Sending the over cap charge" : "Force a charge over the cap"}
+            </span>
+            <span className="mt-0.5 block text-[11px] leading-snug text-zinc-400">
+              Fires a charge ten times the ceiling on purpose. The mandate refuses it and the
+              rejection lands below with its reason. Nothing is spent.
+            </span>
+          </button>
         </section>
 
         <AuditLog entries={state?.audit ?? []} />
