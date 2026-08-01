@@ -4,7 +4,7 @@ import { zodTextFormat } from "openai/helpers/zod";
 import type { Product, Research, CreativeAngle } from "./store.ts";
 
 export const SEARCH_MODEL = process.env.OPENAI_SEARCH_MODEL ?? "gpt-5.6-luna";
-export const TEXT_MODEL = process.env.OPENAI_TEXT_MODEL ?? "gpt-5.6-terra";
+export const TEXT_MODEL = process.env.OPENAI_TEXT_MODEL ?? "gpt-5.6-luna";
 export const IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL ?? "gpt-image-1-mini";
 
 const SEARCH_CONTEXT = (process.env.OPENAI_SEARCH_CONTEXT ?? "low") as "low" | "medium" | "high";
