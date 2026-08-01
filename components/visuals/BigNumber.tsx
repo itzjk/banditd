@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ElementType, type ReactNode } from "react";
 import { prefersReducedMotion, useInView } from "./useInView";
 
 export interface BigNumberProps {
   value: number | string;
-  label: string;
-  detail?: string;
+  label: ReactNode;
+  as?: ElementType;
+  detail?: ReactNode;
   prefix?: string;
   suffix?: string;
   decimals?: number;
@@ -20,6 +21,7 @@ export interface BigNumberProps {
 export default function BigNumber({
   value,
   label,
+  as,
   detail,
   prefix,
   suffix,
@@ -31,7 +33,7 @@ export default function BigNumber({
   className = "",
 }: BigNumberProps) {
   const numeric = typeof value === "number" ? value : null;
-  const [ref, inView] = useInView<HTMLDivElement>({ threshold: 0.4 });
+  const [ref, inView] = useInView<HTMLElement>({ threshold: 0.4 });
   const [shown, setShown] = useState<number>(() => {
     if (numeric === null) return 0;
     return countUp ? 0 : numeric;
@@ -78,9 +80,10 @@ export default function BigNumber({
 
   const text = numeric === null ? String(value) : shown.toFixed(decimals);
   const unitStyle = { fontSize: "0.52em", letterSpacing: "-0.02em" };
+  const Tag: ElementType = as ?? "div";
 
   return (
-    <div ref={ref} className={`${align === "center" ? "text-center" : ""} ${className}`.trim()}>
+    <Tag ref={ref} className={`${align === "center" ? "text-center" : ""} ${className}`.trim()}>
       <p
         className="t-figure"
         style={{ color: tone === "accent" ? "var(--accent)" : "var(--foreground)" }}
@@ -91,6 +94,6 @@ export default function BigNumber({
       </p>
       <p className="t-title mt-3">{label}</p>
       {detail ? <p className="t-small mt-1">{detail}</p> : null}
-    </div>
+    </Tag>
   );
 }

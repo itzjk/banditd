@@ -1,0 +1,40 @@
+{
+  "name": "banditd",
+  "description": "Autonomous advertising agent. It writes ad creatives, runs a sequential test on them and buys more renders of the creative that clears a statistical gate, paying with a one time card issued under a signed mandate. Against UCP businesses this agent only reads: it searches and looks up catalogs to price what it would buy. It declares no payment handler and does not open carts, checkouts or orders over UCP.",
+  "homepage": "https://banditd.vercel.app",
+  "operator": {
+    "name": "banditd",
+    "url": "https://banditd.vercel.app",
+    "type": "hackathon_project"
+  },
+  "ucp": {
+    "version": "2026-04-08",
+    "services": {
+      "dev.ucp.shopping": [
+        {
+          "version": "2026-04-08",
+          "spec": "https://ucp.dev/2026-04-08/specification/overview",
+          "transport": "mcp",
+          "schema": "https://ucp.dev/2026-04-08/services/shopping/mcp.openrpc.json"
+        }
+      ]
+    },
+    "capabilities": {
+      "dev.ucp.shopping.catalog.search": [
+        {
+          "version": "2026-04-08",
+          "spec": "https://ucp.dev/2026-04-08/specification/catalog",
+          "schema": "https://ucp.dev/2026-04-08/schemas/shopping/catalog_search.json"
+        }
+      ],
+      "dev.ucp.shopping.catalog.lookup": [
+        {
+          "version": "2026-04-08",
+          "spec": "https://ucp.dev/2026-04-08/specification/catalog",
+          "schema": "https://ucp.dev/2026-04-08/schemas/shopping/catalog_lookup.json"
+        }
+      ]
+    },
+    "payment_handlers": {}
+  }
+}

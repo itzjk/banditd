@@ -1,12 +1,21 @@
 "use client";
 
-import { Children, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  Children,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ElementType,
+  type ReactNode,
+} from "react";
 import { prefersReducedMotion } from "./useInView";
 
 export interface ShelfProps {
   children: ReactNode;
   ariaLabel: string;
-  title?: string;
+  as?: ElementType;
+  title?: ReactNode;
   itemClassName?: string;
   gap?: "sm" | "md" | "lg";
   controls?: boolean;
@@ -28,6 +37,7 @@ const DEFAULT_ITEM = "w-[78%] sm:w-[52%] lg:w-[33%]";
 export default function Shelf({
   children,
   ariaLabel,
+  as,
   title,
   itemClassName = DEFAULT_ITEM,
   gap = "md",
@@ -127,9 +137,10 @@ export default function Shelf({
   };
 
   const showControls = controls && overflowing;
+  const Tag: ElementType = as ?? "div";
 
   return (
-    <div className={className}>
+    <Tag className={className}>
       {title || showControls ? (
         <div className="flex items-end justify-between gap-4 mb-4">
           {title ? <h3 className="t-title">{title}</h3> : <span />}
@@ -194,6 +205,6 @@ export default function Shelf({
           <div ref={thumbRef} className="bd-shelf-thumb" />
         </div>
       ) : null}
-    </div>
+    </Tag>
   );
 }

@@ -1,16 +1,7 @@
-import type { HTMLAttributes, ReactNode } from "react";
-import { createElement } from "react";
+import type { ElementType, HTMLAttributes, ReactNode } from "react";
 
 export type SurfaceLevel = "quiet" | "base" | "raised" | "feature";
-export type SurfaceTag =
-  | "div"
-  | "section"
-  | "article"
-  | "aside"
-  | "header"
-  | "footer"
-  | "li"
-  | "label";
+export type SurfaceTag = ElementType;
 
 export interface SurfaceProps extends HTMLAttributes<HTMLElement> {
   level?: SurfaceLevel;
@@ -37,13 +28,14 @@ const PADDING: Record<SurfaceLevel, string> = {
 
 export default function Surface({
   level = "base",
-  as = "div",
+  as,
   interactive = false,
   padded = false,
   className = "",
   children,
   ...rest
 }: SurfaceProps) {
+  const Tag: ElementType = as ?? "div";
   const classes = [
     LEVELS[level],
     padded ? PADDING[level] : "",
@@ -53,5 +45,9 @@ export default function Surface({
     .filter(Boolean)
     .join(" ");
 
-  return createElement(as, { ...rest, className: classes }, children);
+  return (
+    <Tag {...rest} className={classes}>
+      {children}
+    </Tag>
+  );
 }

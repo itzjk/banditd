@@ -91,7 +91,9 @@ export default function AuditLog({ entries, initial = 8 }: Props) {
                       {timeAgo(entry.at)}, {clock(entry.at)}
                     </span>
                   </div>
-                  <p className="mt-1 text-[13px] leading-relaxed text-zinc-300">{entry.detail}</p>
+                  <p className="mt-1 break-words [overflow-wrap:anywhere] text-[13px] leading-relaxed text-zinc-300">
+                    {entry.detail}
+                  </p>
                 </div>
               </li>
             );

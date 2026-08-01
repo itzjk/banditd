@@ -144,18 +144,6 @@ function sanitize(value: unknown): State | null {
   };
 }
 
-function blank(): State {
-  return {
-    product: null,
-    research: null,
-    creatives: [],
-    purchases: [],
-    audit: [],
-    mandateId: null,
-    simulatedImpressions: 0,
-  };
-}
-
 function split(input: State): { clean: State; images: Images } {
   const images: Images = {};
   const creatives = input.creatives.map((c) => {
@@ -308,7 +296,10 @@ export default function Dashboard() {
   const [autoRunning, setAutoRunning] = useState(false);
 
   const absorb = useCallback((next: State) => {
-    const { clean, images: found } = split(sanitize(next) ?? blank());
+    const sane = sanitize(next);
+    if (!sane) throw new Error("The server answered with something this run could not read. Nothing was changed.");
+
+    const { clean, images: found } = split(sane);
     setState(clean);
     if (Object.keys(found).length > 0) setImages((prev) => ({ ...prev, ...found }));
     save(clean);

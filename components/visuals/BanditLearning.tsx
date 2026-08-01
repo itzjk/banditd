@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 export type BanditLearningTone = "spectrum" | "accent";
 
@@ -61,119 +61,143 @@ export default function BanditLearning({
   const colors = tone === "accent" ? ACCENT : SPECTRUM;
   const mono = "var(--font-geist-mono), ui-monospace, monospace";
 
+  const holder = useRef<HTMLDivElement | null>(null);
+  const [compact, setCompact] = useState(false);
+
+  useEffect(() => {
+    const el = holder.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) setCompact(entry.contentRect.width < 520);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const capSize = compact ? 17 : 11;
+  const capSpace = compact ? 2.2 : 1.5;
+  const letterSize = compact ? 20 : 13;
+  const letterY = compact ? 258 : 252;
+  const barY = compact ? 272 : 262;
+  const barH = compact ? 18 : 14;
+  const boxH = compact ? 326 : 304;
+  const bottomY = compact ? 316 : 294;
+
   return (
-    <svg
-      viewBox="0 0 640 304"
-      className={`w-full h-auto ${className}`}
-      role="img"
-      aria-label={title}
-      style={{ ["--bd-loop" as string]: `${loopSeconds}s` }}
-    >
-      <defs>
-        <clipPath id={clipId}>
-          <rect x={LEFT} y={262} width={RIGHT - LEFT} height={14} rx={4} />
-        </clipPath>
-      </defs>
+    <div ref={holder} className={className}>
+      <svg
+        viewBox={`0 0 640 ${boxH}`}
+        className="w-full h-auto"
+        role="img"
+        aria-label={title}
+        style={{ ["--bd-loop" as string]: `${loopSeconds}s` }}
+      >
+        <defs>
+          <clipPath id={clipId}>
+            <rect x={LEFT} y={barY} width={RIGHT - LEFT} height={barH} rx={4} />
+          </clipPath>
+        </defs>
 
-      <g stroke="var(--grid-line)" strokeWidth="1" vectorEffect="non-scaling-stroke">
-        {GUIDES.map((x) => (
-          <line key={x} x1={x} y1={38} x2={x} y2={BASE} />
-        ))}
-      </g>
-
-      {caption ? (
-        <text
-          x={LEFT}
-          y={20}
-          fill="var(--subtle)"
-          fontFamily={mono}
-          fontSize={11}
-          letterSpacing={1.5}
-        >
-          {caption.toUpperCase()}
-        </text>
-      ) : null}
-
-      {colors.map((color, i) => (
-        <g key={`arm-${labels[i]}`} className={`bd-arm bd-arm-${i + 1}`} style={{ color }}>
-          <path d={CURVE.area} fill="currentColor" fillOpacity={0.14} />
-          <path
-            d={CURVE.line}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-          />
+        <g stroke="var(--grid-line)" strokeWidth="1" vectorEffect="non-scaling-stroke">
+          {GUIDES.map((x) => (
+            <line key={x} x1={x} y1={38} x2={x} y2={BASE} />
+          ))}
         </g>
-      ))}
 
-      <g stroke="var(--border-strong)" strokeWidth="1" vectorEffect="non-scaling-stroke">
-        <line x1={LEFT} y1={BASE} x2={RIGHT} y2={BASE} />
-        {GUIDES.map((x) => (
-          <line key={x} x1={x} y1={BASE} x2={x} y2={BASE + 5} />
-        ))}
-      </g>
-
-      {colors.map((color, i) => (
-        <g key={`mean-${labels[i]}`} className={`bd-mean-${i + 1}`} style={{ color }}>
+        {caption ? (
           <text
-            x={CENTER}
-            y={252}
-            fill="currentColor"
-            fontFamily={mono}
-            fontSize={13}
-            fontWeight={500}
-            textAnchor="middle"
-          >
-            {labels[i]}
-          </text>
-        </g>
-      ))}
-
-      {showAllocation ? (
-        <>
-          <g clipPath={`url(#${clipId})`}>
-            <rect x={LEFT} y={262} width={RIGHT - LEFT} height={14} fill="var(--surface-2)" />
-            {colors.map((color, i) => (
-              <rect
-                key={`share-${labels[i]}`}
-                className={`bd-share bd-share-${i + 1}`}
-                x={LEFT}
-                y={262}
-                width={RIGHT - LEFT}
-                height={14}
-                fill={color}
-                fillOpacity={0.88}
-              />
-            ))}
-          </g>
-          <rect
             x={LEFT}
-            y={262}
-            width={RIGHT - LEFT}
-            height={14}
-            rx={4}
-            fill="none"
-            stroke="var(--border)"
-            strokeWidth="1"
-            vectorEffect="non-scaling-stroke"
-          />
-          {allocationLabel ? (
+            y={20}
+            fill="var(--subtle)"
+            fontFamily={mono}
+            fontSize={capSize}
+            letterSpacing={capSpace}
+          >
+            {caption.toUpperCase()}
+          </text>
+        ) : null}
+
+        {colors.map((color, i) => (
+          <g key={`arm-${labels[i]}`} className={`bd-arm bd-arm-${i + 1}`} style={{ color }}>
+            <path d={CURVE.area} fill="currentColor" fillOpacity={0.14} />
+            <path
+              d={CURVE.line}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          </g>
+        ))}
+
+        <g stroke="var(--border-strong)" strokeWidth="1" vectorEffect="non-scaling-stroke">
+          <line x1={LEFT} y1={BASE} x2={RIGHT} y2={BASE} />
+          {GUIDES.map((x) => (
+            <line key={x} x1={x} y1={BASE} x2={x} y2={BASE + 5} />
+          ))}
+        </g>
+
+        {colors.map((color, i) => (
+          <g key={`mean-${labels[i]}`} className={`bd-mean-${i + 1}`} style={{ color }}>
             <text
-              x={LEFT}
-              y={294}
-              fill="var(--subtle)"
+              x={CENTER}
+              y={letterY}
+              fill="currentColor"
               fontFamily={mono}
-              fontSize={11}
-              letterSpacing={1.5}
+              fontSize={letterSize}
+              fontWeight={500}
+              textAnchor="middle"
             >
-              {allocationLabel.toUpperCase()}
+              {labels[i]}
             </text>
-          ) : null}
-        </>
-      ) : null}
-    </svg>
+          </g>
+        ))}
+
+        {showAllocation ? (
+          <>
+            <g clipPath={`url(#${clipId})`}>
+              <rect x={LEFT} y={barY} width={RIGHT - LEFT} height={barH} fill="var(--surface-2)" />
+              {colors.map((color, i) => (
+                <rect
+                  key={`share-${labels[i]}`}
+                  className={`bd-share bd-share-${i + 1}`}
+                  x={LEFT}
+                  y={barY}
+                  width={RIGHT - LEFT}
+                  height={barH}
+                  fill={color}
+                  fillOpacity={0.88}
+                />
+              ))}
+            </g>
+            <rect
+              x={LEFT}
+              y={barY}
+              width={RIGHT - LEFT}
+              height={barH}
+              rx={4}
+              fill="none"
+              stroke="var(--border)"
+              strokeWidth="1"
+              vectorEffect="non-scaling-stroke"
+            />
+            {allocationLabel ? (
+              <text
+                x={LEFT}
+                y={bottomY}
+                fill="var(--subtle)"
+                fontFamily={mono}
+                fontSize={capSize}
+                letterSpacing={capSpace}
+              >
+                {allocationLabel.toUpperCase()}
+              </text>
+            ) : null}
+          </>
+        ) : null}
+      </svg>
+    </div>
   );
 }

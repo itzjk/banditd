@@ -108,10 +108,7 @@ export default function MeshField({
         />
       ) : null}
       {showLines ? (
-        <div
-          ref={linesRef}
-          className={`bd-field-layer ${parallax ? "bd-field-parallax" : ""}`}
-        >
+        <div ref={linesRef} className={`bd-field-layer ${parallax ? "bd-field-parallax" : ""}`}>
           <svg
             className="bd-field-lines bd-drift"
             viewBox={`0 0 ${VW} ${VH}`}
@@ -129,16 +126,15 @@ export default function MeshField({
                 <path key={d.slice(0, 12) + i} d={d} />
               ))}
             </g>
-            <g stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" opacity={stroke * 1.3}>
+            <g
+              stroke="currentColor"
+              strokeWidth="1"
+              vectorEffect="non-scaling-stroke"
+              opacity={stroke * 1.3}
+            >
               <line x1={0} y1={AXIS_Y} x2={VW} y2={AXIS_Y} />
               {TICKS.map((x) => (
-                <line
-                  key={x}
-                  x1={x}
-                  y1={AXIS_Y}
-                  x2={x}
-                  y2={AXIS_Y + (x % 200 === 0 ? 11 : 5)}
-                />
+                <line key={x} x1={x} y1={AXIS_Y} x2={x} y2={AXIS_Y + (x % 200 === 0 ? 11 : 5)} />
               ))}
             </g>
           </svg>

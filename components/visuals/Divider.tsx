@@ -1,6 +1,8 @@
+import type { ReactNode } from "react";
+
 export interface DividerProps {
   orientation?: "horizontal" | "vertical";
-  label?: string;
+  label?: ReactNode;
   className?: string;
 }
 

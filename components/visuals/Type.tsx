@@ -1,18 +1,6 @@
-import type { HTMLAttributes, ReactNode } from "react";
-import { createElement } from "react";
+import type { ElementType, HTMLAttributes, ReactNode } from "react";
 
-export type TypeTag =
-  | "h1"
-  | "h2"
-  | "h3"
-  | "h4"
-  | "p"
-  | "span"
-  | "div"
-  | "dt"
-  | "dd"
-  | "li"
-  | "figcaption";
+export type TypeTag = ElementType;
 
 export interface TypeProps extends HTMLAttributes<HTMLElement> {
   children: ReactNode;
@@ -20,9 +8,14 @@ export interface TypeProps extends HTMLAttributes<HTMLElement> {
   className?: string;
 }
 
-function text(base: string, fallback: TypeTag, props: TypeProps) {
-  const { children, as = fallback, className = "", ...rest } = props;
-  return createElement(as, { ...rest, className: `${base} ${className}`.trim() }, children);
+function text(base: string, fallback: ElementType, props: TypeProps) {
+  const { children, as, className = "", ...rest } = props;
+  const Tag: ElementType = as ?? fallback;
+  return (
+    <Tag {...rest} className={`${base} ${className}`.trim()}>
+      {children}
+    </Tag>
+  );
 }
 
 export function Display(props: TypeProps) {

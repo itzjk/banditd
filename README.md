@@ -133,7 +133,7 @@ That is the pitch. Here is the part that took the longest, because the obvious v
 
 Every arm gets a Beta posterior over its click rate with a Jeffreys prior, Beta(0.5, 0.5). At 0 clicks in 50 impressions a uniform prior says 1.9% and Jeffreys says 1.0%. On a product whose real click rate is 3%, that gap is what decides the early races.
 
-Now the wrong part. "Probability of being the best is over 0.95" is not an error rate. It is a statement about one look at the data, and an agent that re-checks after every batch of traffic is not taking one look. Measured over 200 runs per cell against known truth, two identical arms at 3% and 48 evaluations: the naive rule calls a false winner 44.5% of the time. Four identical arms, same conditions: 8.5%. That is not a decision, that is a coin.
+Now the wrong part. "Probability of being the best is over 0.95" is not an error rate. It is a statement about one look at the data, and an agent that re-checks after every batch of traffic is not taking one look. Measured against known truth, two identical arms at 3% and 48 evaluations: the naive rule calls a false winner 44.5% of the time over 200 runs, and about 49% once you push it to 2000, where the estimate settles. Four identical arms, same conditions: around 7%. That is not a decision, that is a coin.
 
 So the gate is three things and all three have to hold:
 
@@ -143,7 +143,9 @@ Expected loss below 1% of the posterior mean. This is the effect size gate. It s
 
 An anytime-valid boundary. The e-value is the probability of being best times a mixture Bayes factor against the pooled null, and it has to clear 1/alpha, which is 20 at alpha 0.05. Ville's inequality bounds the probability that this ever crosses 20 under the null at 5%, however many times you look. That is the piece the naive rule does not have.
 
-Same 200 runs per cell: false positives drop to 0.5% with two arms and 0.0% with four. And when it does fire, it points at the truly best arm 100% of the time.
+Same conditions: false positives drop to 0.5% with two arms over 200 runs, settling near 0.3% at 2000, and to roughly 0.1% with four. And when it does fire, it points at the truly best arm 100% of the time, in every configuration tested.
+
+The 200 run figures are what `scripts/bandit-test.mts` prints, with a confidence interval of [37.8%, 51.4%] on that 44.5%. The larger numbers are where those estimates converge. ProofLab in the dashboard runs the same comparison in the browser, so anyone can push it further and watch it settle.
 
 You can watch the three gates disagree. On 3 clicks in 220 impressions against 12 in 220, the probability of being best is 0.9936 and the expected loss is tiny, so two of the three gates say buy. The e-value is 1.48 against a bar of 20, so the agent holds. Twelve clicks against three looks decisive and it is not.
 

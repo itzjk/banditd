@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ElementType, type HTMLAttributes, type ReactNode } from "react";
 import { prefersReducedMotion } from "./useInView";
 
-export interface ParallaxLayerProps {
+export interface ParallaxLayerProps extends HTMLAttributes<HTMLElement> {
   children: ReactNode;
+  as?: ElementType;
   speed?: number;
   max?: number;
   className?: string;
@@ -12,11 +13,13 @@ export interface ParallaxLayerProps {
 
 export default function ParallaxLayer({
   children,
+  as,
   speed = 0.06,
   max = 44,
   className = "",
+  ...rest
 }: ParallaxLayerProps) {
-  const ref = useRef<HTMLDivElement | null>(null);
+  const ref = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const el = ref.current;
@@ -46,9 +49,11 @@ export default function ParallaxLayer({
     };
   }, [speed, max]);
 
+  const Tag: ElementType = as ?? "div";
+
   return (
-    <div ref={ref} className={`bd-parallax ${className}`.trim()}>
+    <Tag {...rest} ref={ref} className={`bd-parallax ${className}`.trim()}>
       {children}
-    </div>
+    </Tag>
   );
 }

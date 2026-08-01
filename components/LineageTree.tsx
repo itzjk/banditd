@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Creative, PurchaseEvent } from "@/lib/store";
 import { ctr, pct } from "./format";
+import { useDepth } from "./tilt";
 
 interface Props {
   creatives: Creative[];
@@ -150,7 +151,9 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
   }, [creatives, purchases]);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const elements = useRef(new Map<string, HTMLDivElement>());
+  const generations = useRef(0);
   const [links, setLinks] = useState<Link[]>([]);
+  const depth = useDepth();
 
   const register = useCallback((id: string, el: HTMLDivElement | null) => {
     if (el) elements.current.set(id, el);
@@ -214,7 +217,19 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
 
   useEffect(() => {
     measure();
-    const frame = requestAnimationFrame(measure);
+    const sinking = generations.current !== rows.length;
+    generations.current = rows.length;
+
+    let frame = requestAnimationFrame(measure);
+    if (sinking) {
+      const start = performance.now();
+      const follow = (now: number) => {
+        measure();
+        if (now - start < 640) frame = requestAnimationFrame(follow);
+      };
+      frame = requestAnimationFrame(follow);
+    }
+
     const root = containerRef.current;
     const observer = new ResizeObserver(measure);
     if (root) observer.observe(root);
@@ -222,7 +237,7 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
       cancelAnimationFrame(frame);
       observer.disconnect();
     };
-  }, [measure]);
+  }, [measure, rows.length]);
 
   if (!rows.length) {
     return (
@@ -256,7 +271,11 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
       <p className="mt-1 text-[11px] text-zinc-400 sm:hidden">Swipe the tree sideways.</p>
 
       <div className="mt-3 overflow-x-auto pb-1">
-        <div ref={containerRef} className="relative min-w-[32rem] sm:min-w-0">
+        <div
+          ref={containerRef}
+          style={depth ? { perspective: "1500px" } : undefined}
+          className="relative min-w-[32rem] sm:min-w-0"
+        >
           <svg
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 h-full w-full"
@@ -298,6 +317,19 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
               const winnerRate = row.winner
                 ? ctr(row.winner.arm.impressions, row.winner.arm.clicks)
                 : 0;
+              const back = Math.min(rows.length - 1 - index, 3);
+              const sunk = back
+                ? {
+                    opacity: 1 - back * 0.14,
+                    ...(depth
+                      ? {
+                          transform: `translateZ(${-32 * back}px)`,
+                          transition:
+                            "transform 560ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 560ms ease",
+                        }
+                      : null),
+                  }
+                : undefined;
 
               return (
                 <div key={row.generation}>
@@ -315,7 +347,7 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
                     ) : null}
                   </div>
 
-                  <div className="grid grid-cols-4 gap-2 sm:gap-3">
+                  <div className="grid grid-cols-4 gap-2 sm:gap-3" style={sunk}>
                     {row.nodes.map((creative) => (
                       <Node
                         key={creative.id}
