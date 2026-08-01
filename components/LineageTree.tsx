@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Creative } from "@/lib/store";
+import type { Creative, PurchaseEvent } from "@/lib/store";
 import { ctr, pct } from "./format";
 
 interface Props {
   creatives: Creative[];
   winnerId?: string | null;
+  purchases?: PurchaseEvent[];
 }
 
 interface Row {
@@ -108,7 +109,7 @@ function Node({
       </div>
 
       <p
-        className={`line-clamp-2 text-[11px] font-medium leading-snug ${
+        className={`line-clamp-2 break-words text-[11px] font-medium leading-snug ${
           isWinner ? "text-white" : "text-zinc-300"
         }`}
         title={creative.headline}
@@ -127,7 +128,7 @@ function Node({
         <span className="text-[9px] uppercase tracking-wider text-amber-400/70">sim CTR</span>
       </div>
 
-      <div className="text-[9px] tabular-nums text-zinc-500">
+      <div className="text-[9px] tabular-nums text-zinc-400">
         {creative.arm.impressions.toLocaleString()} impr, {creative.arm.clicks.toLocaleString()}{" "}
         clicks
       </div>
@@ -135,8 +136,18 @@ function Node({
   );
 }
 
-export default function LineageTree({ creatives, winnerId }: Props) {
+export default function LineageTree({ creatives, winnerId, purchases }: Props) {
   const rows = useMemo(() => buildRows(creatives, winnerId), [creatives, winnerId]);
+  const paidGenerations = useMemo(() => {
+    const generationOf = new Map(creatives.map((c) => [c.id, c.generation]));
+    const paid = new Set<number>();
+    for (const purchase of purchases ?? []) {
+      if (!purchase.ok) continue;
+      const generation = generationOf.get(purchase.winnerId);
+      if (typeof generation === "number") paid.add(generation);
+    }
+    return paid;
+  }, [creatives, purchases]);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const elements = useRef(new Map<string, HTMLDivElement>());
   const [links, setLinks] = useState<Link[]>([]);
@@ -218,7 +229,7 @@ export default function LineageTree({ creatives, winnerId }: Props) {
       <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
         <h2 className="text-sm font-semibold tracking-tight text-white">Lineage</h2>
         <div className="mt-3 rounded-xl border border-dashed border-white/12 p-6 text-center">
-          <p className="text-[13px] text-zinc-500">
+          <p className="text-[13px] text-zinc-400">
             The family tree draws itself here as soon as the agent writes its first four creatives.
           </p>
         </div>
@@ -238,11 +249,11 @@ export default function LineageTree({ creatives, winnerId }: Props) {
           CTR simulated
         </span>
       </div>
-      <p className="mt-1 text-[12px] leading-relaxed text-zinc-500">
+      <p className="mt-1 text-[12px] leading-relaxed text-zinc-400">
         One row per generation. The winner of each row is the parent of the next one, so the whole
         loop reads top to bottom.
       </p>
-      <p className="mt-1 text-[11px] text-zinc-600 sm:hidden">Swipe the tree sideways.</p>
+      <p className="mt-1 text-[11px] text-zinc-400 sm:hidden">Swipe the tree sideways.</p>
 
       <div className="mt-3 overflow-x-auto pb-1">
         <div ref={containerRef} className="relative min-w-[32rem] sm:min-w-0">
@@ -294,7 +305,7 @@ export default function LineageTree({ creatives, winnerId }: Props) {
                     <span className="rounded-md border border-white/10 bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-300">
                       Gen {row.generation}
                     </span>
-                    <span className="text-[11px] text-zinc-500">
+                    <span className="text-[11px] text-zinc-400">
                       {row.nodes.length} {row.nodes.length === 1 ? "variant" : "variants"}
                     </span>
                     {row.winner && row.winner.arm.impressions ? (
@@ -317,11 +328,21 @@ export default function LineageTree({ creatives, winnerId }: Props) {
 
                   {next ? (
                     <div className="flex h-20 items-center justify-center px-2 sm:h-24">
-                      <div className="sticky left-0 max-w-full rounded-full border border-emerald-400/25 bg-zinc-950 px-3 py-1.5 text-center">
-                        <p className="text-[10px] leading-snug text-zinc-400 sm:text-[11px]">
-                          <span className="font-semibold text-emerald-300">
-                            Agent bought render credits
-                          </span>
+                      <div
+                        className={`sticky left-0 max-w-full rounded-full border bg-zinc-950 px-3 py-1.5 text-center ${
+                          paidGenerations.has(row.generation)
+                            ? "border-emerald-400/25"
+                            : "border-white/12"
+                        }`}
+                      >
+                        <p className="text-[10px] leading-snug text-zinc-300 sm:text-[11px]">
+                          {paidGenerations.has(row.generation) ? (
+                            <span className="font-semibold text-emerald-300">
+                              Agent bought render credits
+                            </span>
+                          ) : (
+                            <span className="font-semibold text-zinc-100">Nothing was charged</span>
+                          )}
                           , then bred {next.nodes.length} variants of the Gen {row.generation}{" "}
                           winner.
                         </p>
@@ -344,7 +365,7 @@ export default function LineageTree({ creatives, winnerId }: Props) {
                   <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-300/70">
                     Gen 1
                   </div>
-                  <p className="mx-auto mt-1 max-w-md text-[12px] leading-relaxed text-zinc-500">
+                  <p className="mx-auto mt-1 max-w-md text-[12px] leading-relaxed text-zinc-400">
                     The descendants show up here once the agent buys its own credits and breeds four
                     variants of the winner above.
                   </p>

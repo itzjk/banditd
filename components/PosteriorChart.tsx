@@ -220,7 +220,7 @@ export default function PosteriorChart({ creatives, winnerIndex }: Props) {
         <h2 className="text-sm font-semibold tracking-tight text-white">What the agent believes</h2>
         <div className="mt-3 flex h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/12 px-4 text-center sm:h-48">
           <p className="text-[13px] font-medium text-zinc-300">No impressions yet</p>
-          <p className="max-w-md text-[12px] leading-relaxed text-zinc-500">
+          <p className="max-w-md text-[12px] leading-relaxed text-zinc-400">
             Once traffic runs, every variant gets a curve here: what the agent believes its click
             rate could be.
           </p>
@@ -235,7 +235,7 @@ export default function PosteriorChart({ creatives, winnerIndex }: Props) {
     <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold tracking-tight text-white">What the agent believes</h2>
-        <span className="text-[11px] text-zinc-500">
+        <span className="text-[11px] text-zinc-400">
           Posterior click rate per variant, {served.toLocaleString()} simulated impressions
         </span>
       </div>
@@ -253,7 +253,7 @@ export default function PosteriorChart({ creatives, winnerIndex }: Props) {
               style={{ backgroundColor: c.color, boxShadow: `0 0 8px ${c.color}66` }}
             />
             <span className="font-semibold capitalize text-zinc-200">{c.label}</span>
-            <span className="tabular-nums text-zinc-500">{pct(c.rate, 2)}</span>
+            <span className="tabular-nums text-zinc-400">{pct(c.rate, 2)}</span>
             {winner === i ? (
               <span className="rounded-full bg-emerald-400/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-300">
                 Candidate
@@ -326,7 +326,7 @@ export default function PosteriorChart({ creatives, winnerIndex }: Props) {
           {view.ticks.map((t, i) => (
             <span
               key={i}
-              className="absolute top-0 -translate-x-1/2 text-[10px] tabular-nums text-zinc-500"
+              className="absolute top-0 -translate-x-1/2 text-[10px] tabular-nums text-zinc-400"
               style={{ left: `${clamp(((t - view.lo) / (spread || 1)) * 100, 3, 97)}%` }}
             >
               {pct(t, view.digits)}
@@ -335,7 +335,7 @@ export default function PosteriorChart({ creatives, winnerIndex }: Props) {
         </div>
       </div>
 
-      <p className="mt-2 text-[12px] leading-relaxed text-zinc-500">
+      <p className="mt-2 text-[12px] leading-relaxed text-zinc-400">
         Each curve is one variant, and it covers the click rates the agent still considers possible.
         Wide is uncertainty, narrow is confidence. Serve more impressions and the curves tighten. The
         moment one pulls clear of the rest, the agent has a winner.

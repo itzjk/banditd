@@ -84,7 +84,7 @@ export default function MarketPanel({ research, productName }: Props) {
       <Shell>
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <h2 className="text-sm font-semibold tracking-tight text-white">Market research</h2>
-          <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+          <span className="rounded-full border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
             Not run yet
           </span>
         </div>
@@ -104,7 +104,7 @@ export default function MarketPanel({ research, productName }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
         <div className="min-w-0">
           <h2 className="text-sm font-semibold tracking-tight text-white">Market research</h2>
-          <p className="mt-0.5 text-[11px] leading-snug text-zinc-500">
+          <p className="mt-0.5 text-[11px] leading-snug text-zinc-400">
             {productName ? `Evidence behind the ads for ${productName}` : "Evidence behind the ads"}
           </p>
         </div>
@@ -122,7 +122,7 @@ export default function MarketPanel({ research, productName }: Props) {
           <div className="text-base font-semibold tabular-nums leading-none text-white">
             {sources.length}
           </div>
-          <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-zinc-500">
+          <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-zinc-400">
             Sources read
           </div>
         </div>
@@ -130,22 +130,22 @@ export default function MarketPanel({ research, productName }: Props) {
           <div className="text-base font-semibold tabular-nums leading-none text-white">
             {domains}
           </div>
-          <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-zinc-500">Sites</div>
+          <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-zinc-400">Sites</div>
         </div>
         <div className="rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2">
           <div className="text-base font-semibold tabular-nums leading-none text-white">
             {angles.length}
           </div>
-          <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-zinc-500">Angles</div>
+          <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-zinc-400">Angles</div>
         </div>
       </div>
 
-      <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
+      <p className="mt-2 text-[11px] leading-relaxed text-zinc-400">
         Pulled from pages fetched during this run, not from model memory.
       </p>
 
       <div className="mt-4 border-t border-white/10 pt-4">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
           Who buys this
         </div>
         {profile.length ? (
@@ -162,16 +162,16 @@ export default function MarketPanel({ research, productName }: Props) {
             ))}
           </div>
         ) : (
-          <p className="mt-2 text-[13px] text-zinc-500">No buyer profile came back.</p>
+          <p className="mt-2 text-[13px] text-zinc-400">No buyer profile came back.</p>
         )}
       </div>
 
       <div className="mt-4 border-t border-white/10 pt-4">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
             What competitors say
           </div>
-          <span className="text-[11px] tabular-nums text-zinc-500">
+          <span className="text-[11px] tabular-nums text-zinc-400">
             {angles.length} {angles.length === 1 ? "angle" : "angles"} found
           </span>
         </div>
@@ -181,7 +181,7 @@ export default function MarketPanel({ research, productName }: Props) {
             <ol className="mt-2 divide-y divide-white/[0.06]">
               {shownAngles.map((angle, i) => (
                 <li key={`${angle}-${i}`} className="flex gap-2.5 py-2 first:pt-0 last:pb-0">
-                  <span className="mt-[3px] w-5 shrink-0 font-mono text-[10px] tabular-nums text-zinc-600">
+                  <span className="mt-[3px] w-5 shrink-0 font-mono text-[10px] tabular-nums text-zinc-400">
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   <span className="min-w-0 flex-1 break-words text-[13px] leading-relaxed text-zinc-300">
@@ -202,12 +202,12 @@ export default function MarketPanel({ research, productName }: Props) {
             ) : null}
           </>
         ) : (
-          <p className="mt-2 text-[13px] text-zinc-500">No competitor angles came back.</p>
+          <p className="mt-2 text-[13px] text-zinc-400">No competitor angles came back.</p>
         )}
       </div>
 
       <div className="mt-4 border-t border-white/10 pt-4">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
           Where your price lands
         </div>
         {research.pricePositioning ? (
@@ -220,16 +220,16 @@ export default function MarketPanel({ research, productName }: Props) {
             </p>
           </div>
         ) : (
-          <p className="mt-2 text-[13px] text-zinc-500">No price positioning came back.</p>
+          <p className="mt-2 text-[13px] text-zinc-400">No price positioning came back.</p>
         )}
       </div>
 
       <div className="mt-4 border-t border-white/10 pt-4">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
             Sources
           </div>
-          <span className="text-[11px] tabular-nums text-zinc-500">
+          <span className="text-[11px] tabular-nums text-zinc-400">
             {sources.length} read across {domains} {domains === 1 ? "site" : "sites"}
           </span>
         </div>
@@ -256,11 +256,11 @@ export default function MarketPanel({ research, productName }: Props) {
                           {source.title || domain}
                         </span>
                         <span className="mt-0.5 flex min-w-0 items-baseline gap-1">
-                          <span className="shrink-0 font-mono text-[11px] text-zinc-500">
+                          <span className="shrink-0 font-mono text-[11px] text-zinc-400">
                             {domain}
                           </span>
                           {path ? (
-                            <span className="min-w-0 truncate font-mono text-[11px] text-zinc-600">
+                            <span className="min-w-0 truncate font-mono text-[11px] text-zinc-400">
                               {path}
                             </span>
                           ) : null}
@@ -268,7 +268,7 @@ export default function MarketPanel({ research, productName }: Props) {
                       </span>
                       <span
                         aria-hidden="true"
-                        className="mt-[1px] shrink-0 text-[11px] text-zinc-600 group-hover:text-zinc-300"
+                        className="mt-[1px] shrink-0 text-[11px] text-zinc-400 group-hover:text-zinc-200"
                       >
                         ↗
                       </span>
@@ -289,7 +289,7 @@ export default function MarketPanel({ research, productName }: Props) {
             ) : null}
           </>
         ) : (
-          <p className="mt-2 text-[13px] text-zinc-500">
+          <p className="mt-2 text-[13px] text-zinc-400">
             The search returned no citable sources on this run.
           </p>
         )}

@@ -35,7 +35,7 @@ const ANGLE_GLOW: Record<string, string> = {
 function Metric({ label, value, tint }: { label: string; value: string; tint?: string }) {
   return (
     <div className="rounded-lg bg-white/[0.04] px-2 py-1.5">
-      <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">{label}</div>
+      <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-400">{label}</div>
       <div className={`text-sm font-semibold tabular-nums ${tint ?? "text-zinc-100"}`}>{value}</div>
     </div>
   );
@@ -104,7 +104,7 @@ export default function CreativeCard({
               ANGLE_GLOW[creative.angle] ?? "from-zinc-500/20"
             } to-transparent`}
           >
-            <span className="text-[11px] uppercase tracking-[0.2em] text-zinc-500">
+            <span className="text-[11px] uppercase tracking-[0.2em] text-zinc-400">
               No image returned
             </span>
           </div>
@@ -123,11 +123,15 @@ export default function CreativeCard({
 
       <div className="flex flex-1 flex-col gap-3 p-3 sm:p-4">
         <div>
-          <h3 className="text-[15px] font-semibold leading-snug text-white">{creative.headline}</h3>
-          <p className="mt-1 text-[13px] leading-relaxed text-zinc-400">{creative.body}</p>
+          <h3 className="break-words text-[15px] font-semibold leading-snug text-white">
+            {creative.headline}
+          </h3>
+          <p className="mt-1 break-words text-[13px] leading-relaxed text-zinc-400">
+            {creative.body}
+          </p>
         </div>
 
-        <div className="text-[11px] leading-relaxed text-zinc-500">
+        <div className="break-words text-[11px] leading-relaxed text-zinc-400">
           {creative.parentId ? (
             <>
               Bred from {parentHeadline ? `"${parentHeadline}"` : shortId(creative.parentId)}, the

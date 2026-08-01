@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import type { Creative, State } from "@/lib/store";
+import type {
+  AuditEntry,
+  Creative,
+  CreativeAngle,
+  Product,
+  PurchaseEvent,
+  Research,
+  State,
+} from "@/lib/store";
 import MandateBar from "@/components/MandateBar";
 import CreativeCard from "@/components/CreativeCard";
 import PurchaseEventItem from "@/components/PurchaseEvent";
@@ -18,8 +26,135 @@ import { ctr, money, pct } from "@/components/format";
 
 const MANDATE_CAP = 50;
 const STORAGE_KEY = "banditd_state";
+const ANGLES: CreativeAngle[] = ["price", "ritual", "gift", "quality"];
+const MAX_AUDIT = 200;
+
+const UNREADABLE =
+  "A saved session in this browser could not be read, so it was discarded. You are starting clean.";
+const PATCHED =
+  "A saved session in this browser had damaged entries. They were dropped and the rest was restored.";
 
 type Images = Record<string, string>;
+
+function record(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function text(value: unknown, fallback = ""): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function count(value: unknown): number {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function list(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function safeProduct(value: unknown): Product | null {
+  const p = record(value);
+  if (!p || typeof p.name !== "string") return null;
+  return { name: p.name, price: text(p.price), description: text(p.description) };
+}
+
+function safeResearch(value: unknown): Research | null {
+  const r = record(value);
+  if (!r) return null;
+  return {
+    buyerProfile: text(r.buyerProfile),
+    competitorAngles: list(r.competitorAngles).map((a) => text(a)),
+    pricePositioning: text(r.pricePositioning),
+    sources: list(r.sources)
+      .map((s) => record(s))
+      .filter((s): s is Record<string, unknown> => s !== null)
+      .map((s) => ({ title: text(s.title), url: text(s.url) })),
+  };
+}
+
+function safeArm(raw: Record<string, unknown> | null): Creative["arm"] {
+  const impressions = Math.max(0, Math.floor(count(raw?.impressions)));
+  const clicks = Math.max(0, Math.floor(count(raw?.clicks)));
+  return { impressions, clicks: Math.min(clicks, impressions) };
+}
+
+function safeCreative(value: unknown): Creative | null {
+  const c = record(value);
+  if (!c || typeof c.id !== "string") return null;
+  return {
+    id: c.id,
+    generation: count(c.generation),
+    parentId: typeof c.parentId === "string" ? c.parentId : null,
+    angle: ANGLES.includes(c.angle as CreativeAngle) ? (c.angle as CreativeAngle) : "quality",
+    headline: text(c.headline),
+    body: text(c.body),
+    imagePrompt: text(c.imagePrompt),
+    targetEmotion: text(c.targetEmotion),
+    imageData: typeof c.imageData === "string" ? c.imageData : null,
+    arm: safeArm(record(c.arm)),
+  };
+}
+
+function safePurchase(value: unknown): PurchaseEvent | null {
+  const p = record(value);
+  if (!p || typeof p.id !== "string") return null;
+  return {
+    id: p.id,
+    at: text(p.at),
+    amount: text(p.amount),
+    reason: text(p.reason),
+    winnerId: text(p.winnerId),
+    probabilityBest: count(p.probabilityBest),
+    impressions: count(p.impressions),
+    ok: p.ok === true,
+    errorCode: typeof p.errorCode === "string" ? p.errorCode : null,
+    cardLast4: typeof p.cardLast4 === "string" ? p.cardLast4 : null,
+    transactionId: typeof p.transactionId === "string" ? p.transactionId : null,
+    mandateId: typeof p.mandateId === "string" ? p.mandateId : null,
+  };
+}
+
+function safeAudit(value: unknown): AuditEntry | null {
+  const a = record(value);
+  if (!a) return null;
+  return { at: text(a.at), kind: text(a.kind), detail: text(a.detail) };
+}
+
+function sanitize(value: unknown): State | null {
+  const raw = record(value);
+  if (!raw) return null;
+  return {
+    product: safeProduct(raw.product),
+    research: safeResearch(raw.research),
+    creatives: list(raw.creatives)
+      .map(safeCreative)
+      .filter((c): c is Creative => c !== null),
+    purchases: list(raw.purchases)
+      .map(safePurchase)
+      .filter((p): p is PurchaseEvent => p !== null),
+    audit: list(raw.audit)
+      .map(safeAudit)
+      .filter((a): a is AuditEntry => a !== null)
+      .slice(0, MAX_AUDIT),
+    mandateId: typeof raw.mandateId === "string" ? raw.mandateId : null,
+    simulatedImpressions: count(raw.simulatedImpressions),
+  };
+}
+
+function blank(): State {
+  return {
+    product: null,
+    research: null,
+    creatives: [],
+    purchases: [],
+    audit: [],
+    mandateId: null,
+    simulatedImpressions: 0,
+  };
+}
 
 function split(input: State): { clean: State; images: Images } {
   const images: Images = {};
@@ -47,15 +182,48 @@ function save(value: State) {
   }
 }
 
-function restore(): State | null {
+function forget() {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as State;
-    return parsed && typeof parsed === "object" && Array.isArray(parsed.creatives) ? parsed : null;
+    window.localStorage.removeItem(STORAGE_KEY);
   } catch {
-    return null;
+    return;
   }
+}
+
+function dropped(raw: Record<string, unknown>, safe: State): number {
+  const audit = Math.min(list(raw.audit).length, MAX_AUDIT);
+  return (
+    list(raw.creatives).length -
+    safe.creatives.length +
+    (list(raw.purchases).length - safe.purchases.length) +
+    (audit - safe.audit.length)
+  );
+}
+
+function restore(): { state: State | null; notice: string | null } {
+  let stored: string | null = null;
+  try {
+    stored = window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return { state: null, notice: null };
+  }
+  if (!stored) return { state: null, notice: null };
+
+  let parsed: unknown = null;
+  try {
+    parsed = JSON.parse(stored);
+  } catch {
+    forget();
+    return { state: null, notice: UNREADABLE };
+  }
+
+  const raw = record(parsed);
+  const safe = raw ? sanitize(raw) : null;
+  if (!raw || !safe) {
+    forget();
+    return { state: null, notice: UNREADABLE };
+  }
+  return { state: safe, notice: dropped(raw, safe) > 0 ? PATCHED : null };
 }
 
 interface DecideResponse {
@@ -122,7 +290,7 @@ function Action({
         </span>
         {running ? "Working" : label}
       </span>
-      <span className="text-[11px] leading-snug text-zinc-500">{hint}</span>
+      <span className="text-[11px] leading-snug text-zinc-400">{hint}</span>
     </button>
   );
 }
@@ -132,6 +300,7 @@ export default function Dashboard() {
   const [images, setImages] = useState<Images>({});
   const [busy, setBusy] = useState<Task | null>("load");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [decision, setDecision] = useState<Decision | null>(null);
   const [evaluation, setEvaluation] = useState<Evaluation | null>(null);
   const [receipt, setReceipt] = useState<LastPurchase | null>(null);
@@ -139,7 +308,7 @@ export default function Dashboard() {
   const [autoRunning, setAutoRunning] = useState(false);
 
   const absorb = useCallback((next: State) => {
-    const { clean, images: found } = split(next);
+    const { clean, images: found } = split(sanitize(next) ?? blank());
     setState(clean);
     if (Object.keys(found).length > 0) setImages((prev) => ({ ...prev, ...found }));
     save(clean);
@@ -166,10 +335,11 @@ export default function Dashboard() {
   useEffect(() => {
     let alive = true;
     const boot = async () => {
-      const stored = restore();
+      const { state: stored, notice: warning } = restore();
+      if (alive && warning) setNotice(warning);
       if (stored) {
         if (alive) {
-          setState(stored);
+          absorb(stored);
           setBusy(null);
         }
         return;
@@ -222,6 +392,15 @@ export default function Dashboard() {
 
   const winner = winnerId ? byId.get(winnerId) : undefined;
   const cohortImpressions = cohort.reduce((sum, c) => sum + c.arm.impressions, 0);
+  const candidateImpressions = freshEvaluation
+    ? (winner ?? cohort[freshEvaluation.candidateIndex])?.arm.impressions
+    : undefined;
+
+  const purchases = state?.purchases ?? [];
+  const marketing = state?.research ?? null;
+  const angles =
+    marketing && Array.isArray(marketing.competitorAngles) ? marketing.competitorAngles : [];
+  const sources = marketing && Array.isArray(marketing.sources) ? marketing.sources : [];
 
   const hasProduct = Boolean(state?.product);
   const hasResearch = Boolean(state?.research);
@@ -290,11 +469,24 @@ export default function Dashboard() {
       <MandateBar
         mandateId={state?.mandateId ?? null}
         cap={MANDATE_CAP}
-        purchases={state?.purchases ?? []}
+        purchases={purchases}
         working={locked}
       />
 
       <main className="mx-auto w-full max-w-6xl space-y-4 px-4 pb-20 pt-4 sm:space-y-6 sm:px-6 sm:pt-6">
+        {notice ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-400/30 bg-amber-400/[0.07] px-3 py-2.5 text-[12px] leading-snug text-amber-200">
+            <span className="min-w-0">{notice}</span>
+            <button
+              type="button"
+              onClick={() => setNotice(null)}
+              className="text-[11px] uppercase tracking-wider text-amber-300/80 hover:text-amber-100"
+            >
+              Dismiss
+            </button>
+          </div>
+        ) : null}
+
         {error ? (
           <div className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2.5 text-[13px] text-rose-200">
             {error}
@@ -305,18 +497,18 @@ export default function Dashboard() {
           {state?.product ? (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
                   Product under test
                 </div>
-                <h1 className="mt-1 text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                <h1 className="mt-1 break-words text-xl font-semibold tracking-tight text-white sm:text-2xl">
                   {state.product.name}
                 </h1>
-                <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-zinc-400">
+                <p className="mt-1 max-w-2xl break-words text-[13px] leading-relaxed text-zinc-400">
                   {state.product.description}
                 </p>
               </div>
               <div className="shrink-0 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2">
-                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">Price</div>
+                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-400">Price</div>
                 <div className="text-lg font-semibold tabular-nums text-white">
                   {state.product.price}
                 </div>
@@ -343,7 +535,7 @@ export default function Dashboard() {
           {state?.research ? (
             <div className="mt-4 grid gap-3 border-t border-white/10 pt-4 sm:grid-cols-3">
               <div>
-                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-400">
                   Who buys it
                 </div>
                 <p className="mt-1 text-[13px] leading-relaxed text-zinc-300">
@@ -351,11 +543,11 @@ export default function Dashboard() {
                 </p>
               </div>
               <div>
-                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-400">
                   Competitor angles
                 </div>
                 <ul className="mt-1 space-y-1">
-                  {state.research.competitorAngles.slice(0, 4).map((a) => (
+                  {angles.slice(0, 4).map((a) => (
                     <li key={a} className="text-[13px] leading-snug text-zinc-300">
                       {a}
                     </li>
@@ -363,15 +555,15 @@ export default function Dashboard() {
                 </ul>
               </div>
               <div>
-                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-400">
                   Price positioning
                 </div>
                 <p className="mt-1 text-[13px] leading-relaxed text-zinc-300">
                   {state.research.pricePositioning}
                 </p>
-                {state.research.sources.length ? (
+                {sources.length ? (
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {state.research.sources.slice(0, 4).map((s) => (
+                    {sources.slice(0, 4).map((s) => (
                       <a
                         key={s.url}
                         href={s.url}
@@ -405,7 +597,7 @@ export default function Dashboard() {
             <h2 className="text-sm font-semibold tracking-tight text-white">
               Or run it step by step
             </h2>
-            <span className="text-[11px] text-zinc-500">Generation {generation}</span>
+            <span className="text-[11px] text-zinc-400">Generation {generation}</span>
           </div>
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
@@ -494,7 +686,7 @@ export default function Dashboard() {
             <span className="text-[13px] font-semibold text-rose-200">
               {busy === "force" ? "Sending the over cap charge" : "Force a charge over the cap"}
             </span>
-            <span className="mt-0.5 block text-[11px] leading-snug text-zinc-500">
+            <span className="mt-0.5 block text-[11px] leading-snug text-zinc-400">
               Fires a charge ten times the ceiling on purpose. The mandate refuses it and the
               rejection lands below with its reason. Nothing is spent.
             </span>
@@ -551,6 +743,9 @@ export default function Dashboard() {
                   ? `The agent wants to spend $${money(decision.amount)}`
                   : "The agent kept the money in its pocket"}
               </h2>
+              <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                Decided on simulated traffic
+              </span>
             </div>
 
             <p className="mt-2 text-[13px] leading-relaxed text-zinc-200">
@@ -559,15 +754,18 @@ export default function Dashboard() {
 
             <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
               <div className="rounded-lg bg-white/[0.04] px-2 py-1.5">
-                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+                <div className="flex flex-wrap items-center gap-1 text-[10px] uppercase tracking-[0.12em] text-zinc-400">
                   Probability best
+                  <span className="rounded border border-amber-400/30 bg-amber-400/10 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300">
+                    Sim
+                  </span>
                 </div>
                 <div className="text-sm font-semibold tabular-nums text-zinc-100">
                   {pct(freshEvaluation.probabilityBest)}
                 </div>
               </div>
               <div className="rounded-lg bg-white/[0.04] px-2 py-1.5">
-                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-400">
                   Evidence
                 </div>
                 <div
@@ -579,15 +777,18 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="rounded-lg bg-white/[0.04] px-2 py-1.5">
-                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+                <div className="flex flex-wrap items-center gap-1 text-[10px] uppercase tracking-[0.12em] text-zinc-400">
                   Impressions
+                  <span className="rounded border border-amber-400/30 bg-amber-400/10 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300">
+                    Sim
+                  </span>
                 </div>
                 <div className="text-sm font-semibold tabular-nums text-zinc-100">
                   {freshEvaluation.totalImpressions.toLocaleString()}
                 </div>
               </div>
               <div className="rounded-lg bg-white/[0.04] px-2 py-1.5">
-                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-400">
                   Candidate
                 </div>
                 <div className="truncate text-sm font-semibold text-zinc-100">
@@ -618,10 +819,15 @@ export default function Dashboard() {
 
         <GatesPanel
           evaluation={freshEvaluation}
+          candidateImpressions={candidateImpressions}
           candidateLabel={cohort.find((c) => c.id === winnerId)?.headline}
         />
 
-        <LineageTree creatives={state?.creatives ?? []} winnerId={winnerId} />
+        <LineageTree
+          creatives={state?.creatives ?? []}
+          winnerId={winnerId}
+          purchases={purchases}
+        />
 
         <MarketPanel research={state?.research ?? null} productName={state?.product?.name} />
 
@@ -630,7 +836,7 @@ export default function Dashboard() {
             <h2 className="text-sm font-semibold tracking-tight text-white">
               Creatives in the run
             </h2>
-            <span className="text-[11px] text-zinc-500">
+            <span className="text-[11px] text-zinc-400">
               {cohort.length} live in generation {generation}, {cohortImpressions.toLocaleString()}{" "}
               simulated impressions
             </span>
@@ -655,7 +861,7 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-white/12 bg-white/[0.02] p-6 text-center">
-              <p className="text-[13px] text-zinc-500">
+              <p className="text-[13px] text-zinc-400">
                 No creatives yet. Run the research, then let the agent write four.
               </p>
             </div>
@@ -686,14 +892,15 @@ export default function Dashboard() {
         <section className="space-y-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-sm font-semibold tracking-tight text-white">Money it moved</h2>
-            <span className="text-[11px] text-zinc-500">
-              Sandbox payments, single use cards, newest first
+            <span className="text-[11px] text-zinc-400">
+              Sandbox payments, single use cards, newest first. The impressions and confidence on
+              each charge come from simulated traffic.
             </span>
           </div>
 
-          {state?.purchases.length ? (
+          {purchases.length ? (
             <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              {state.purchases.map((p, i) => (
+              {purchases.map((p, i) => (
                 <PurchaseEventItem
                   key={p.id}
                   event={p}
@@ -704,7 +911,7 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed border-white/12 bg-white/[0.02] p-6 text-center">
-              <p className="text-[13px] text-zinc-500">
+              <p className="text-[13px] text-zinc-400">
                 Nothing charged yet. Every attempt shows up here, the ones that go through and the
                 ones the mandate refuses.
               </p>
@@ -714,7 +921,7 @@ export default function Dashboard() {
 
         <AuditLog entries={state?.audit ?? []} />
 
-        <p className="pb-2 text-center text-[11px] leading-relaxed text-zinc-600">
+        <p className="pb-2 text-center text-[13px] leading-relaxed text-zinc-300">
           Impressions, clicks and click through rates on this page are simulated for the demo.
           Payments run against the Prava sandbox.
         </p>

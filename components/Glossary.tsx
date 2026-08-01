@@ -12,9 +12,9 @@ import {
 } from "react";
 
 export const GLOSSARY_TERMS = {
-  "three-gates": {
-    label: "three gates",
-    body: "A 95% probability of being best is not a 5% chance of being wrong. That number means different things with 2 variants than with 4, and it inflates every time you look at it: on identical variants, checking 48 times pushes the false alarm rate from 0.7% to 44.5%. So we don't stop there. We also require the gap to be big enough to matter, and we use an anytime-valid boundary that holds no matter how often we look. Measured on 200 runs against known truth, that takes the false alarm rate down to 0.5%.",
+  "four-gates": {
+    label: "four gates",
+    body: "Four conditions, and all four have to hold before a cent moves: enough traffic on the candidate, one ad clearly ahead, a gap big enough to be worth money, and a result that holds up to repeated looks. The last two are there because a 95% probability of being best is not a 5% chance of being wrong. That number means different things with 2 variants than with 4, and it inflates every time you look at it: on identical variants, checking 48 times pushes the false alarm rate from 0.7% to 44.5%. The anytime-valid boundary holds no matter how often we look. Measured on 200 runs against known truth, the four together take the false alarm rate down to 0.5%.",
   },
   "thompson-sampling": {
     label: "Thompson sampling",
@@ -167,7 +167,7 @@ export default function Glossary({ term, children }: Props) {
           }}
         >
           <span className="flex items-start justify-between gap-3">
-            <span className="eyebrow">{entry.label}</span>
+            <span className="eyebrow text-muted">{entry.label}</span>
             <button
               type="button"
               aria-label="Close explanation"
@@ -175,7 +175,7 @@ export default function Glossary({ term, children }: Props) {
                 setOpenId(null);
                 triggerRef.current?.focus();
               }}
-              className="-mr-1 -mt-1 shrink-0 cursor-pointer rounded-md px-1.5 py-0.5 text-sm leading-none text-subtle transition-colors hover:text-foreground"
+              className="-mr-1 -mt-1 shrink-0 cursor-pointer rounded-md px-1.5 py-0.5 text-sm leading-none text-muted transition-colors hover:text-foreground"
             >
               ×
             </button>

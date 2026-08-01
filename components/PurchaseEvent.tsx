@@ -46,6 +46,14 @@ const DECLINES: Record<string, { title: string; plain: string }> = {
   },
 };
 
+function SimTag() {
+  return (
+    <span className="rounded border border-amber-400/30 bg-amber-400/10 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300">
+      Sim
+    </span>
+  );
+}
+
 function explain(code: string | null): { title: string; plain: string } {
   if (!code) return { title: "Charge declined", plain: "The charge did not go through." };
   const known = DECLINES[code];
@@ -98,14 +106,14 @@ export default function PurchaseEventItem({ event, winnerHeadline, latest }: Pro
             ${money(event.amount)}
           </span>
         </div>
-        <div className="text-[11px] tabular-nums text-zinc-500">
+        <div className="text-[11px] tabular-nums text-zinc-400">
           {timeAgo(event.at)}, {clock(event.at)}
         </div>
       </div>
 
       <div className="space-y-3 p-3 sm:p-4">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
             Why the agent did this
           </div>
           <p className="mt-1 text-[13px] leading-relaxed text-zinc-200">{event.reason}</p>
@@ -125,7 +133,7 @@ export default function PurchaseEventItem({ event, winnerHeadline, latest }: Pro
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className="rounded-lg bg-white/[0.04] px-2 py-1.5">
-            <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">Card</div>
+            <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-400">Card</div>
             {event.cardLast4 ? (
               <div className="flex items-center gap-1.5">
                 <span className="font-mono text-sm text-zinc-100">
@@ -137,25 +145,29 @@ export default function PurchaseEventItem({ event, winnerHeadline, latest }: Pro
                 </span>
               </div>
             ) : (
-              <div className="text-sm text-zinc-500">None issued</div>
+              <div className="text-sm text-zinc-400">None issued</div>
             )}
           </div>
           <div className="rounded-lg bg-white/[0.04] px-2 py-1.5">
-            <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">Confidence</div>
+            <div className="flex flex-wrap items-center gap-1 text-[10px] uppercase tracking-[0.12em] text-zinc-400">
+              Confidence
+              <SimTag />
+            </div>
             <div className="text-sm font-semibold tabular-nums text-zinc-100">
               {event.probabilityBest ? pct(event.probabilityBest) : "n/a"}
             </div>
           </div>
           <div className="rounded-lg bg-white/[0.04] px-2 py-1.5">
-            <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+            <div className="flex flex-wrap items-center gap-1 text-[10px] uppercase tracking-[0.12em] text-zinc-400">
               Impressions
+              <SimTag />
             </div>
             <div className="text-sm font-semibold tabular-nums text-zinc-100">
               {event.impressions.toLocaleString()}
             </div>
           </div>
           <div className="rounded-lg bg-white/[0.04] px-2 py-1.5">
-            <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-500">
+            <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-400">
               Transaction
             </div>
             <div className="truncate font-mono text-[12px] text-zinc-300">
@@ -164,7 +176,7 @@ export default function PurchaseEventItem({ event, winnerHeadline, latest }: Pro
           </div>
         </div>
 
-        <div className="text-[11px] text-zinc-500">
+        <div className="break-words text-[11px] text-zinc-400">
           Bought for {winnerHeadline ? `"${winnerHeadline}"` : shortId(event.winnerId, 10)}. The card
           number never touches the agent, it is minted for this one charge and dies with it.
         </div>

@@ -55,13 +55,13 @@ export default function AuditLog({ entries, initial = 8 }: Props) {
     <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="text-sm font-semibold tracking-tight text-white">Audit log</h2>
-        <span className="text-[11px] text-zinc-500">
+        <span className="text-[11px] text-zinc-400">
           {entries.length} {entries.length === 1 ? "entry" : "entries"}, newest first
         </span>
       </div>
 
       {entries.length === 0 ? (
-        <p className="mt-3 text-[13px] text-zinc-500">
+        <p className="mt-3 text-[13px] text-zinc-400">
           Nothing yet. Every move the agent makes lands here, in the order it made them.
         </p>
       ) : (
@@ -87,7 +87,7 @@ export default function AuditLog({ entries, initial = 8 }: Props) {
                     >
                       {kind.label}
                     </span>
-                    <span className="text-[11px] tabular-nums text-zinc-500">
+                    <span className="text-[11px] tabular-nums text-zinc-400">
                       {timeAgo(entry.at)}, {clock(entry.at)}
                     </span>
                   </div>

@@ -45,7 +45,8 @@ const GATE_COPY = [
   {
     id: "traffic",
     name: "Enough traffic",
-    meaning: "Without enough data, any winner is just noise.",
+    meaning:
+      "Without enough data, any winner is just noise. The count is the simulated traffic on the candidate itself, not on the whole cohort.",
   },
   {
     id: "ahead",
@@ -83,6 +84,14 @@ function loss(value: number): string {
 function ratio(current: number, target: number): number {
   if (!Number.isFinite(current) || !Number.isFinite(target) || target <= 0) return 0;
   return Math.max(0, Math.min(1, current / target));
+}
+
+function SimTag() {
+  return (
+    <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-300">
+      Simulated traffic
+    </span>
+  );
 }
 
 function CheckIcon() {
@@ -127,12 +136,12 @@ function GateRow({
         : "border-white/10 bg-white/[0.02]";
 
   const badge = !resolved
-    ? "border-white/10 bg-white/5 text-zinc-500"
+    ? "border-white/10 bg-white/5 text-zinc-300"
     : gate.met
       ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300"
       : blocking
         ? "border-amber-400/40 bg-amber-400/10 text-amber-300"
-        : "border-white/10 bg-white/5 text-zinc-500";
+        : "border-white/10 bg-white/5 text-zinc-300";
 
   const bar = gate.met ? "bg-emerald-400" : blocking ? "bg-amber-400" : "bg-zinc-600";
   const veil = resolved ? "opacity-100" : "opacity-40";
@@ -159,8 +168,8 @@ function GateRow({
         >
           {gate.current}
         </span>
-        <span className="text-zinc-600">of</span>
-        <span className="text-zinc-400">{gate.required}</span>
+        <span className="text-zinc-400">of</span>
+        <span className="text-zinc-300">{gate.required}</span>
       </div>
 
       <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white/10">
@@ -174,7 +183,7 @@ function GateRow({
         />
       </div>
 
-      <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">{gate.meaning}</p>
+      <p className="mt-2 text-[11px] leading-relaxed text-zinc-400">{gate.meaning}</p>
 
       {!gate.met && blocking ? (
         <p
@@ -236,8 +245,11 @@ export default function GatesPanel({
     return (
       <Shell>
         <div className="border-b border-white/10 px-3 py-3 sm:px-4">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
-            Decision gates
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+              Decision gates
+            </div>
+            <SimTag />
           </div>
           <p className="mt-1 text-[13px] leading-relaxed text-zinc-400">
             No evaluation yet. The agent checks four conditions before it is allowed to spend, and
@@ -249,11 +261,11 @@ export default function GatesPanel({
             <li key={gate.id} className="rounded-xl border border-white/10 bg-white/[0.02] p-3">
               <div className="flex items-center justify-between gap-2">
                 <h4 className="text-[13px] font-semibold text-zinc-400">{gate.name}</h4>
-                <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-600">
+                <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-300">
                   Not run
                 </span>
               </div>
-              <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-600">{gate.meaning}</p>
+              <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-400">{gate.meaning}</p>
             </li>
           ))}
         </ul>
@@ -261,10 +273,8 @@ export default function GatesPanel({
     );
   }
 
-  const impressions =
-    typeof candidateImpressions === "number"
-      ? candidateImpressions
-      : (evaluation.totalImpressions ?? 0);
+  const onCandidate = typeof candidateImpressions === "number";
+  const impressions = onCandidate ? candidateImpressions : (evaluation.totalImpressions ?? 0);
   const probabilityBest = evaluation.probabilityBest ?? 0;
   const expectedLoss = evaluation.expectedLoss ?? Number.POSITIVE_INFINITY;
   const posteriorMean = evaluation.posteriorMean ?? 0;
@@ -283,9 +293,9 @@ export default function GatesPanel({
     {
       ...GATE_COPY[0],
       met: trafficMet,
-      current: `${count(impressions)} impressions`,
-      required: `${count(minImpressions)} needed`,
-      action: `Needs ${count(missing)} more impressions. Keep the test running.`,
+      current: `${count(impressions)} ${onCandidate ? "on the candidate" : "across the cohort"}`,
+      required: `${count(minImpressions)} simulated impressions needed`,
+      action: `The candidate needs ${count(missing)} more simulated impressions. Keep the test running.`,
       progress: ratio(impressions, minImpressions),
     },
     {
@@ -331,8 +341,11 @@ export default function GatesPanel({
     <Shell>
       <div className="border-b border-white/10 px-3 py-3 sm:px-4">
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
-            Decision gates
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+              Decision gates
+            </div>
+            <SimTag />
           </div>
           <div className="text-[11px] font-semibold tabular-nums text-zinc-400">
             {clearedSoFar} of {gates.length} cleared

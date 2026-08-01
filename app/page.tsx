@@ -53,8 +53,9 @@ const STEPS: { n: string; title: string; body: ReactNode }[] = [
     title: "Buys its own credits",
     body: (
       <>
-        Once <Glossary term="three-gates" /> agree, it charges more render credits through Prava,
-        with no approval step.
+        Once <Glossary term="four-gates" /> agree, enough traffic, one ad clearly ahead, a gap worth
+        money, and a result that holds up to repeated looks, it charges more render credits through
+        Prava, with no approval step.
       </>
     ),
   },
@@ -108,7 +109,7 @@ export default function Home() {
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-gutter py-4">
           <div className="flex items-baseline gap-2">
             <span className="text-lg font-semibold tracking-tight">banditd</span>
-            <span className="hidden text-sm text-subtle sm:inline">ad agent</span>
+            <span className="hidden text-sm text-muted sm:inline">ad agent</span>
           </div>
           <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted">
             <span className="size-1.5 rounded-full bg-accent" />
@@ -119,7 +120,7 @@ export default function Home() {
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-gutter pb-16 pt-10 sm:pt-14">
         <div className="enter max-w-2xl" style={{ animationDelay: "60ms" }}>
-          <p className="eyebrow">Agentic commerce</p>
+          <p className="eyebrow text-muted">Agentic commerce</p>
           <h1 className="mt-3 text-display font-semibold">
             An agent that runs your ads and spends its own money on the ones that work.
           </h1>
@@ -151,7 +152,7 @@ export default function Home() {
             </ol>
 
             <div className="enter mt-8 border-t border-border pt-6" style={{ animationDelay: "400ms" }}>
-              <p className="eyebrow">The limits you set</p>
+              <p className="eyebrow text-muted">The limits you set</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {GUARDRAILS.map((g) => (
                   <span
@@ -252,7 +253,7 @@ export default function Home() {
                   {busy ? "Handing it to the agent" : "Hand it to the agent"}
                 </button>
 
-                <p className="text-xs leading-relaxed text-subtle">
+                <p className="text-[0.8125rem] leading-relaxed text-muted">
                   Performance numbers in the demo are simulated and labeled in the dashboard.
                   Payments run against the Prava sandbox.
                 </p>
@@ -263,7 +264,7 @@ export default function Home() {
       </main>
 
       <footer className="enter border-t border-border" style={{ animationDelay: "460ms" }}>
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-1 px-gutter py-6 text-xs text-subtle sm:flex-row sm:items-center sm:justify-between">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-1 px-gutter py-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
           <span>Built at the Agentic Commerce Hackathon, 2026.</span>
           <span className="font-mono">OpenAI and Prava on Visa Intelligent Commerce</span>
         </div>

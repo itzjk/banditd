@@ -52,7 +52,7 @@ export default function AgentStatus({ title, steps, intervalMs = 2200 }: Props) 
             <div className="truncate text-[13px] text-zinc-200">{steps[index] ?? steps[0]}</div>
           </div>
         </div>
-        <div className="text-[11px] tabular-nums text-zinc-500">{elapsed}s</div>
+        <div className="text-[11px] tabular-nums text-zinc-400">{elapsed}s</div>
       </div>
 
       <div className="h-0.5 w-full overflow-hidden bg-white/10">
@@ -64,7 +64,7 @@ export default function AgentStatus({ title, steps, intervalMs = 2200 }: Props) 
           <li
             key={s}
             className={`flex items-center gap-1.5 text-[11px] ${
-              i < index ? "text-zinc-500 line-through" : i === index ? "text-zinc-200" : "text-zinc-600"
+              i < index ? "text-zinc-400 line-through" : i === index ? "text-zinc-200" : "text-zinc-400"
             }`}
           >
             <span
