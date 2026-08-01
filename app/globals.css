@@ -1,26 +1,166 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --background: #f7f7f6;
+  --surface: #ffffff;
+  --surface-2: #f1f1ef;
+  --foreground: #0b0c0d;
+  --muted: #55595f;
+  --subtle: #83888f;
+  --border: #e4e4e1;
+  --border-strong: #cdcdc9;
+  --accent: #0d7a52;
+  --accent-foreground: #ffffff;
+  --accent-soft: rgba(13, 122, 82, 0.1);
+  --danger: #b3242b;
+  --danger-soft: rgba(179, 36, 43, 0.1);
+  --warn: #8a5a00;
+  --warn-soft: rgba(138, 90, 0, 0.12);
+  --grid-line: rgba(11, 12, 13, 0.055);
+  --ring: rgba(11, 12, 13, 0.5);
+  --card-shadow: 0 1px 2px rgba(11, 12, 13, 0.05), 0 16px 40px -28px rgba(11, 12, 13, 0.35);
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --display-size: 2.125rem;
+  --gutter: 1.25rem;
+  --section: 3.5rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #08090a;
+    --surface: #0f1113;
+    --surface-2: #16191c;
+    --foreground: #f1f3f4;
+    --muted: #9ba1a8;
+    --subtle: #6c737a;
+    --border: #1e2226;
+    --border-strong: #2d3338;
+    --accent: #3fe08f;
+    --accent-foreground: #04140c;
+    --accent-soft: rgba(63, 224, 143, 0.12);
+    --danger: #ff6b6b;
+    --danger-soft: rgba(255, 107, 107, 0.12);
+    --warn: #f4b942;
+    --warn-soft: rgba(244, 185, 66, 0.12);
+    --grid-line: rgba(255, 255, 255, 0.045);
+    --ring: rgba(241, 243, 244, 0.6);
+    --card-shadow: 0 1px 0 rgba(255, 255, 255, 0.03), 0 24px 48px -32px rgba(0, 0, 0, 0.9);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@media (min-width: 640px) {
+  :root {
+    --display-size: 2.75rem;
+    --gutter: 2rem;
+    --section: 5rem;
+  }
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-soft: var(--accent-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --text-display: var(--display-size);
+  --text-display--line-height: 1.06;
+  --text-display--letter-spacing: -0.03em;
+
+  --spacing-gutter: var(--gutter);
+  --spacing-section: var(--section);
+
+  --shadow-card: var(--card-shadow);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: var(--foreground);
+    color: var(--background);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--subtle);
+  }
+}
+
+@layer components {
+  .grid-bg {
+    background-image:
+      linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-line) 1px, transparent 1px);
+    background-size: 56px 56px;
+    background-position: center top;
+  }
+
+  .eyebrow {
+    font-family: var(--font-geist-mono), ui-monospace, monospace;
+    font-size: 0.6875rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--subtle);
+  }
+
+  .field {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 0.625rem;
+    background: var(--surface);
+    padding: 0.75rem 0.875rem;
+    font-size: 1rem;
+    line-height: 1.45;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .field:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.875rem;
+    box-shadow: var(--card-shadow);
+  }
 }

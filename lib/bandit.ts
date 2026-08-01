@@ -16,6 +16,10 @@ export interface EvaluateOptions {
   minImpressions?: number;
   candidateRule?: CandidateRule;
   rng?: Rng;
+  priorAlpha?: number;
+  priorBeta?: number;
+  effectSizeTolerance?: number;
+  alpha?: number;
 }
 
 export interface Evaluation {
@@ -23,9 +27,22 @@ export interface Evaluation {
   probabilityBest: number;
   sufficientEvidence: boolean;
   totalImpressions: number;
+  expectedLoss: number;
+  eValue: number;
+  posteriorMean: number;
+  thresholdMet: boolean;
+  minImpressionsMet: boolean;
+  effectSizeOk: boolean;
+  anytimeValid: boolean;
 }
 
 const defaultRng: Rng = Math.random;
+
+export const DEFAULT_PRIOR_ALPHA = 0.5;
+export const DEFAULT_PRIOR_BETA = 0.5;
+export const DEFAULT_SAMPLES = 20000;
+export const DEFAULT_EFFECT_SIZE_TOLERANCE = 0.01;
+export const DEFAULT_ALPHA = 0.05;
 
 export function createRng(seed: number): Rng {
   let s = seed >>> 0;
@@ -72,28 +89,97 @@ export function sampleBeta(alpha: number, beta: number, rng: Rng = defaultRng): 
   return x / s;
 }
 
+const LANCZOS = [
+  676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059,
+  12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7,
+];
+
+export function logGamma(x: number): number {
+  if (x < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x);
+  const z = x - 1;
+  let a = 0.99999999999980993;
+  for (let i = 0; i < LANCZOS.length; i++) a += LANCZOS[i] / (z + i + 1);
+  const t = z + LANCZOS.length - 0.5;
+  return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(a);
+}
+
+export function logBetaFn(a: number, b: number): number {
+  return logGamma(a) + logGamma(b) - logGamma(a + b);
+}
+
+export function logMixtureBayesFactor(arms: Arm[], priorAlpha: number, priorBeta: number): number {
+  if (arms.length < 2) return 0;
+  const base = logBetaFn(priorAlpha, priorBeta);
+  let clicks = 0;
+  let misses = 0;
+  for (const arm of arms) {
+    clicks += arm.clicks;
+    misses += arm.impressions - arm.clicks;
+  }
+  const pooled = logBetaFn(priorAlpha + clicks, priorBeta + misses) - base;
+  const terms = arms.map((arm) => {
+    const miss = arm.impressions - arm.clicks;
+    const split =
+      logBetaFn(priorAlpha + arm.clicks, priorBeta + miss) -
+      base +
+      logBetaFn(priorAlpha + clicks - arm.clicks, priorBeta + misses - miss) -
+      base;
+    return split - pooled;
+  });
+  const top = Math.max(...terms);
+  if (!Number.isFinite(top)) return top;
+  let acc = 0;
+  for (const t of terms) acc += Math.exp(t - top);
+  return top + Math.log(acc / arms.length);
+}
+
 export function evaluate(arms: Arm[], options: EvaluateOptions = {}): Evaluation {
   const rng = options.rng ?? defaultRng;
-  const samples = options.samples ?? 20000;
+  const samples = options.samples ?? DEFAULT_SAMPLES;
   const threshold = options.threshold ?? 0.95;
   const minImpressions = options.minImpressions ?? 200;
-  const rule = options.candidateRule ?? "sample";
+  const rule = options.candidateRule ?? "probabilityBest";
+  const priorAlpha = options.priorAlpha ?? DEFAULT_PRIOR_ALPHA;
+  const priorBeta = options.priorBeta ?? DEFAULT_PRIOR_BETA;
+  const tolerance = options.effectSizeTolerance ?? DEFAULT_EFFECT_SIZE_TOLERANCE;
+  const alphaLevel = options.alpha ?? DEFAULT_ALPHA;
   const totalImpressions = arms.reduce((sum, a) => sum + a.impressions, 0);
 
   if (arms.length === 0) {
-    return { candidateIndex: -1, probabilityBest: 0, sufficientEvidence: false, totalImpressions };
+    return {
+      candidateIndex: -1,
+      probabilityBest: 0,
+      sufficientEvidence: false,
+      totalImpressions,
+      expectedLoss: Number.POSITIVE_INFINITY,
+      eValue: 0,
+      posteriorMean: 0,
+      thresholdMet: false,
+      minImpressionsMet: false,
+      effectSizeOk: false,
+      anytimeValid: false,
+    };
   }
   if (arms.length === 1) {
+    const enough = arms[0].impressions >= minImpressions;
     return {
       candidateIndex: 0,
       probabilityBest: 1,
-      sufficientEvidence: arms[0].impressions >= minImpressions,
+      sufficientEvidence: enough,
       totalImpressions,
+      expectedLoss: 0,
+      eValue: Number.POSITIVE_INFINITY,
+      posteriorMean:
+        (arms[0].clicks + priorAlpha) / (arms[0].impressions + priorAlpha + priorBeta),
+      thresholdMet: true,
+      minImpressionsMet: enough,
+      effectSizeOk: true,
+      anytimeValid: true,
     };
   }
 
-  const alpha = arms.map((a) => a.clicks + 1);
-  const beta = arms.map((a) => a.impressions - a.clicks + 1);
+  const alpha = arms.map((a) => a.clicks + priorAlpha);
+  const beta = arms.map((a) => a.impressions - a.clicks + priorBeta);
 
   let sampled = 0;
   let bestDraw = -1;
@@ -106,6 +192,7 @@ export function evaluate(arms: Arm[], options: EvaluateOptions = {}): Evaluation
   }
 
   const wins = new Array<number>(arms.length).fill(0);
+  const lossSum = new Array<number>(arms.length).fill(0);
   const draws = new Array<number>(arms.length).fill(0);
   for (let s = 0; s < samples; s++) {
     let leader = 0;
@@ -114,6 +201,8 @@ export function evaluate(arms: Arm[], options: EvaluateOptions = {}): Evaluation
       if (draws[k] > draws[leader]) leader = k;
     }
     wins[leader]++;
+    const top = draws[leader];
+    for (let k = 0; k < arms.length; k++) lossSum[k] += top - draws[k];
   }
 
   let candidateIndex = sampled;
@@ -133,13 +222,31 @@ export function evaluate(arms: Arm[], options: EvaluateOptions = {}): Evaluation
   }
 
   const probabilityBest = wins[candidateIndex] / samples;
+  const expectedLoss = lossSum[candidateIndex] / samples;
+  const posteriorMean =
+    alpha[candidateIndex] / (alpha[candidateIndex] + beta[candidateIndex]);
+
+  const logBf = logMixtureBayesFactor(arms, priorAlpha, priorBeta);
+  const eValue = probabilityBest <= 0 ? 0 : Math.exp(Math.log(probabilityBest) + logBf);
+
+  const thresholdMet = probabilityBest > threshold;
+  const minImpressionsMet = arms[candidateIndex].impressions >= minImpressions;
+  const effectSizeOk = expectedLoss < tolerance * posteriorMean;
+  const anytimeValid = eValue >= 1 / alphaLevel;
 
   return {
     candidateIndex,
     probabilityBest,
     sufficientEvidence:
-      probabilityBest > threshold && arms[candidateIndex].impressions >= minImpressions,
+      thresholdMet && minImpressionsMet && effectSizeOk && anytimeValid,
     totalImpressions,
+    expectedLoss,
+    eValue,
+    posteriorMean,
+    thresholdMet,
+    minImpressionsMet,
+    effectSizeOk,
+    anytimeValid,
   };
 }
 
