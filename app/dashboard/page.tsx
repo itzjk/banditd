@@ -234,12 +234,14 @@ export default function Dashboard() {
       absorb(await api<State>("/api/research", { state }));
     });
 
-  const generate = (parentId?: string) =>
-    run(parentId ? "evolve" : "creatives", async () => {
+  const generate = (parentId?: string) => {
+    if (locked) return;
+    return run(parentId ? "evolve" : "creatives", async () => {
       absorb(await api<State>("/api/creatives", parentId ? { parentId, state } : { state }));
       setDecision(null);
       setEvaluation(null);
     });
+  };
 
   const simulate = () =>
     run("simulate", async () => {
