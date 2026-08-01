@@ -29,6 +29,15 @@ const DECLINES: Record<string, { title: string; plain: string }> = {
     plain:
       "The mandate allowed a fixed number of charges and they are all used. Nothing was spent on this attempt.",
   },
+  CYCLE_ALREADY_CHARGED: {
+    title: "Already charged this cycle",
+    plain:
+      "A recurring mandate allows one charge per cycle and this one was already used. Nothing was spent. The seller signs another mandate, or the agent waits for the cycle to renew.",
+  },
+  DECLINED: {
+    title: "Visa declined the charge",
+    plain: "The card network refused the charge. Nothing was spent and the mandate is untouched.",
+  },
   CHARGE_FAILED: {
     title: "The card declined the charge",
     plain: "The network refused the charge. Nothing was spent and the mandate is untouched.",

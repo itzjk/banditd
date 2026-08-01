@@ -181,6 +181,13 @@ interface RawCharge {
   errorMessage?: string;
 }
 
+function declineCode(rawCode: string | undefined, message: string): string {
+  const text = message.toLowerCase();
+  if (text.includes("exceeds threshold")) return "THRESHOLD_EXCEEDED";
+  if (text.includes("already made in the current payment cycle")) return "CYCLE_ALREADY_CHARGED";
+  return rawCode ?? "CHARGE_FAILED";
+}
+
 export async function chargeMandate(
   mandateId: string,
   amount: string,
@@ -200,10 +207,11 @@ export async function chargeMandate(
   }
 
   if (raw.status === "failed" || !raw.credentials) {
+    const message = raw.errorMessage ?? "Charge was declined";
     return {
       ok: false,
-      code: raw.errorCode ?? "CHARGE_FAILED",
-      message: raw.errorMessage ?? "Charge was declined",
+      code: declineCode(raw.errorCode, message),
+      message,
       httpStatus: 200,
       mandateId: raw.mandateId ?? mandateId,
       transactionId: raw.transactionId,
