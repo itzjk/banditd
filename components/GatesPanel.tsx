@@ -149,7 +149,9 @@ function GateRow({
   return (
     <li className={`rounded-xl border p-3 transition-colors duration-200 ${tone}`}>
       <div className="flex items-start justify-between gap-2">
-        <h4 className="min-w-0 text-[13px] font-semibold leading-snug text-zinc-100">{gate.name}</h4>
+        <h4 className="min-w-0 break-words text-[13px] font-semibold leading-snug text-zinc-100">
+          {gate.name}
+        </h4>
         <span
           className={`flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition-opacity duration-200 ${badge} ${veil}`}
         >
@@ -380,7 +382,7 @@ export default function GatesPanel({
                 <CheckIcon />
                 All four gates cleared
               </div>
-              <p className="mt-1 text-[13px] leading-relaxed text-zinc-200">
+              <p className="mt-1 break-words text-[13px] leading-relaxed text-zinc-200">
                 {candidateLabel ? `"${candidateLabel}"` : "The leading ad"} has earned the budget. The
                 agent is cleared to spend on it.
               </p>
@@ -391,7 +393,7 @@ export default function GatesPanel({
                 <WaitIcon />
                 Waiting on: {blocker ? blocker.name : "one more check"}
               </div>
-              <p className="mt-1 text-[13px] leading-relaxed text-zinc-200">
+              <p className="mt-1 break-words text-[13px] leading-relaxed text-zinc-200">
                 {blocker ? blocker.action : "The agent is holding until every gate clears."}
               </p>
               <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-400">

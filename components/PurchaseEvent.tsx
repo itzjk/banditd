@@ -116,7 +116,7 @@ export default function PurchaseEventItem({ event, winnerHeadline, latest }: Pro
           <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
             Why the agent did this
           </div>
-          <p className="mt-1 text-[13px] leading-relaxed text-zinc-200">{event.reason}</p>
+          <p className="mt-1 break-words text-[13px] leading-relaxed text-zinc-200">{event.reason}</p>
         </div>
 
         {!ok ? (

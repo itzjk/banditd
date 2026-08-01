@@ -10,6 +10,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 
 export const GLOSSARY_TERMS = {
   "four-gates": {
@@ -152,12 +153,13 @@ export default function Glossary({ term, children }: Props) {
         {children ?? entry.label}
       </button>
 
-      {open ? (
+      {open && typeof document !== "undefined"
+        ? createPortal(
         <span
           ref={panelRef}
           role="note"
           id={panelId}
-          className="card fixed z-50 overflow-y-auto p-4 text-left"
+          className="card fixed z-[999] overflow-y-auto p-4 text-left shadow-2xl"
           style={{
             top: position?.top ?? 0,
             left: position?.left ?? 0,
@@ -183,8 +185,10 @@ export default function Glossary({ term, children }: Props) {
           <span className="mt-2 block text-[0.8125rem] leading-relaxed text-muted">
             {entry.body}
           </span>
-        </span>
-      ) : null}
+        </span>,
+            document.body,
+          )
+        : null}
     </>
   );
 }

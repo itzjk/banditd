@@ -142,7 +142,7 @@ export default function MandateBar({ mandateId, cap, purchases, facts, working }
               {armed
                 ? live
                   ? `$${money(shownRemaining)} left of the $${money(cap)} ceiling`
-                  : `$${money(shownRemaining)} left of the $${money(cap)} ceiling, counted in this browser`
+                  : `Local estimate: $${money(shownRemaining)} left of the $${money(cap)} ceiling`
                 : "The agent cannot spend a cent yet"}
             </span>
             <span className="shrink-0 tabular-nums">

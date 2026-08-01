@@ -104,7 +104,7 @@ export default function MarketPanel({ research, productName }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
         <div className="min-w-0">
           <h2 className="text-sm font-semibold tracking-tight text-white">Market research</h2>
-          <p className="mt-0.5 text-[11px] leading-snug text-zinc-400">
+          <p className="mt-0.5 break-words text-[11px] leading-snug text-zinc-400">
             {productName ? `Evidence behind the ads for ${productName}` : "Evidence behind the ads"}
           </p>
         </div>
