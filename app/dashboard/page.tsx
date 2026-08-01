@@ -397,11 +397,6 @@ export default function Dashboard() {
     : undefined;
 
   const purchases = state?.purchases ?? [];
-  const marketing = state?.research ?? null;
-  const angles =
-    marketing && Array.isArray(marketing.competitorAngles) ? marketing.competitorAngles : [];
-  const sources = marketing && Array.isArray(marketing.sources) ? marketing.sources : [];
-
   const hasProduct = Boolean(state?.product);
   const hasResearch = Boolean(state?.research);
   const hasCreatives = cohort.length > 0;
@@ -532,53 +527,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {state?.research ? (
-            <div className="mt-4 grid gap-3 border-t border-white/10 pt-4 sm:grid-cols-3">
-              <div>
-                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-400">
-                  Who buys it
-                </div>
-                <p className="mt-1 text-[13px] leading-relaxed text-zinc-300">
-                  {state.research.buyerProfile}
-                </p>
-              </div>
-              <div>
-                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-400">
-                  Competitor angles
-                </div>
-                <ul className="mt-1 space-y-1">
-                  {angles.slice(0, 4).map((a) => (
-                    <li key={a} className="text-[13px] leading-snug text-zinc-300">
-                      {a}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div>
-                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-400">
-                  Price positioning
-                </div>
-                <p className="mt-1 text-[13px] leading-relaxed text-zinc-300">
-                  {state.research.pricePositioning}
-                </p>
-                {sources.length ? (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {sources.slice(0, 4).map((s) => (
-                      <a
-                        key={s.url}
-                        href={s.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="max-w-full truncate rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-[11px] text-zinc-400 hover:text-zinc-200"
-                      >
-                        {s.title || s.url}
-                      </a>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
         </section>
 
         <DemoRunner

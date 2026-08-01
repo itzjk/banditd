@@ -233,7 +233,7 @@ export default function RunLedger({ state, pricing, models }: Props) {
               Every model call and every charge the agent made, priced at the published rates.
             </p>
           </div>
-          <div className="shrink-0 text-right">
+          <div className="shrink-0 text-left sm:text-right">
             <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
               Run total
             </div>
