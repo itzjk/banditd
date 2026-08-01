@@ -8,6 +8,10 @@ import CreativeCard from "@/components/CreativeCard";
 import PurchaseEventItem from "@/components/PurchaseEvent";
 import AuditLog from "@/components/AuditLog";
 import AgentStatus from "@/components/AgentStatus";
+import PosteriorChart from "@/components/PosteriorChart";
+import GatesPanel from "@/components/GatesPanel";
+import LineageTree from "@/components/LineageTree";
+import MarketPanel from "@/components/MarketPanel";
 import { ctr, money, pct } from "@/components/format";
 
 const MANDATE_CAP = 50;
@@ -683,6 +687,20 @@ export default function Dashboard() {
             ) : null}
           </section>
         ) : null}
+
+        <PosteriorChart
+          creatives={cohort}
+          winnerIndex={winnerId ? cohort.findIndex((c) => c.id === winnerId) : null}
+        />
+
+        <GatesPanel
+          evaluation={freshEvaluation}
+          candidateLabel={cohort.find((c) => c.id === winnerId)?.headline}
+        />
+
+        <LineageTree creatives={state?.creatives ?? []} winnerId={winnerId} />
+
+        <MarketPanel research={state?.research ?? null} productName={state?.product?.name} />
 
         <section className="space-y-3">
           <div className="flex flex-wrap items-baseline justify-between gap-2">

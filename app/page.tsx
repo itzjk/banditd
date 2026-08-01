@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { State } from "@/lib/store";
+import Glossary from "@/components/Glossary";
 
 const STORAGE_KEY = "banditd_state";
 
@@ -26,7 +27,7 @@ const EXAMPLE = {
   description: "A 32oz bottle of slow-steeped concentrate that makes 16 cups.",
 };
 
-const STEPS = [
+const STEPS: { n: string; title: string; body: ReactNode }[] = [
   {
     n: "01",
     title: "Researches the market",
@@ -34,18 +35,28 @@ const STEPS = [
   },
   {
     n: "02",
-    title: "Writes four creatives",
+    title: "Writes four ads",
     body: "Four angles, four images, four sets of copy. Price, ritual, gift, quality.",
   },
   {
     n: "03",
     title: "Measures which one wins",
-    body: "Each creative is an arm on a multi-armed bandit, scored with Thompson sampling.",
+    body: (
+      <>
+        Each ad is an arm on a <Glossary term="multi-armed-bandit" />, scored with{" "}
+        <Glossary term="thompson-sampling" />.
+      </>
+    ),
   },
   {
     n: "04",
     title: "Buys its own credits",
-    body: "At 95% confidence it charges more render credits through Prava, with no approval step.",
+    body: (
+      <>
+        Once <Glossary term="three-gates" /> agree, it charges more render credits through Prava,
+        with no approval step.
+      </>
+    ),
   },
 ];
 
@@ -113,7 +124,7 @@ export default function Home() {
             An agent that runs your ads and spends its own money on the ones that work.
           </h1>
           <p className="mt-4 text-base leading-relaxed text-muted sm:text-lg">
-            Give it a product. It researches the market, generates the creatives, watches which
+            Give it a product. It researches the market, writes the ads, watches which
             one actually wins, and once the evidence is statistical it buys more render credits
             by itself through Prava, inside the limits you set.
           </p>
@@ -148,8 +159,8 @@ export default function Home() {
                 ))}
               </div>
               <p className="mt-4 text-sm leading-relaxed text-muted">
-                Go over the mandate and the charge is blocked, with the reason written to the
-                dashboard. The card number never touches the agent.
+                Go over the <Glossary term="mandate" /> and the charge is blocked, with the reason
+                written to the dashboard. The card number never touches the agent.
               </p>
             </div>
           </section>
