@@ -356,7 +356,7 @@ function Segmented({
               type="button"
               aria-pressed={on}
               onClick={() => onPick(option.value)}
-              className={`focus-ring hover-tint min-w-0 rounded-lg border px-2.5 py-1.5 text-[0.8125rem] font-medium ${
+              className={`focus-ring hover-tint min-h-11 min-w-0 rounded-lg border px-2.5 py-1.5 text-[0.8125rem] font-medium sm:min-h-0 ${
                 on
                   ? "border-foreground/25 bg-foreground text-background"
                   : "border-border bg-surface-2 text-muted hover:border-border-strong hover:text-foreground"
@@ -897,7 +897,7 @@ export default function ProofLab({
           type="button"
           onClick={runLive}
           disabled={running}
-          className="focus-ring hover-tint rounded-lg border border-foreground/25 bg-foreground px-3.5 py-2 text-[0.8125rem] font-semibold text-background disabled:cursor-not-allowed disabled:opacity-45"
+          className="focus-ring hover-tint min-h-11 rounded-lg border border-foreground/25 bg-foreground px-3.5 py-2 text-[0.8125rem] font-semibold text-background disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-0"
         >
           {busy === "live" ? "Running live" : "Run one live"}
         </button>
@@ -905,7 +905,7 @@ export default function ProofLab({
           type="button"
           onClick={() => runBatch(batchSize)}
           disabled={running}
-          className="focus-ring hover-tint rounded-lg border border-border bg-surface-2 px-3.5 py-2 text-[0.8125rem] font-medium text-muted hover:border-border-strong hover:text-foreground disabled:cursor-not-allowed disabled:opacity-45"
+          className="focus-ring hover-tint min-h-11 rounded-lg border border-border bg-surface-2 px-3.5 py-2 text-[0.8125rem] font-medium text-muted hover:border-border-strong hover:text-foreground disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-0"
         >
           Repeat {group(batchSize)} times
         </button>
@@ -913,7 +913,7 @@ export default function ProofLab({
           <button
             type="button"
             onClick={halt}
-            className="focus-ring hover-tint rounded-lg border border-border bg-surface-2 px-3.5 py-2 text-[0.8125rem] font-medium text-muted hover:border-border-strong hover:text-foreground"
+            className="focus-ring hover-tint min-h-11 rounded-lg border border-border bg-surface-2 px-3.5 py-2 text-[0.8125rem] font-medium text-muted hover:border-border-strong hover:text-foreground sm:min-h-0"
           >
             Stop
           </button>
@@ -922,7 +922,7 @@ export default function ProofLab({
             type="button"
             onClick={reset}
             disabled={board.runs === 0}
-            className="focus-ring hover-tint rounded-lg border border-border bg-surface-2 px-3.5 py-2 text-[0.8125rem] font-medium text-muted hover:border-border-strong hover:text-foreground disabled:cursor-not-allowed disabled:opacity-45"
+            className="focus-ring hover-tint min-h-11 rounded-lg border border-border bg-surface-2 px-3.5 py-2 text-[0.8125rem] font-medium text-muted hover:border-border-strong hover:text-foreground disabled:cursor-not-allowed disabled:opacity-45 sm:min-h-0"
           >
             Reset
           </button>

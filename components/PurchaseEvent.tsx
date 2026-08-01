@@ -114,14 +114,14 @@ function Fact({
 
 function Total({ label, value, dot }: { label: string; value: string; dot?: string }) {
   return (
-    <div className="min-w-0 px-2.5 py-2.5 sm:px-4">
+    <div className="min-w-0 px-1.5 py-2.5 sm:px-4">
       <div className="flex min-w-0 items-center gap-1">
         {dot ? <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} /> : null}
-        <span className="truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-400 sm:tracking-[0.14em]">
+        <span className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-400 sm:tracking-[0.14em]">
           {label}
         </span>
       </div>
-      <div className="mt-1 truncate text-[16px] font-semibold leading-tight tabular-nums text-white">
+      <div className="mt-1 truncate text-[14px] font-semibold leading-tight tabular-nums text-white sm:text-[16px]">
         {value}
       </div>
     </div>

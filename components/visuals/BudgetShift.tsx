@@ -179,7 +179,7 @@ export default function BudgetShift({
                   <span key={`${cycle}-${i}`} className="bsx-seg" style={segStyle(i)} />
                 </div>
                 <p
-                  className="mt-1.5 truncate font-mono text-[0.5625rem] uppercase tracking-[0.06em] sm:text-[0.625rem] sm:tracking-[0.14em]"
+                  className="mt-1.5 break-words font-mono text-[0.5625rem] uppercase leading-snug tracking-[0.06em] sm:truncate sm:text-[0.625rem] sm:tracking-[0.14em]"
                   style={{ color: i === activePhase ? INK : MUT }}
                 >
                   {`0${i + 1}`} {p}
@@ -191,7 +191,7 @@ export default function BudgetShift({
           <div className="mt-5 space-y-3.5">
             {labels.map((label, i) => (
               <div key={label} className="min-w-0">
-                <div className="flex items-baseline gap-2">
+                <div className="flex items-baseline gap-1.5 sm:gap-2">
                   <span
                     className="size-1.5 shrink-0 self-center rounded-[1px]"
                     style={{
@@ -226,7 +226,7 @@ export default function BudgetShift({
                   </span>
                   <span
                     ref={(el) => void (shareEls.current[i] = el)}
-                    className="w-11 shrink-0 text-right font-mono text-[0.625rem] tabular-nums"
+                    className="w-9 shrink-0 text-right font-mono text-[0.625rem] tabular-nums sm:w-11"
                     style={{ color: MUT }}
                   >
                     {start[i].toFixed(1)}%

@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 
 export const alt =
@@ -20,6 +22,11 @@ const VERTICAL_LINES = [120, 240, 360, 480, 600, 720, 840, 960, 1080];
 const HORIZONTAL_LINES = [105, 210, 315, 420, 525];
 
 export default async function Image() {
+  const [plexRegular, plexSemiBold] = await Promise.all([
+    readFile(join(process.cwd(), "public", "fonts", "IBMPlexSans-Regular.ttf")),
+    readFile(join(process.cwd(), "public", "fonts", "IBMPlexSans-SemiBold.ttf")),
+  ]);
+
   return new ImageResponse(
     (
       <div
@@ -29,6 +36,7 @@ export default async function Image() {
           width: "100%",
           height: "100%",
           backgroundColor: BACKGROUND,
+          fontFamily: '"IBM Plex Sans"',
         }}
       >
         {VERTICAL_LINES.map((x) => (
@@ -89,6 +97,7 @@ export default async function Image() {
               <div
                 style={{
                   fontSize: 74,
+                  fontWeight: 600,
                   letterSpacing: "-0.035em",
                   color: FOREGROUND,
                   lineHeight: 1,
@@ -149,6 +158,7 @@ export default async function Image() {
                 <div
                   style={{
                     fontSize: 84,
+                    fontWeight: 600,
                     lineHeight: 1,
                     letterSpacing: "-0.04em",
                     color: DANGER,
@@ -176,6 +186,7 @@ export default async function Image() {
                 <div
                   style={{
                     fontSize: 84,
+                    fontWeight: 600,
                     lineHeight: 1,
                     letterSpacing: "-0.04em",
                     color: ACCENT,
@@ -192,6 +203,12 @@ export default async function Image() {
         </div>
       </div>
     ),
-    { ...size },
+    {
+      ...size,
+      fonts: [
+        { name: "IBM Plex Sans", data: plexRegular, weight: 400, style: "normal" },
+        { name: "IBM Plex Sans", data: plexSemiBold, weight: 600, style: "normal" },
+      ],
+    },
   );
 }
