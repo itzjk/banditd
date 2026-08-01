@@ -271,11 +271,7 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
       <p className="mt-1 text-[11px] text-zinc-400 sm:hidden">Swipe the tree sideways.</p>
 
       <div className="mt-3 overflow-x-auto pb-1">
-        <div
-          ref={containerRef}
-          style={depth ? { perspective: "1500px" } : undefined}
-          className="relative min-w-[32rem] sm:min-w-0"
-        >
+        <div ref={containerRef} className="relative min-w-[32rem] sm:min-w-0">
           <svg
             aria-hidden="true"
             className="pointer-events-none absolute inset-0 h-full w-full"
@@ -332,7 +328,10 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
                 : undefined;
 
               return (
-                <div key={row.generation}>
+                <div
+                  key={row.generation}
+                  style={depth && back ? { perspective: "1600px" } : undefined}
+                >
                   <div className="sticky left-0 mb-2 flex w-fit flex-wrap items-center gap-2">
                     <span className="rounded-md border border-white/10 bg-white/[0.06] px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-300">
                       Gen {row.generation}
