@@ -50,6 +50,7 @@ export interface LastPurchase {
   message?: string;
   forced?: boolean;
   cardLast4?: string | null;
+  creditedRenders?: number;
 }
 
 interface DecideResponse {
@@ -113,6 +114,7 @@ export const AGENT_STEPS: Record<Task, { title: string; steps: string[] }> = {
       "Minting a single use card",
       "Charging the mandate",
       "Reporting the charge back to Prava",
+      "Crediting the renders the charge paid for",
     ],
   },
   force: {
@@ -663,6 +665,7 @@ export default function DemoRunner({
       opened: boolean;
       parentCtr: number;
       plan: { targetImpressions: number; reason: string } | null;
+      naiveLook: number | null;
     } = {
       current: state,
       decision: null,
@@ -674,6 +677,7 @@ export default function DemoRunner({
       opened: false,
       parentCtr: 0,
       plan: null,
+      naiveLook: null,
     };
 
     const serve = async (label: string) => {
@@ -718,6 +722,17 @@ export default function DemoRunner({
           setRounds((prev) => [...prev, row]);
           report({ detail: roundLine(row) });
 
+          if (
+            held.naiveLook === null &&
+            evaluation.thresholdMet === true &&
+            !evaluation.sufficientEvidence
+          ) {
+            held.naiveLook = held.round;
+            report({
+              note: `Look ${held.round}: probability best crossed the bar with the gates still shut. The fixed-horizon rule the industry uses would have bought right here. banditd kept testing.`,
+            });
+          }
+
           if (evaluation.sufficientEvidence) {
             held.opened = true;
             break;
@@ -742,7 +757,11 @@ export default function DemoRunner({
             )} against the ${EVIDENCE_TARGET} needed`,
             note: `Probability best reached ${pct(
               last.probabilityBest,
-            )} and the frontier held across ${looksWord(last.n)} at the same test`,
+            )} and the frontier held across ${looksWord(last.n)} at the same test${
+              held.naiveLook !== null && held.naiveLook < last.n
+                ? `. The fixed-horizon rule the industry uses would have bought back on look ${held.naiveLook}`
+                : ""
+            }`,
           };
         }
 
@@ -867,16 +886,26 @@ export default function DemoRunner({
           setEnding({
             kind: "held",
             headline: "The evidence cleared, the mandate did not",
-            text: `This is a valid outcome, not a failure. All four gates opened on look ${held.round}: the evidence was enough and the agent judged the leading ad had earned the spend. What held the money is the mandate, not the statistics. A Prava mandate on a monthly frequency allows one charge per cycle, so once the signed mandates are charged there is nothing left to spend against until the seller signs another one. The reason the agent gave sits on the decide step above.`,
+            text: `This is a valid outcome, not a failure. All four gates opened on look ${held.round}: the evidence was enough and the agent judged the leading ad had earned the spend. What held the money is the mandate, not the statistics. A Prava mandate on a monthly frequency allows one charge per cycle, so once the signed mandates are charged there is nothing left to spend against until the seller signs another one. The reason the agent gave sits on the decide step above.${
+              held.naiveLook !== null
+                ? ` The fixed-horizon rule the industry uses would have called this winner at look ${held.naiveLook}. banditd did not trust it until look ${held.round}, when the evidence survived repeated looks.`
+                : ""
+            }`,
           });
           return;
         }
         setEnding({
           kind: "held",
           headline: "The agent decided not to spend",
-          text: held.gate
-            ? `This is a valid outcome, not a failure. ${looked} as traffic came in and the gate "${held.gate}" never opened, so it kept the money and the run ends here.`
-            : `This is a valid outcome, not a failure. ${looked} as traffic came in and the statistics never cleared the gates, so it kept the money and the run ends here.`,
+          text: `${
+            held.gate
+              ? `This is a valid outcome, not a failure. ${looked} as traffic came in and the gate "${held.gate}" never opened, so it kept the money and the run ends here.`
+              : `This is a valid outcome, not a failure. ${looked} as traffic came in and the statistics never cleared the gates, so it kept the money and the run ends here.`
+          }${
+            held.naiveLook !== null
+              ? ` The fixed-horizon rule the industry uses would have bought at look ${held.naiveLook}, on evidence that never ended up holding. banditd kept the money.`
+              : ""
+          }`,
         });
         return;
       }
@@ -901,10 +930,15 @@ export default function DemoRunner({
         held.bought = res.lastPurchase?.ok === true;
 
         if (held.bought) {
+          const credited = res.lastPurchase?.creditedRenders ?? 0;
           return {
             detail: `Charged $${money(res.lastPurchase?.amount)} on a single use card ending ${
               res.lastPurchase?.cardLast4 ?? "????"
-            }`,
+            }${credited ? `, delivering ${credited} render credits the next generation burns one by one` : ""}`,
+            note:
+              held.naiveLook !== null
+                ? `The fixed-horizon rule the industry uses would have bought at look ${held.naiveLook}. banditd waited until look ${held.round}, when the evidence survived repeated looks.`
+                : undefined,
           };
         }
 
@@ -988,7 +1022,13 @@ export default function DemoRunner({
         headline: "The full loop closed",
         text: `Researched, wrote, served traffic across ${looksWord(
           held.round,
-        )} until the anytime valid frontier cleared, spent under the mandate, bred the winner and retested the next generation.`,
+        )} until the anytime valid frontier cleared, spent under the mandate, bred the winner and retested the next generation.${
+          held.naiveLook !== null
+            ? ` The fixed-horizon rule the industry uses would have spent the $${money(
+                held.decision?.amount,
+              )} at look ${held.naiveLook}, before the evidence survived repeated looks. banditd waited until look ${held.round}.`
+            : ""
+        }`,
       });
     } catch (err) {
       if (err instanceof Cancelled) {

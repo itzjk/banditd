@@ -109,7 +109,9 @@ Six routes, one step each:
 
 `POST /api/decide` runs the bandit evaluation, hands the result plus the live mandate constraints to the model, and gets back either a purchase call or an abstention.
 
-`POST /api/purchase` charges the mandate, rotates across the signed ones, reports the charge back to Prava. Send `force: true` and it deliberately charges over the ceiling so you can watch the rejection.
+`POST /api/purchase` charges the mandate, rotates across the signed ones, reports the charge back to Prava, and credits the ledger: one approved dollar is one render credit. Send `force: true` and it deliberately charges over the ceiling so you can watch the rejection.
+
+`POST /api/image` renders one creative image and debits one render credit. At a balance of zero it answers 402: no render credits left, the agent has to buy more through the mandate before it can render.
 
 The five files in `lib` that matter:
 
@@ -184,6 +186,14 @@ A recurring mandate allows one charge per cycle. Monthly frequency means one cha
 Declines do not arrive as errors. They come back HTTP 200 with `status: "failed"` and code `DECLINED`, and the real reason is only in the message string. So `lib/prava.ts` reads the message and normalizes it: "exceeds threshold" becomes `THRESHOLD_EXCEEDED`, "already made in the current payment cycle" becomes `CYCLE_ALREADY_CHARGED`. Each code maps to a sentence a seller can act on.
 
 The over-cap charge is not blocked by our code. We send it, the Visa network refuses it, and the decline comes back through Prava. Nothing was spent, the mandate is still live, and the dashboard says both. That is why the failure is in the demo.
+
+What the server refuses to believe
+
+The state travels in the browser, and `/api/purchase` treats it as a proposal, not as truth: before any mandate is touched, the server re-runs the four gates on the cohort it was handed and answers 422 to any evidence that is implausible on its face, meaning a claimed CTR above 25% on any arm, more than 5,000,000 claimed impressions, or more clicks than impressions. Even a state the server believed cannot spend past what the seller signed, because the ceiling and the merchant scope are enforced by the Visa network, not by the client. In production the counts would come as signed server-side telemetry from the ad platform, with the browser only reading; the plausibility check is the demo-sized version of that boundary.
+
+The ledger of what the money bought
+
+Every approved charge delivers render credits at one dollar per render, written to a ledger on the state. Every image render debits one credit, and at zero `/api/image` answers 402 and the agent cannot make more until it buys again through the mandate. The run starts with a starter grant of 4 renders, so the first generation is on the house and every one after that is bought, debited and audited.
 
 What's simulated and what isn't
 

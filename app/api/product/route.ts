@@ -37,6 +37,12 @@ export async function POST(req: Request) {
 
   logAudit(
     session.state,
+    "credits",
+    "Starter grant, 4 renders: the first generation is on the house, every render after that has to be bought through the mandate",
+  );
+
+  logAudit(
+    session.state,
     "product",
     `Seller submitted "${session.state.product!.name}" at ${session.state.product!.price}`,
   );

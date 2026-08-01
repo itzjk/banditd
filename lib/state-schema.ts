@@ -49,6 +49,20 @@ export interface AuditEntry {
   detail: string;
 }
 
+export type CreditKind = "purchase" | "render" | "grant";
+
+export interface CreditEntry {
+  at: string;
+  kind: CreditKind;
+  amount: number;
+  ref: string;
+}
+
+export interface Credits {
+  balance: number;
+  entries: CreditEntry[];
+}
+
 export interface RoundArm {
   id: string;
   impressions: number;
@@ -69,6 +83,7 @@ export interface State {
   purchases: PurchaseEvent[];
   audit: AuditEntry[];
   rounds: Round[];
+  credits: Credits;
   mandateId: string | null;
   simulatedImpressions: number;
 }
@@ -79,8 +94,24 @@ export interface Session {
 }
 
 const ANGLES: CreativeAngle[] = ["price", "ritual", "gift", "quality"];
+const CREDIT_KINDS: CreditKind[] = ["purchase", "render", "grant"];
 export const MAX_AUDIT = 200;
 export const MAX_ROUNDS = 200;
+export const STARTER_CREDITS = 4;
+
+export function starterCredits(): Credits {
+  return {
+    balance: STARTER_CREDITS,
+    entries: [
+      {
+        at: new Date().toISOString(),
+        kind: "grant",
+        amount: STARTER_CREDITS,
+        ref: "starter_grant",
+      },
+    ],
+  };
+}
 
 export function emptyState(): State {
   return {
@@ -90,6 +121,7 @@ export function emptyState(): State {
     purchases: [],
     audit: [],
     rounds: [],
+    credits: starterCredits(),
     mandateId: process.env.PRAVA_MANDATE_ID ?? null,
     simulatedImpressions: 0,
   };
@@ -208,6 +240,26 @@ function coerceRound(value: unknown): Round | null {
   };
 }
 
+function coerceCreditEntry(value: unknown): CreditEntry | null {
+  const e = record(value);
+  if (!e || !CREDIT_KINDS.includes(e.kind as CreditKind)) return null;
+  const amount = Math.trunc(count(e.amount));
+  if (amount === 0) return null;
+  return { at: text(e.at), kind: e.kind as CreditKind, amount, ref: text(e.ref) };
+}
+
+function coerceCredits(value: unknown): Credits {
+  const c = record(value);
+  if (!c) return starterCredits();
+  return {
+    balance: Math.max(0, Math.trunc(count(c.balance))),
+    entries: list(c.entries)
+      .map(coerceCreditEntry)
+      .filter((e): e is CreditEntry => e !== null)
+      .slice(0, MAX_AUDIT),
+  };
+}
+
 export function coerceState(value: unknown): State | null {
   const raw = record(value);
   if (!raw) return null;
@@ -229,6 +281,7 @@ export function coerceState(value: unknown): State | null {
       .map(coerceRound)
       .filter((r): r is Round => r !== null)
       .slice(-MAX_ROUNDS),
+    credits: coerceCredits(raw.credits),
     mandateId: typeof raw.mandateId === "string" ? raw.mandateId : null,
     simulatedImpressions: count(raw.simulatedImpressions),
   };

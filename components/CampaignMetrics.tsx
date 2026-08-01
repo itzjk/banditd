@@ -19,6 +19,7 @@ interface Props {
   creatives: Creative[];
   purchases: PurchaseEvent[];
   cap: number;
+  credits: number;
   evaluation: Confidence | null;
   winnerId: string | null;
   generation: number;
@@ -84,6 +85,7 @@ export default function CampaignMetrics({
   creatives,
   purchases,
   cap,
+  credits,
   evaluation,
   winnerId,
   generation,
@@ -133,9 +135,20 @@ export default function CampaignMetrics({
             Sandbox spend
           </span>
         </div>
-        <span className="text-[12px] tabular-nums text-zinc-400">
-          Generation {generation}, {cohort.length} ads live
-        </span>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <span
+            className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tabular-nums ${
+              credits > 0
+                ? "border-white/30 bg-white/[0.07] text-white"
+                : "border-rose-400/40 bg-rose-500/10 text-rose-200"
+            }`}
+          >
+            Render credits: {credits}
+          </span>
+          <span className="text-[12px] tabular-nums text-zinc-400">
+            Generation {generation}, {cohort.length} ads live
+          </span>
+        </div>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/[0.08] sm:grid-cols-4">
@@ -252,7 +265,9 @@ export default function CampaignMetrics({
       <p className="mt-2.5 break-words text-[12px] leading-relaxed text-zinc-400">
         Impressions, clicks, click through rates and confidence come from simulated traffic, not from
         a live ad platform. Budget used is real money moved through the Prava sandbox. Cost per click
-        mixes the two: sandbox spend divided by simulated clicks.
+        mixes the two: sandbox spend divided by simulated clicks. Render credits are the goods that
+        money buys: every approved charge adds them, every image render burns one, and at zero the
+        agent cannot render until it buys again.
       </p>
     </section>
   );

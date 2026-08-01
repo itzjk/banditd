@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { openSession, commit, logAudit } from "@/lib/store";
+import { openSession, commit, logAudit, logCredit } from "@/lib/store";
 import { evaluate } from "@/lib/bandit";
 import { reportCharge } from "@/lib/prava";
 import {
@@ -47,11 +47,34 @@ const DECLINE_MESSAGES: Record<string, string> = {
   [NO_MANDATE_AVAILABLE]: NO_MANDATE_MESSAGE,
 };
 
+const MAX_PLAUSIBLE_IMPRESSIONS = 5000000;
+const MAX_PLAUSIBLE_CTR = 0.25;
+const CTR_CHECK_FLOOR = 50;
+
 function normalizeAmount(raw: string | undefined): string | null {
   if (!raw) return null;
   const n = Number(raw);
   if (!Number.isFinite(n) || n <= 0) return null;
   return n.toFixed(2);
+}
+
+function implausibility(cohort: { arm: { impressions: number; clicks: number } }[]): string | null {
+  const impressions = cohort.reduce((sum, c) => sum + c.arm.impressions, 0);
+  const clicks = cohort.reduce((sum, c) => sum + c.arm.clicks, 0);
+  if (impressions > MAX_PLAUSIBLE_IMPRESSIONS) {
+    return `${impressions.toLocaleString("en-US")} impressions across the cohort, more than any run here ever serves`;
+  }
+  if (clicks > impressions) {
+    return `${clicks.toLocaleString("en-US")} clicks on ${impressions.toLocaleString("en-US")} impressions`;
+  }
+  const hot = cohort.find(
+    (c) => c.arm.impressions >= CTR_CHECK_FLOOR && c.arm.clicks / c.arm.impressions > MAX_PLAUSIBLE_CTR,
+  );
+  if (hot) {
+    const rate = ((hot.arm.clicks / hot.arm.impressions) * 100).toFixed(1);
+    return `a ${rate}% click through rate on one arm, far above anything the traffic model can produce`;
+  }
+  return null;
 }
 
 export async function POST(req: Request) {
@@ -73,6 +96,23 @@ export async function POST(req: Request) {
         code: "NO_EVIDENCE",
       },
       { status: 400 },
+    );
+  }
+
+  const implausible = implausibility(cohort);
+  if (implausible) {
+    logAudit(
+      state,
+      "purchase",
+      `Refused the purchase request before touching any mandate: the incoming evidence claims ${implausible}. The server does not spend against evidence it cannot believe.`,
+    );
+    return NextResponse.json(
+      {
+        error: `The server does not accept implausible evidence: the incoming state claims ${implausible}, so the request was refused before any mandate was touched.`,
+        code: "IMPLAUSIBLE_EVIDENCE",
+        state: commit(session),
+      },
+      { status: 422 },
     );
   }
 
@@ -300,6 +340,16 @@ export async function POST(req: Request) {
     `Charged ${amount} on mandate ${usedMandateId} for "${reason}" on card ending ${cardLast4 ?? "????"}${result.deduplicated ? ", deduplicated by reference" : ""} (txn ${transactionId ?? "n/a"}, reference ${reference})`,
   );
 
+  const creditedRenders = Math.max(0, Math.floor(Number(amount)));
+  if (creditedRenders > 0) {
+    logCredit(state, "purchase", creditedRenders, transactionId ?? reference);
+    logAudit(
+      state,
+      "credits",
+      `The ${amount} charge delivered ${creditedRenders} render credits at one dollar per render, balance now ${state.credits.balance}`,
+    );
+  }
+
   if (reportError) {
     logAudit(
       state,
@@ -317,6 +367,7 @@ export async function POST(req: Request) {
       winnerId,
       transactionId,
       cardLast4,
+      creditedRenders,
       mandateId: usedMandateId,
       rotatedPast: rotation.rotated.map((r) => r.mandateId),
       status: result.status,

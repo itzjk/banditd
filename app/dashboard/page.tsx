@@ -14,6 +14,9 @@ import type {
   AuditEntry,
   Creative,
   CreativeAngle,
+  CreditEntry,
+  CreditKind,
+  Credits,
   Product,
   PurchaseEvent,
   Research,
@@ -47,8 +50,10 @@ const MANDATE_BLOCKS = new Set([
 const STORAGE_KEY = "banditd_state";
 const IMAGES_KEY = "banditd_images";
 const ANGLES: CreativeAngle[] = ["price", "ritual", "gift", "quality"];
+const CREDIT_KINDS: CreditKind[] = ["purchase", "render", "grant"];
 const MAX_AUDIT = 200;
 const MAX_ROUNDS = 200;
+const STARTER_CREDITS = 4;
 
 const UNREADABLE =
   "A saved session in this browser could not be read, so it was discarded. You are starting clean.";
@@ -167,6 +172,61 @@ function safeRound(value: unknown): Round | null {
   };
 }
 
+function starterCredits(): Credits {
+  return {
+    balance: STARTER_CREDITS,
+    entries: [
+      {
+        at: new Date().toISOString(),
+        kind: "grant",
+        amount: STARTER_CREDITS,
+        ref: "starter_grant",
+      },
+    ],
+  };
+}
+
+function safeCreditEntry(value: unknown): CreditEntry | null {
+  const e = record(value);
+  if (!e || !CREDIT_KINDS.includes(e.kind as CreditKind)) return null;
+  const amount = Math.trunc(count(e.amount));
+  if (amount === 0) return null;
+  return { at: text(e.at), kind: e.kind as CreditKind, amount, ref: text(e.ref) };
+}
+
+function safeCredits(value: unknown): Credits {
+  const c = record(value);
+  if (!c) return starterCredits();
+  return {
+    balance: Math.max(0, Math.trunc(count(c.balance))),
+    entries: list(c.entries)
+      .map(safeCreditEntry)
+      .filter((e): e is CreditEntry => e !== null)
+      .slice(0, MAX_AUDIT),
+  };
+}
+
+function mergeCredits(prev: State | null, next: State): State {
+  if (!prev) return next;
+  const prevGrant = prev.credits.entries.find((e) => e.kind === "grant");
+  const nextGrant = next.credits.entries.find((e) => e.kind === "grant");
+  if (!prevGrant || !nextGrant || prevGrant.at !== nextGrant.at || prevGrant.ref !== nextGrant.ref) {
+    return next;
+  }
+  const seen = new Set<string>();
+  const entries: CreditEntry[] = [];
+  for (const entry of [...next.credits.entries, ...prev.credits.entries]) {
+    const key = `${entry.kind}:${entry.ref}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    entries.push(entry);
+  }
+  entries.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+  const capped = entries.slice(0, MAX_AUDIT);
+  const balance = Math.max(0, capped.reduce((sum, e) => sum + e.amount, 0));
+  return { ...next, credits: { balance, entries: capped } };
+}
+
 function sanitize(value: unknown): State | null {
   const raw = record(value);
   if (!raw) return null;
@@ -187,6 +247,7 @@ function sanitize(value: unknown): State | null {
       .map(safeRound)
       .filter((r): r is Round => r !== null)
       .slice(-MAX_ROUNDS),
+    credits: safeCredits(raw.credits),
     mandateId: typeof raw.mandateId === "string" ? raw.mandateId : null,
     simulatedImpressions: count(raw.simulatedImpressions),
   };
@@ -205,6 +266,7 @@ function split(input: State): { clean: State; images: Images } {
     purchases: input.purchases,
     audit: input.audit,
     rounds: input.rounds,
+    credits: input.credits,
     mandateId: input.mandateId,
     simulatedImpressions: input.simulatedImpressions,
   };
@@ -300,6 +362,15 @@ interface DecideResponse {
 
 type PurchaseResponse = State & { lastPurchase?: LastPurchase };
 
+class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 async function api<T>(url: string, body?: unknown): Promise<T> {
   const res = await fetch(url, {
     method: body === undefined ? "GET" : "POST",
@@ -313,7 +384,7 @@ async function api<T>(url: string, body?: unknown): Promise<T> {
       data && typeof data === "object" && "error" in data
         ? String((data as { error: unknown }).error)
         : `Request failed with status ${res.status}`;
-    throw new Error(message);
+    throw new ApiError(message, res.status);
   }
   return data as T;
 }
@@ -516,10 +587,12 @@ function Fold({
 interface ImageResponse {
   creativeId: string;
   imageData: string;
+  state?: State;
 }
 
 export default function Dashboard() {
   const [state, setState] = useState<State | null>(null);
+  const stateRef = useRef<State | null>(null);
   const [images, setImages] = useState<Images>({});
   const [rendering, setRendering] = useState<Set<string>>(() => new Set());
   const requested = useRef<Set<string>>(new Set());
@@ -538,7 +611,8 @@ export default function Dashboard() {
     const sane = sanitize(next);
     if (!sane) throw new Error("The server answered with something this run could not read. Nothing was changed.");
 
-    const { clean, images: found } = split(sane);
+    const { clean, images: found } = split(mergeCredits(stateRef.current, sane));
+    stateRef.current = clean;
     setState(clean);
     if (Object.keys(found).length > 0) {
       setImages((prev) => {
@@ -657,19 +731,23 @@ export default function Dashboard() {
           const res = await api<ImageResponse>("/api/image", {
             creativeId: c.id,
             imagePrompt: c.imagePrompt,
+            state: stateRef.current,
           });
+          if (res.state) absorb(res.state);
           setImages((prev) => {
             const merged = { ...prev, [c.id]: res.imageData };
             saveImages(merged);
             return merged;
           });
+        } catch (e) {
+          if (e instanceof ApiError && e.status === 402) setNotice(e.message);
         } finally {
           settle(c.id);
         }
       };
       void draw().catch(() => settle(c.id));
     });
-  }, [creatives, images, settle]);
+  }, [creatives, images, settle, absorb]);
 
   const winner = winnerId ? byId.get(winnerId) : undefined;
   const cohortImpressions = cohort.reduce((sum, c) => sum + c.arm.impressions, 0);
@@ -962,6 +1040,7 @@ export default function Dashboard() {
           creatives={creatives}
           purchases={purchases}
           cap={MANDATE_CAP}
+          credits={state?.credits.balance ?? 0}
           evaluation={freshEvaluation}
           winnerId={winnerId}
           generation={generation}

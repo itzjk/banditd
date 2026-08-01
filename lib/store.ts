@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { emptyState, coerceState, MAX_AUDIT, MAX_ROUNDS } from "./state-schema.ts";
-import type { State, Session, RoundArm } from "./state-schema.ts";
+import type { State, Session, RoundArm, CreditKind } from "./state-schema.ts";
 
 export * from "./state-schema.ts";
 
@@ -58,6 +58,12 @@ export function commit(session: Session): State {
 export function logAudit(target: State, kind: string, detail: string) {
   target.audit.unshift({ at: new Date().toISOString(), kind, detail });
   if (target.audit.length > MAX_AUDIT) target.audit.length = MAX_AUDIT;
+}
+
+export function logCredit(target: State, kind: CreditKind, amount: number, ref: string) {
+  target.credits.entries.unshift({ at: new Date().toISOString(), kind, amount, ref });
+  if (target.credits.entries.length > MAX_AUDIT) target.credits.entries.length = MAX_AUDIT;
+  target.credits.balance = Math.max(0, target.credits.balance + amount);
 }
 
 export function logRound(

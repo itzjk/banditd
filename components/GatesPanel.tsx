@@ -440,6 +440,12 @@ export default function GatesPanel({
               <p className="mt-1 break-words text-[14px] leading-relaxed text-zinc-200">
                 {blocker ? blocker.action : "The agent is holding until every gate clears."}
               </p>
+              {aheadMet && !looksMet ? (
+                <p className="mt-1.5 break-words text-[12px] leading-relaxed text-zinc-300">
+                  A fixed-horizon test would call this now. The e-value says the evidence does not
+                  survive repeated looks yet.
+                </p>
+              ) : null}
               <p className="mt-1.5 text-[12px] leading-relaxed text-zinc-400">
                 Nothing is broken. The agent is deliberately not spending until this clears.
               </p>

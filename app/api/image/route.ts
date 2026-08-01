@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { openSession, commit, logAudit, logCredit } from "@/lib/store";
 import { generateImage, isAngle, startBudget } from "@/lib/openai";
 
 export const maxDuration = 300;
@@ -10,6 +11,7 @@ export async function POST(req: Request) {
     creativeId?: unknown;
     imagePrompt?: unknown;
     angle?: unknown;
+    state?: unknown;
   };
 
   const creativeId = typeof body.creativeId === "string" ? body.creativeId.trim() : "";
@@ -21,6 +23,27 @@ export async function POST(req: Request) {
   }
   if (!imagePrompt) {
     return NextResponse.json({ error: "no image prompt given" }, { status: 400 });
+  }
+
+  const session = openSession(body.state);
+  const state = session.state;
+
+  if (state.credits.balance <= 0) {
+    logAudit(
+      state,
+      "credits",
+      `Refused to render ${creativeId}: the credit balance is 0, so there is nothing to deliver against`,
+    );
+    return NextResponse.json(
+      {
+        error:
+          "No render credits left. The agent has to buy more through the mandate before it can render.",
+        code: "NO_CREDITS",
+        creativeId,
+        state: commit(session),
+      },
+      { status: 402 },
+    );
   }
 
   const budget = startBudget("Image render", IMAGE_BUDGET_MS);
@@ -37,5 +60,12 @@ export async function POST(req: Request) {
     );
   }
 
-  return NextResponse.json({ creativeId, imageData });
+  logCredit(state, "render", -1, creativeId);
+  logAudit(
+    state,
+    "credits",
+    `Rendered ${creativeId} and debited 1 render credit, ${state.credits.balance} left on the ledger`,
+  );
+
+  return NextResponse.json({ creativeId, imageData, state: commit(session) });
 }
