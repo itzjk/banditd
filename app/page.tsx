@@ -822,12 +822,27 @@ export default function Home() {
                 </div>
 
                 {briefError ? (
-                  <p
+                  <div
                     role="alert"
                     className="mt-4 rounded-lg border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger"
                   >
-                    {briefError}
-                  </p>
+                    <p>{briefError}</p>
+                    <p className="mt-2 text-foreground">
+                      If you were asking a question rather than naming a product, the agent can
+                      answer it.{" "}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          window.dispatchEvent(
+                            new CustomEvent("banditd:ask", { detail: brief.trim() }),
+                          )
+                        }
+                        className="focus-ring font-semibold underline decoration-border-strong underline-offset-2"
+                      >
+                        Ask it here instead
+                      </button>
+                    </p>
+                  </div>
                 ) : null}
 
                 {briefNote ? (

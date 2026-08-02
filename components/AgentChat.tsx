@@ -221,6 +221,16 @@ export default function AgentChat({ state }: Props) {
   }, [busy]);
 
   useEffect(() => {
+    function onAsk(event: Event) {
+      const text = (event as CustomEvent<string>).detail;
+      setOpen(true);
+      if (typeof text === "string" && text.trim()) setDraft(text.trim());
+    }
+    window.addEventListener("banditd:ask", onAsk);
+    return () => window.removeEventListener("banditd:ask", onAsk);
+  }, []);
+
+  useEffect(() => {
     if (open) return;
     let last = window.scrollY;
     const onScroll = () => {
