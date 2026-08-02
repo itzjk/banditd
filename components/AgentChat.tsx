@@ -224,8 +224,11 @@ export default function AgentChat({ state }: Props) {
   useEffect(() => {
     const carried = claimQuestion();
     if (!carried) return;
-    setOpen(true);
-    setDraft(carried);
+    const frame = requestAnimationFrame(() => {
+      setOpen(true);
+      setDraft(carried);
+    });
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
