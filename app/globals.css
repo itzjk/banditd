@@ -973,9 +973,10 @@
 .bd-stage-bg {
   position: absolute;
   inset: 0;
-  background-image: url("/brand/bg.jpg");
-  background-size: cover;
-  background-position: center 42%;
+  background:
+    radial-gradient(900px 620px at 78% 18%, rgba(34, 227, 255, 0.10), transparent 62%),
+    radial-gradient(1100px 780px at 12% 88%, rgba(34, 227, 255, 0.055), transparent 66%),
+    radial-gradient(1500px 1000px at 50% 0%, #0a1620, #04060a 58%);
   z-index: -3;
 }
 
@@ -991,10 +992,11 @@
 .bd-stage-hero {
   position: absolute;
   z-index: -1;
-  right: 1%;
-  top: 3rem;
-  width: 430px;
-  max-width: 34vw;
+  right: 4%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 400px;
+  max-width: 30vw;
   mix-blend-mode: screen;
   pointer-events: none;
   opacity: 0.95;
@@ -1006,7 +1008,7 @@
 
 @media (max-width: 1279px) {
   .bd-stage-hero { display: none; }
-  .bd-stage-bg { background-position: center 60%; }
+
 }
 
 .bd-stage-motion {
@@ -1034,10 +1036,11 @@
 .bd-stage-halo {
   position: absolute;
   z-index: -2;
-  right: 1%;
-  top: 3rem;
-  width: 430px;
-  max-width: 34vw;
+  right: 4%;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 400px;
+  max-width: 30vw;
   aspect-ratio: 1 / 1;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(122, 211, 240, 0.16), rgba(122, 211, 240, 0.04) 46%, transparent 68%);
