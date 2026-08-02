@@ -1087,3 +1087,19 @@
 @media (prefers-reduced-motion: reduce) {
   .bd-caret { animation: none; }
 }
+
+@layer components {
+  .bd-neon {
+    color: #38e8ff;
+    text-shadow:
+      0 0 1px rgba(56, 232, 255, 0.55),
+      0 0 14px rgba(34, 227, 255, 0.42),
+      0 0 46px rgba(34, 227, 255, 0.22);
+  }
+  .bd-lume {
+    color: #ffffff;
+    text-shadow:
+      0 0 18px rgba(226, 244, 255, 0.24),
+      0 0 60px rgba(160, 214, 240, 0.12);
+  }
+}

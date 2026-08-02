@@ -760,8 +760,8 @@ export default function Home() {
                 Prava sandbox, no real money moves
               </span>
               <Display className="mt-4 max-w-3xl">
-                Write four ads. Wait for proof.{" "}
-                <span className="text-accent">Then pay for the winner yourself.</span>
+                <span className="bd-lume">Write four ads. Wait for proof.</span>{" "}
+                <span className="bd-neon">Then pay for the winner yourself.</span>
               </Display>
               <Lead className="mt-5 max-w-xl">
                 One sentence about what you sell. It reads the market, writes the ads, serves them
