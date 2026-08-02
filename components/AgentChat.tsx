@@ -40,6 +40,7 @@ export default function AgentChat({ state }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const [away, setAway] = useState(false);
 
   const logRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -54,6 +55,20 @@ export default function AgentChat({ state }: Props) {
     const timer = setInterval(() => setTick((n) => n + 1), 2400);
     return () => clearInterval(timer);
   }, [busy]);
+
+  useEffect(() => {
+    if (open) return;
+    let last = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (y < 48) setAway(false);
+      else if (y > last + 8) setAway(true);
+      else if (y < last - 8) setAway(false);
+      last = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -115,13 +130,24 @@ export default function AgentChat({ state }: Props) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Ask the agent about this run"
-        className="fixed bottom-4 right-4 z-40 flex items-center gap-2 rounded-full border border-white/15 bg-zinc-900/95 px-4 py-3 text-[13px] font-semibold text-zinc-100 shadow-lg backdrop-blur transition-colors hover:bg-zinc-800 sm:bottom-6 sm:right-6"
+        className={`fixed bottom-4 right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-zinc-900/95 text-[13px] font-semibold text-zinc-100 shadow-lg backdrop-blur transition-[transform,opacity] duration-200 hover:bg-zinc-800 sm:bottom-6 sm:right-6 sm:h-auto sm:w-auto sm:gap-2 sm:px-4 sm:py-3 sm:pointer-events-auto sm:translate-y-0 sm:opacity-100 ${
+          away ? "pointer-events-none translate-y-20 opacity-0" : ""
+        }`}
       >
-        <span className="relative flex h-2 w-2">
+        <svg viewBox="0 0 20 20" aria-hidden="true" className="h-5 w-5 sm:hidden">
+          <path
+            d="M3.5 5.5h13v8h-7l-3.5 3v-3h-2.5z"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <span className="relative hidden h-2 w-2 sm:flex">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-70" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300" />
         </span>
-        Ask the agent
+        <span className="hidden sm:inline">Ask the agent</span>
       </button>
     );
   }

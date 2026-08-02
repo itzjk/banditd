@@ -52,6 +52,7 @@ import type { Decision, Evaluation, LastPurchase, Task } from "@/components/Demo
 import { ctr, money, pct, plain, strength } from "@/components/format";
 import { declineFamily } from "@/lib/declines";
 import RunHistory from "@/components/RunHistory";
+import SampleRun from "@/components/SampleRun";
 import { archiveRun, historySnapshot, serverHistory, subscribeHistory } from "@/lib/history";
 
 const MANDATE_CAP = 50;
@@ -1215,6 +1216,14 @@ export default function Dashboard() {
   }, [hasCreatives, hasTraffic, hasPurchases, hasAudit]);
 
   const focused = upcoming.length > 0;
+  const untouched =
+    !hasCreatives &&
+    !hasTraffic &&
+    !hasPurchases &&
+    !hasResearch &&
+    !hasHistory &&
+    !autoRunning &&
+    busy === null;
 
   const advise = async () => {
     if (locked) return;
@@ -1492,9 +1501,11 @@ export default function Dashboard() {
             onRunningChange={setAutoRunning}
             onDecision={carryDecision}
             onReceipt={setReceipt}
-            footer={focused ? <Preview items={upcoming} /> : null}
+            footer={focused && !untouched ? <Preview items={upcoming} /> : null}
           />
         </div>
+
+        {untouched ? <SampleRun /> : null}
 
         {busy && busy !== "load" ? (
           <AgentStatus title={AGENT_STEPS[busy].title} steps={AGENT_STEPS[busy].steps} />

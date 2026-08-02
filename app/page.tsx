@@ -560,6 +560,10 @@ export default function Home() {
           <div className="relative mx-auto w-full max-w-5xl px-gutter pb-16 pt-12 sm:pb-24 sm:pt-16 lg:pb-28 lg:pt-16">
             <div className="enter max-w-4xl">
               <Eyebrow className="text-muted">The expensive call is when to stop</Eyebrow>
+              <span className="mt-2 flex items-center gap-1.5 text-[0.8125rem] text-muted lg:hidden">
+                <span className="size-1.5 shrink-0 rounded-full bg-accent" />
+                Prava sandbox, no real money moves
+              </span>
               <Display className={`mt-4 ${DISPLAY_XL}`}>
                 Stop paying for the ads that lost. banditd decides which one to switch off, and
                 when.
