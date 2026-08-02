@@ -992,14 +992,13 @@
 .bd-stage-hero {
   position: absolute;
   z-index: -1;
-  right: 4%;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 400px;
-  max-width: 30vw;
-  mix-blend-mode: screen;
+  right: 2%;
+  top: 1rem;
+  width: 560px;
+  max-width: 40vw;
   pointer-events: none;
-  opacity: 0.95;
+  opacity: 1;
+  filter: drop-shadow(0 0 90px rgba(34, 227, 255, 0.20));
 }
 
 .bd-stage :where(.t-display, .t-headline, .t-title) { color: #f4f7f9; }
