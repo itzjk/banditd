@@ -973,10 +973,10 @@
 .bd-stage-bg {
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(900px 620px at 78% 18%, rgba(34, 227, 255, 0.10), transparent 62%),
-    radial-gradient(1100px 780px at 12% 88%, rgba(34, 227, 255, 0.055), transparent 66%),
-    radial-gradient(1500px 1000px at 50% 0%, #0a1620, #04060a 58%);
+  background-color: #04060a;
+  background-image: url("/brand/stage.jpg");
+  background-size: cover;
+  background-position: center top;
   z-index: -3;
 }
 
@@ -992,8 +992,8 @@
 .bd-stage-hero {
   position: absolute;
   z-index: -1;
-  right: 2%;
-  top: 1rem;
+  right: 3%;
+  top: 0.5rem;
   width: 560px;
   max-width: 40vw;
   pointer-events: none;
