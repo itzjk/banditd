@@ -44,6 +44,8 @@ export const DEFAULT_PRIOR_BETA = 0.5;
 export const DEFAULT_SAMPLES = 20000;
 export const DEFAULT_EFFECT_SIZE_TOLERANCE = 0.01;
 export const DEFAULT_ALPHA = 0.05;
+export const DEFAULT_THRESHOLD = 0.95;
+export const DEFAULT_MIN_IMPRESSIONS = 200;
 export const DEFAULT_EVIDENCE_CONCENTRATION = 50;
 export const EVIDENCE_CALIBRATION = 1.4;
 
@@ -216,8 +218,8 @@ export function logCohortBayesFactor(
 export function evaluate(arms: Arm[], options: EvaluateOptions = {}): Evaluation {
   const rng = options.rng ?? defaultRng;
   const samples = options.samples ?? DEFAULT_SAMPLES;
-  const threshold = options.threshold ?? 0.95;
-  const minImpressions = options.minImpressions ?? 200;
+  const threshold = options.threshold ?? DEFAULT_THRESHOLD;
+  const minImpressions = options.minImpressions ?? DEFAULT_MIN_IMPRESSIONS;
   const rule = options.candidateRule ?? "probabilityBest";
   const priorAlpha = options.priorAlpha ?? DEFAULT_PRIOR_ALPHA;
   const priorBeta = options.priorBeta ?? DEFAULT_PRIOR_BETA;

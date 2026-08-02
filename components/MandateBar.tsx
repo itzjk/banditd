@@ -375,6 +375,11 @@ export default function MandateBar({
                       Kills the authorization for good. The next purchase attempt is refused live.
                     </span>
                   )}
+                  <p role="alert" className="sr-only">
+                    {confirmRevoke
+                      ? "Confirm needed. Press the same button again to revoke the mandate for good, or choose Keep it to cancel."
+                      : ""}
+                  </p>
                 </div>
               ) : null}
             </>

@@ -75,7 +75,7 @@ export default async function AuthorizationPage() {
         </div>
       </div>
 
-      <main className="mx-auto w-full max-w-2xl flex-1 px-gutter py-8 sm:py-12">
+      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-2xl flex-1 px-gutter py-8 sm:py-12">
         {!read.live ? (
           <>
             <h1 className="text-[1.5rem] font-semibold leading-tight tracking-tight text-foreground sm:text-[1.875rem]">

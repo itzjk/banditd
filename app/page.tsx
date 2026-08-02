@@ -553,7 +553,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="relative z-10 flex-1">
+      <main id="main" tabIndex={-1} className="relative z-10 flex-1">
         <section className="relative overflow-hidden border-b border-border">
           <MeshField variant="flow" intensity="soft" parallax position="absolute" />
           <div className="relative mx-auto w-full max-w-5xl px-gutter pb-16 pt-12 sm:pb-24 sm:pt-16 lg:pb-28 lg:pt-16">

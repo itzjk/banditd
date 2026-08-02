@@ -44,7 +44,14 @@ export default function AgentChat({ state }: Props) {
 
   const logRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const launcherRef = useRef<HTMLButtonElement | null>(null);
   const stateRef = useRef<State | null>(state);
+  const restoreFocus = useRef(false);
+
+  const close = useCallback(() => {
+    restoreFocus.current = true;
+    setOpen(false);
+  }, []);
 
   useEffect(() => {
     stateRef.current = state;
@@ -73,14 +80,21 @@ export default function AgentChat({ state }: Props) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") close();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  }, [open, close]);
 
   useEffect(() => {
-    if (open) inputRef.current?.focus();
+    if (open) {
+      inputRef.current?.focus();
+      return;
+    }
+    if (restoreFocus.current) {
+      restoreFocus.current = false;
+      launcherRef.current?.focus();
+    }
   }, [open]);
 
   useEffect(() => {
@@ -127,11 +141,14 @@ export default function AgentChat({ state }: Props) {
   if (!open) {
     return (
       <button
+        ref={launcherRef}
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Ask the agent about this run"
-        className={`fixed bottom-4 right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-zinc-900/95 text-[13px] font-semibold text-zinc-100 shadow-lg backdrop-blur transition-[transform,opacity] duration-200 hover:bg-zinc-800 sm:bottom-6 sm:right-6 sm:h-auto sm:w-auto sm:gap-2 sm:px-4 sm:py-3 sm:pointer-events-auto sm:translate-y-0 sm:opacity-100 ${
-          away ? "pointer-events-none translate-y-20 opacity-0" : ""
+        aria-haspopup="dialog"
+        aria-expanded={false}
+        className={`fixed bottom-[calc(1rem_+_env(safe-area-inset-bottom,0px))] right-4 z-40 flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-zinc-900/95 text-[13px] font-semibold text-zinc-100 shadow-lg backdrop-blur transition-[transform,opacity] duration-200 hover:bg-zinc-800 sm:bottom-[calc(1.5rem_+_env(safe-area-inset-bottom,0px))] sm:right-6 sm:h-auto sm:w-auto sm:gap-2 sm:px-4 sm:py-3 sm:pointer-events-auto sm:translate-y-0 sm:opacity-100 ${
+          away ? "invisible pointer-events-none translate-y-20 opacity-0 sm:visible" : ""
         }`}
       >
         <svg viewBox="0 0 20 20" aria-hidden="true" className="h-5 w-5 sm:hidden">
@@ -156,7 +173,7 @@ export default function AgentChat({ state }: Props) {
     <div
       role="dialog"
       aria-label="Chat with the banditd agent"
-      className="fixed inset-x-3 bottom-3 z-50 flex h-[min(78vh,34rem)] flex-col overflow-hidden rounded-2xl border border-white/15 bg-zinc-900/95 text-zinc-100 shadow-2xl backdrop-blur sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-[24rem]"
+      className="fixed inset-x-3 bottom-[calc(0.75rem_+_env(safe-area-inset-bottom,0px))] z-50 flex h-[min(78dvh,34rem)] flex-col overflow-hidden rounded-2xl border border-white/15 bg-zinc-900/95 text-zinc-100 shadow-2xl backdrop-blur sm:inset-x-auto sm:bottom-[calc(1.5rem_+_env(safe-area-inset-bottom,0px))] sm:right-6 sm:w-[24rem]"
     >
       <div className="flex items-start justify-between gap-2 border-b border-white/10 px-4 py-3">
         <div className="min-w-0">
@@ -167,7 +184,7 @@ export default function AgentChat({ state }: Props) {
         </div>
         <button
           type="button"
-          onClick={() => setOpen(false)}
+          onClick={close}
           aria-label="Close the chat"
           className="-mr-2 -my-1 flex min-h-[2.75rem] shrink-0 items-center rounded-lg px-2 text-[12px] uppercase tracking-[0.14em] text-zinc-400 transition-colors hover:text-white"
         >
@@ -177,7 +194,10 @@ export default function AgentChat({ state }: Props) {
 
       <div
         ref={logRef}
+        role="log"
         aria-live="polite"
+        aria-label="Conversation"
+        tabIndex={0}
         className="flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-3"
       >
         {turns.length === 0 ? (
@@ -213,6 +233,9 @@ export default function AgentChat({ state }: Props) {
                   : "border border-white/10 bg-white/[0.04] text-zinc-200"
               }`}
             >
+              <span className="sr-only">
+                {turn.role === "user" ? "You asked: " : "The agent answered: "}
+              </span>
               {turn.content}
             </div>
           </div>
@@ -229,7 +252,10 @@ export default function AgentChat({ state }: Props) {
         ) : null}
 
         {error ? (
-          <div className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-[12px] leading-snug text-rose-200">
+          <div
+            role="alert"
+            className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2 text-[12px] leading-snug text-rose-200"
+          >
             {error}
           </div>
         ) : null}

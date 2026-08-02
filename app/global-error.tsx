@@ -9,7 +9,7 @@ const css = `
   }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--fg); font-family: ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-  .wrap { min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:1.25rem; }
+  .wrap { min-height:100vh; min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:1.25rem; }
   .card { width:100%; max-width:34rem; background:var(--card); border:1px solid var(--line); border-radius:0.875rem; padding:1.25rem; }
   .eyebrow { margin:0; font-family: ui-monospace, monospace; font-size:0.6875rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--sub); }
   h1 { margin:0.75rem 0 0; font-size:1.25rem; line-height:1.25; letter-spacing:-0.02em; }

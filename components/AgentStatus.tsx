@@ -35,8 +35,7 @@ export default function AgentStatus({ title, steps, intervalMs = 2200 }: Props) 
 
   return (
     <div
-      role="status"
-      aria-live="polite"
+      aria-busy="true"
       className="overflow-hidden rounded-2xl border border-white/15 bg-white/[0.04]"
     >
       <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 sm:px-4">
@@ -49,10 +48,14 @@ export default function AgentStatus({ title, steps, intervalMs = 2200 }: Props) 
             <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-200">
               {title}
             </div>
-            <div className="truncate text-[14px] text-zinc-200">{steps[index] ?? steps[0]}</div>
+            <div role="status" className="truncate text-[14px] text-zinc-200">
+              {steps[index] ?? steps[0]}
+            </div>
           </div>
         </div>
-        <div className="text-[12px] tabular-nums text-zinc-400">{elapsed}s</div>
+        <div aria-hidden="true" className="text-[12px] tabular-nums text-zinc-400">
+          {elapsed}s
+        </div>
       </div>
 
       <div className="h-0.5 w-full overflow-hidden bg-white/10">

@@ -1,4 +1,3 @@
-export const UCP_VERSION = "2026-04-08";
 export const AGENT_PROFILE_PATH = "/.well-known/ucp-agent.json";
 export const MERCHANT_PROFILE_PATH = "/.well-known/ucp";
 

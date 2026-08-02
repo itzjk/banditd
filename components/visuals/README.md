@@ -11,7 +11,7 @@ figures line up in a column even where nothing asks for tabular numerals.
 Import from the barrel:
 
 ```tsx
-import { MeshField, Surface, BanditLearning, Shelf, BigNumber, Reveal, ParallaxLayer, Divider } from "@/components/visuals";
+import { MeshField, Surface, BanditLearning, Shelf, BigNumber, Reveal } from "@/components/visuals";
 import { Display, Headline, Title, Lead, Body, Small, Caption, Eyebrow, Mono } from "@/components/visuals";
 ```
 
@@ -260,49 +260,6 @@ like lag.
 
 ---
 
-## ParallaxLayer
-
-Moves its child slower than the page. Meant for decorative layers. It shifts the element visually
-without changing layout, so on an element that is in normal flow with tight spacing it can overlap a
-neighbour. Use it on absolutely positioned decoration, or leave generous space around it.
-
-| prop | type | default | what it does |
-| --- | --- | --- | --- |
-| `children` | `ReactNode` | required | what drifts |
-| `as` | any element or component | `"div"` | the wrapper |
-| `speed` | `number` | `0.06` | fraction of the scroll distance, negative moves the other way |
-| `max` | `number` | `44` | px cap in each direction |
-| `className` | `string` | `""` | extra classes |
-
-```tsx
-<section className="relative isolate overflow-hidden">
-  <ParallaxLayer speed={0.05} className="absolute inset-x-0 -top-10 -z-10">
-    <MeshField position="absolute" variant="contour" parallax={false} />
-  </ParallaxLayer>
-  <div className="relative">{children}</div>
-</section>
-```
-
----
-
-## Divider
-
-Separator that fades at the ends instead of stopping dead, with an optional mono label.
-
-| prop | type | default | what it does |
-| --- | --- | --- | --- |
-| `orientation` | `"horizontal" \| "vertical"` | `"horizontal"` | vertical needs a parent with a height |
-| `label` | `ReactNode` | none | centered label with a rule on each side |
-| `className` | `string` | `""` | extra classes |
-
-```tsx
-<Divider />
-<Divider label="how it works" className="my-12" />
-<Divider orientation="vertical" className="mx-6" />
-```
-
----
-
 ## Typography
 
 Nine steps, each one a component and a class. The components are the shortcut, the classes work
@@ -343,8 +300,6 @@ Available globally, no import needed.
 | --- | --- |
 | `.surface-quiet` `.surface-base` `.surface-raised` `.surface-feature` | what `Surface` applies, use directly on markup you already have |
 | `.surface-interactive` | hover lift, press, needs a positioned element |
-| `.edge-glow` | the hairline bevel on its own, on any element with a radius |
-| `.hover-lift` | 2px lift on hover, pointer devices only |
 | `.hover-tint` | consistent 160ms color, background and border transition |
 | `.focus-ring` | intentional focus state, transparent until `:focus-visible`, then it steps outward |
 | `.hairline` | gradient rule that fades at both ends, add `.hairline-in` or `.hairline-out` for one sided |
@@ -371,8 +326,6 @@ for the four creatives.
     <Surface level="feature" className="mt-10 p-4 sm:p-8">
       <BanditLearning />
     </Surface>
-
-    <Divider label="results" className="my-16" />
 
     <div className="grid gap-10 sm:grid-cols-3">
       <Reveal><BigNumber value={44.5} decimals={1} suffix="%" label="Detection rate" /></Reveal>

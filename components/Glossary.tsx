@@ -108,6 +108,11 @@ export default function Glossary({ term, children }: Props) {
 
   useEffect(() => {
     if (!open) return;
+    panelRef.current?.focus();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
@@ -144,6 +149,7 @@ export default function Glossary({ term, children }: Props) {
         ref={triggerRef}
         type="button"
         aria-expanded={open}
+        aria-haspopup="dialog"
         aria-controls={open ? panelId : undefined}
         onClick={() => setOpenId(open ? null : panelId)}
         className={`inline cursor-pointer rounded-sm text-left underline decoration-dotted decoration-1 underline-offset-4 transition-colors ${
@@ -157,9 +163,11 @@ export default function Glossary({ term, children }: Props) {
         ? createPortal(
         <span
           ref={panelRef}
-          role="note"
+          role="dialog"
+          aria-label={entry.label}
+          tabIndex={-1}
           id={panelId}
-          className="card fixed z-[999] overflow-y-auto p-4 text-left shadow-2xl"
+          className="card fixed z-[999] overflow-y-auto p-4 text-left shadow-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
           style={{
             top: position?.top ?? 0,
             left: position?.left ?? 0,

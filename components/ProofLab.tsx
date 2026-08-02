@@ -332,22 +332,6 @@ function scoreOf(board: Board): ProofScore {
   };
 }
 
-export function runProofBatch(setup: ProofSetup, seed: number, count: number): ProofScore {
-  const board = emptyBoard();
-  const rates = ratesOf(setup);
-  const best = bestOf(setup);
-  let at = seed;
-  for (let i = 0; i < count; i++) {
-    const run = startRun(setup, at);
-    at += 7919;
-    while (run.look < setup.looks && !(run.naive.fired && run.gated.fired)) {
-      stepRun(run, setup, rates, best, false);
-    }
-    record(board, run, setup, rates, best);
-  }
-  return scoreOf(board);
-}
-
 function later(task: () => void): () => void {
   if (typeof window === "undefined") return () => {};
   if (typeof window.requestIdleCallback === "function") {

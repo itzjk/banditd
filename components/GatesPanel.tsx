@@ -1,4 +1,10 @@
 "use client";
+import {
+  DEFAULT_ALPHA,
+  DEFAULT_EFFECT_SIZE_TOLERANCE,
+  DEFAULT_MIN_IMPRESSIONS,
+  DEFAULT_THRESHOLD,
+} from "@/lib/bandit";
 
 import { useEffect, useState, type ReactNode } from "react";
 import { pct } from "./format";
@@ -231,11 +237,11 @@ function Shell({ children }: { children: ReactNode }) {
 
 export default function GatesPanel({
   evaluation,
-  threshold = 0.95,
-  minImpressions = 200,
+  threshold = DEFAULT_THRESHOLD,
+  minImpressions = DEFAULT_MIN_IMPRESSIONS,
   candidateImpressions,
-  effectSizeTolerance = 0.01,
-  alpha = 0.05,
+  effectSizeTolerance = DEFAULT_EFFECT_SIZE_TOLERANCE,
+  alpha = DEFAULT_ALPHA,
   candidateLabel,
   mandateBlocked = false,
 }: Props) {

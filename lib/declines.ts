@@ -37,11 +37,3 @@ export function declineFamily(code: string | null | undefined): DeclineFamily {
   }
   return "unknown";
 }
-
-export function isGuardrailDecline(code: string | null | undefined): boolean {
-  return declineFamily(code) === "guardrail";
-}
-
-export function isProviderFailure(code: string | null | undefined): boolean {
-  return declineFamily(code) === "provider";
-}

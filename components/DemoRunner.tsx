@@ -399,10 +399,23 @@ function RoundTrack({ rounds }: { rounds: Round[] }) {
   );
 }
 
+const STATUS_WORD: Record<Status, string> = {
+  running: "Running",
+  done: "Done",
+  held: "Held",
+  stalled: "Stalled",
+  blocked: "Blocked",
+  failed: "Failed",
+  cancelled: "Cancelled",
+};
+
 function StatusDot({ status }: { status: Status }) {
+  const word = <span className="sr-only">{STATUS_WORD[status] ?? status}, </span>;
+
   if (status === "running") {
     return (
       <span className="relative mt-0.5 flex h-3 w-3 shrink-0">
+        {word}
         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-zinc-300 opacity-75" />
         <span className="relative inline-flex h-3 w-3 rounded-full bg-zinc-200" />
       </span>
@@ -424,6 +437,7 @@ function StatusDot({ status }: { status: Status }) {
     <span
       className={`mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border ${tone}`}
     >
+      {word}
       <svg viewBox="0 0 16 16" aria-hidden="true" className="h-2.5 w-2.5">
         {status === "done" ? (
           <path
@@ -1182,7 +1196,7 @@ export default function DemoRunner({
 
       {ending ? (
         <div className="px-3 pb-3 sm:px-4">
-          <div className={`rounded-xl border px-3 py-2.5 ${endingTone}`}>
+          <div role="alert" className={`rounded-xl border px-3 py-2.5 ${endingTone}`}>
             <div
               className={`text-[11px] font-bold uppercase tracking-[0.14em] ${endingLabel}`}
             >

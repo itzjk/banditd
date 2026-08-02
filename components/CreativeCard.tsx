@@ -104,7 +104,11 @@ export default function CreativeCard({
             {creative.imageData ? (
               <Image
                 src={creative.imageData}
-                alt={creative.headline}
+                alt={
+                  creative.imagePrompt
+                    ? `Ad image for the ${creative.angle} angle: ${creative.imagePrompt}`
+                    : `Ad image for the ${creative.angle} angle`
+                }
                 fill
                 unoptimized
                 sizes="(max-width: 640px) 100vw, 320px"

@@ -392,23 +392,38 @@ function readRev(): number {
 }
 
 function save(value: State, rev: number) {
+  const payload = JSON.stringify(value);
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+    window.localStorage.setItem(STORAGE_KEY, payload);
     window.localStorage.setItem(REV_KEY, String(rev));
-  } catch {
     return;
+  } catch {
+    try {
+      window.localStorage.removeItem(IMAGES_KEY);
+      window.localStorage.setItem(STORAGE_KEY, payload);
+      window.localStorage.setItem(REV_KEY, String(rev));
+    } catch {
+      return;
+    }
   }
 }
 
 function saveImages(images: Images) {
-  try {
-    window.localStorage.setItem(IMAGES_KEY, JSON.stringify(images));
-  } catch {
+  let keys = Object.keys(images);
+  while (keys.length > 0) {
+    const subset: Images = {};
+    for (const key of keys) subset[key] = images[key];
     try {
-      window.localStorage.removeItem(IMAGES_KEY);
-    } catch {
+      window.localStorage.setItem(IMAGES_KEY, JSON.stringify(subset));
       return;
+    } catch {
+      keys = keys.slice(0, keys.length - 1);
     }
+  }
+  try {
+    window.localStorage.removeItem(IMAGES_KEY);
+  } catch {
+    return;
   }
 }
 
@@ -787,6 +802,8 @@ function Fold({
   const [choice, setChoice] = useState<boolean | null>(null);
   const open = choice ?? defaultOpen;
   const panel = useId();
+  const labelId = useId();
+  const hintId = useId();
 
   return (
     <section>
@@ -794,12 +811,22 @@ function Fold({
         type="button"
         aria-expanded={open}
         aria-controls={panel}
+        aria-labelledby={labelId}
+        aria-describedby={hintId}
         onClick={() => setChoice(!open)}
         className="flex min-h-[3.5rem] w-full cursor-pointer items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.02] px-3 py-3 text-left transition-colors duration-150 hover:border-white/20 hover:bg-white/[0.05] sm:px-4"
       >
         <span className="min-w-0">
-          <span className="block break-words text-[14px] font-semibold text-zinc-100">{title}</span>
-          <span className="mt-0.5 block break-words text-[12px] leading-snug text-zinc-400">
+          <span
+            id={labelId}
+            className="block break-words text-[14px] font-semibold text-zinc-100"
+          >
+            {title}
+          </span>
+          <span
+            id={hintId}
+            className="mt-0.5 block break-words text-[12px] leading-snug text-zinc-400"
+          >
             {hint}
           </span>
         </span>
@@ -1431,7 +1458,7 @@ export default function Dashboard() {
         onRevoke={revoke}
       />
 
-      <main className="mx-auto w-full max-w-6xl px-4 pb-24 pt-5 sm:px-6 sm:pt-8">
+      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl px-4 pb-24 pt-5 sm:px-6 sm:pt-8">
         <div className="space-y-4 sm:space-y-5">
         {notice ? (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[13px] leading-snug text-zinc-300">
@@ -1653,7 +1680,12 @@ export default function Dashboard() {
                 </span>
               </div>
 
-              <div className="-mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
+              <div
+                role="group"
+                aria-label="The ads in this generation, scrollable sideways"
+                tabIndex={0}
+                className="-mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-100 sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden"
+              >
                 {cohort.map((c, i) => (
                   <div key={c.id} className="w-[86%] shrink-0 snap-start sm:w-auto">
                     <CreativeCard
@@ -1682,7 +1714,12 @@ export default function Dashboard() {
                   title="Retired variants"
                   hint={`The ${creatives.length - cohort.length} ${creatives.length - cohort.length === 1 ? "ad" : "ads"} from earlier generations, kept so you can see what the winner beat.`}
                 >
-                  <div className="-mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
+                  <div
+                    role="group"
+                    aria-label="Retired ads, scrollable sideways"
+                    tabIndex={0}
+                    className="-mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-zinc-100 sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden"
+                  >
                     {creatives
                       .filter((c) => c.generation !== generation)
                       .map((c) => (

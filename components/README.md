@@ -119,44 +119,6 @@ curl -X POST localhost:3000/api/export \
 
 ---
 
-## SeedPresets
-
-`components/SeedPresets.tsx`, semantic tokens, home page.
-
-Four example products from four categories, one tap each. Labeled as made up so nobody reads them
-as real catalog entries. Meant to sit next to the product form, or to replace the single
-"Use example" button.
-
-### Props
-
-| prop | type | default | meaning |
-| --- | --- | --- | --- |
-| `onPick` | `(preset: SeedPreset) => void` | required | Fired with the whole preset. Fill the form fields from it. |
-| `disabled` | `boolean` | `false` | Greys out every card. |
-| `className` | `string` | none | Spacing from the parent, for example `mt-5`. |
-
-Also exports `SEED_PRESETS` and the `SeedPreset` type
-(`{ id, category, name, price, description }`).
-
-### Example
-
-```tsx
-import SeedPresets, { type SeedPreset } from "@/components/SeedPresets";
-
-<SeedPresets
-  className="mt-5"
-  disabled={busy}
-  onPick={(preset: SeedPreset) => {
-    setName(preset.name);
-    setPrice(preset.price);
-    setDescription(preset.description);
-    setError(null);
-  }}
-/>
-```
-
----
-
 ## ProofLab
 
 `components/ProofLab.tsx`, semantic tokens, mounted on both pages.
@@ -200,7 +162,7 @@ and `var(--danger)` inside the tree resolves against the override, so nothing in
 rewritten to literals and the home page mount is untouched by it.
 
 Also exports `ProofScore` (`runs`, `naiveFalse`, `naiveRight`, `gatedFalse`, `gatedRight`),
-`ProofTruth`, `ProofTone`, `ProofSetup` and `runProofBatch`.
+`ProofTruth`, `ProofTone` and `ProofSetup`.
 
 ### Example
 
@@ -220,18 +182,6 @@ const wrong = score && score.runs ? (100 * score.naiveFalse) / score.runs : 0;
 
 <ProofLab batchSize={200} onScore={setScore} />
 ```
-
-### Headless helper
-
-```ts
-import { runProofBatch, type ProofSetup } from "@/components/ProofLab";
-
-const setup: ProofSetup = { arms: 2, truth: "identical", lift: 50, looks: 48, horizon: 12000 };
-const score = runProofBatch(setup, 4000, 200);
-```
-
-Same engine the component drives, but synchronous. It blocks the thread it runs on, so keep it in a
-script or a test and never on a click handler.
 
 ### Keeping the interface alive
 
