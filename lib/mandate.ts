@@ -232,8 +232,10 @@ export interface RotationResult {
 
 const MAX_ATTEMPTS = 4;
 
+const NOTHING_LEFT_BEHIND = new Set(["CYCLE_ALREADY_CHARGED", "FETCH_AGENTIC_CREDS_ERROR", "NO_TOKEN"]);
+
 function worthRetrying(code: string): boolean {
-  return code === "CYCLE_ALREADY_CHARGED" || declineFamily(code) === "provider";
+  return NOTHING_LEFT_BEHIND.has(code.toUpperCase());
 }
 
 export async function chargeWithRotation(

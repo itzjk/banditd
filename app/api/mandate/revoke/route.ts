@@ -5,7 +5,6 @@ import { cancelMandate, PravaError } from "@/lib/prava";
 export const maxDuration = 30;
 
 interface RevokeBody {
-  mandateId?: string;
   state?: unknown;
 }
 
@@ -14,16 +13,16 @@ export async function POST(req: Request) {
 
   const session = openSession(body.state);
   const state = session.state;
-  const mandateId = body.mandateId?.trim() || state.mandateId;
+  const mandateId = (process.env.PRAVA_REVOKE_DEMO_MANDATE_ID ?? "").trim();
 
   if (!mandateId) {
     return NextResponse.json(
       {
         error:
-          "there is no mandate on file to revoke. The seller has to sign one before there is anything to take back.",
-        code: "NO_MANDATE_ON_FILE",
+          "This deployment has no mandate set aside for the revocation demo, so there is nothing this endpoint is allowed to cancel. Revoking a live mandate is done by the seller in their own Prava account, not from here: this app has no sign in, so it never accepts a mandate id from the caller and can only touch the one the operator nominated.",
+        code: "REVOKE_NOT_ARMED",
       },
-      { status: 400 },
+      { status: 403 },
     );
   }
 

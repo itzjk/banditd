@@ -83,6 +83,11 @@ function normalizeAmount(raw: string | undefined): string | null {
   return n.toFixed(2);
 }
 
+function packPrice(): number {
+  const n = Number(process.env.RENDER_CREDIT_PRICE ?? "4.00");
+  return Number.isFinite(n) && n > 0 ? n : 4;
+}
+
 function implausibility(cohort: { arm: { impressions: number; clicks: number } }[]): string | null {
   const impressions = cohort.reduce((sum, c) => sum + c.arm.impressions, 0);
   const clicks = cohort.reduce((sum, c) => sum + c.arm.clicks, 0);
@@ -208,6 +213,16 @@ export async function POST(req: Request) {
     );
   }
 
+  if (!force && requested && Number(requested) > packPrice()) {
+    return NextResponse.json(
+      {
+        error: `The agent asked to charge ${requested} for one pack of render credits, and a pack costs ${packPrice().toFixed(2)}. The charge was never sent. The mandate ceiling is the seller's limit, not this product's price list, so the price of what the agent is buying is enforced here rather than left to the card network to catch.`,
+        code: "AMOUNT_ABOVE_LIST_PRICE",
+      },
+      { status: 422 },
+    );
+  }
+
   let queue: MandateQueue;
   let attempts: MandateCandidate[];
   let amount: string;
@@ -254,7 +269,7 @@ export async function POST(req: Request) {
         : "Bandit called the winner and bought more render credits");
   const probabilityBest = provenProbability;
   const impressions = provenImpressions;
-  const baseReference = `banditd_${Date.now()}_${winnerId}`;
+  const baseReference = `banditd_${cohortSeed(cohort)}_g${generation}_${amount.replace(".", "")}`;
 
   if (queue.listError) {
     logAudit(

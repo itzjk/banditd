@@ -418,16 +418,21 @@ function coerceRound(value: unknown): Round | null {
   };
 }
 
+const MAX_ENTRY_CREDITS = 12;
+const MAX_BALANCE_CREDITS = 60;
+
 function coerceCreditEntry(value: unknown): CreditEntry | null {
   const e = record(value);
   if (!e || !CREDIT_KINDS.includes(e.kind as CreditKind)) return null;
-  const amount = Math.trunc(count(e.amount));
-  if (amount === 0) return null;
+  const raw = Math.trunc(count(e.amount));
+  if (raw === 0) return null;
+  const amount = Math.min(MAX_ENTRY_CREDITS, Math.max(-MAX_ENTRY_CREDITS, raw));
   return { at: text(e.at), kind: e.kind as CreditKind, amount, ref: text(e.ref) };
 }
 
 export function ledgerBalance(entries: CreditEntry[]): number {
-  return Math.max(0, entries.reduce((sum, e) => sum + e.amount, 0));
+  const sum = entries.reduce((total, e) => total + e.amount, 0);
+  return Math.min(MAX_BALANCE_CREDITS, Math.max(0, sum));
 }
 
 function coerceCredits(value: unknown): Credits {
