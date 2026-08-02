@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { State } from "@/lib/store";
 import { archiveRun } from "@/lib/history";
+import { armQuestion } from "@/lib/autorun";
 import { armAutorun } from "@/lib/autorun";
 import { searchCatalog, type CatalogProduct } from "@/lib/catalog";
 import Glossary from "@/components/Glossary";
@@ -832,14 +833,13 @@ export default function Home() {
                       answer it.{" "}
                       <button
                         type="button"
-                        onClick={() =>
-                          window.dispatchEvent(
-                            new CustomEvent("banditd:ask", { detail: brief.trim() }),
-                          )
-                        }
+                        onClick={() => {
+                          armQuestion(brief.trim());
+                          router.push("/dashboard");
+                        }}
                         className="focus-ring font-semibold underline decoration-border-strong underline-offset-2"
                       >
-                        Ask it here instead
+                        Ask the agent instead
                       </button>
                     </p>
                   </div>

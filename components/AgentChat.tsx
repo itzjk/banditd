@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { claimQuestion } from "@/lib/autorun";
 import type { State } from "@/lib/store";
 
 interface ToolRun {
@@ -221,13 +222,10 @@ export default function AgentChat({ state }: Props) {
   }, [busy]);
 
   useEffect(() => {
-    function onAsk(event: Event) {
-      const text = (event as CustomEvent<string>).detail;
-      setOpen(true);
-      if (typeof text === "string" && text.trim()) setDraft(text.trim());
-    }
-    window.addEventListener("banditd:ask", onAsk);
-    return () => window.removeEventListener("banditd:ask", onAsk);
+    const carried = claimQuestion();
+    if (!carried) return;
+    setOpen(true);
+    setDraft(carried);
   }, []);
 
   useEffect(() => {
