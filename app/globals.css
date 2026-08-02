@@ -1081,7 +1081,6 @@
 .bd-ghost {
   position: absolute;
   inset: 0;
-  padding: inherit;
   pointer-events: none;
   white-space: pre-wrap;
   overflow: hidden;
