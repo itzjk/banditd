@@ -129,8 +129,8 @@ function Comparison({ left, right }: { left: ArchivedRun; right: ArchivedRun }) 
       <p className="mt-3 break-words text-[13px] leading-relaxed text-zinc-200">
         {left.winner && right.winner
           ? sameAngle
-            ? `The ${left.winner.angle} angle won both times, and the two winners sit ${gapBetween} apart on click through rate. That angle is holding up across products.`
-            : `The ${left.winner.angle} angle won on ${left.product.name} and the ${right.winner.angle} angle won on ${right.product.name}, with ${gapBetween} between the two winning rates. The angle that wins depends on the product, so neither one is a default.`
+            ? `The ${left.winner.angle} angle won both times, and the two winners sit ${gapBetween} apart on click through rate. Two runs is not evidence that the angle travels, but it is worth testing again.`
+            : `The ${left.winner.angle} angle won on ${left.product.name} and the ${right.winner.angle} angle won on ${right.product.name}, with ${gapBetween} between the two winning rates. Two runs, two different answers, so neither angle is a default here.`
           : "One of these runs never named a winner, so there is nothing to compare yet."}
       </p>
     </div>

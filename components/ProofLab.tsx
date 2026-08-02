@@ -647,7 +647,7 @@ function ScoreRow({
         />
       </div>
       <p className="mt-1 text-[0.6875rem] tabular-nums text-subtle">
-        {group(hits)} of {group(runs)} runs
+        {group(hits)} of {group(runs)} {runs === 1 ? "run" : "runs"}
       </p>
     </div>
   );
@@ -869,7 +869,7 @@ export default function ProofLab({
 
   const headline =
     board.runs === 0
-      ? "Pick a scenario and run it. Both rules read the same traffic, one impression at a time."
+      ? "Pick a scenario and run it. Both rules read the same traffic, one look at a time."
       : truth === "identical"
         ? `Over ${group(board.runs)} run${board.runs === 1 ? "" : "s"} on ads with the same true click rate, the naive rule invented a winner ${pct(
             naiveFalseRate,
@@ -901,9 +901,9 @@ export default function ProofLab({
           folded ? "" : "mt-2"
         }`.trim()}
       >
-        The naive rule stops the moment one ad looks 95% likely to be best. Banditd needs four gates
-        to clear. Choose a truth the ads do not know about, then watch which rule respects it and
-        what respecting it costs in clicks.
+        The naive rule stops the moment one ad looks 95% likely to be best. Banditd needs all four
+        gates to clear. Choose a truth the ads do not know about, then watch which rule respects it
+        and what respecting it costs in clicks.
       </p>
 
       <div className="mt-4 grid gap-3 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -1040,7 +1040,7 @@ export default function ProofLab({
         )}
         {busy === "batch" ? (
           <span className="font-mono text-[0.75rem] tabular-nums text-subtle">
-            {group(pending)} runs left
+            {group(pending)} {pending === 1 ? "run" : "runs"} left
           </span>
         ) : null}
       </div>

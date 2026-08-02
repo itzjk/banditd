@@ -99,7 +99,6 @@ const EXAMPLE = {
   description: "A 32oz bottle of slow-steeped concentrate that makes 16 cups.",
 };
 
-const DISPLAY_XL = "text-[clamp(2.25rem,8.4vw,4.5rem)]";
 const SECTION_PAD = "py-14 sm:py-24 lg:py-32";
 const RISE_EASE = "cubic-bezier(0.22, 0.61, 0.36, 1)";
 
@@ -564,7 +563,7 @@ export default function Home() {
                 <span className="size-1.5 shrink-0 rounded-full bg-accent" />
                 Prava sandbox, no real money moves
               </span>
-              <Display className={`mt-4 ${DISPLAY_XL}`}>
+              <Display className="mt-4">
                 Stop paying for the ads that lost. banditd decides which one to switch off, and
                 when.
               </Display>
@@ -573,11 +572,14 @@ export default function Home() {
                 holds the call until the evidence is good enough to act on. Then it pays for the
                 next round of work itself, inside the limits you set.
               </Lead>
-              <Caption className="mt-5 max-w-xl text-muted">
-                The rule most agents use calls a false winner 44.5% of the time. This one calls a
-                false winner 2.5% of the time, on the same runs against known truth, and the script
-                that proves it runs on your laptop in about eighteen minutes with no keys.
-              </Caption>
+              <Small className="mt-5 max-w-xl">
+                The rule most agents use calls a false winner{" "}
+                <strong className="font-semibold tabular-nums text-foreground">44.5%</strong> of the
+                time. This one calls a false winner{" "}
+                <strong className="font-semibold tabular-nums text-foreground">2.5%</strong> of the
+                time, on the same runs against known truth, and the script that proves it runs on
+                your laptop in about eighteen minutes with no keys.
+              </Small>
             </div>
 
             <div className="mt-8 grid items-start gap-6 sm:mt-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,23rem)] lg:gap-10">

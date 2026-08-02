@@ -65,7 +65,7 @@ export default function Insights({
     (insights.generation !== generation || insights.impressions !== impressions);
 
   const blocked = !hasResearch
-    ? "Run the market research first. These recommendations are built on the pages that search read, not on anything the model remembers."
+    ? "Run the market research first. These recommendations are built on the pages the search read, not on anything the model remembers."
     : "Serve traffic first. Until impressions land there are no click rates to reason from, and the agent would be guessing.";
 
   return (
@@ -80,8 +80,8 @@ export default function Insights({
           </div>
           <p className="mt-2 max-w-xl break-words text-[13px] leading-relaxed text-zinc-400 [overflow-wrap:anywhere]">
             The agent takes the market research it gathered and the click rates it measured, and says
-            what it would do next. It is told to invent no market numbers, and to answer no basis yet
-            when the data cannot carry a claim.
+            what it would do next. It is told to invent no market numbers, and to answer &ldquo;no
+            basis yet&rdquo; when the data cannot carry a claim.
           </p>
         </div>
 

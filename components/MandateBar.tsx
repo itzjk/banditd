@@ -336,7 +336,7 @@ export default function MandateBar({
                   cycle, so the second purchase in the same month is refused by Prava with the
                   ceiling untouched.{" "}
                   {read?.queued
-                    ? `${read.queued} more signed mandate${read.queued === 1 ? "" : "s"} are queued behind this one, and the agent moves on instead of retrying this one.`
+                    ? `${read.queued} more signed ${read.queued === 1 ? "mandate is" : "mandates are"} queued behind this one, and the agent moves on instead of retrying this one.`
                     : "Once it is used the agent stops buying until another mandate is signed."}
                 </p>
               )}

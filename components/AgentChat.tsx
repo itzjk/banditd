@@ -18,7 +18,7 @@ const MAX_TURNS = 10;
 const SUGGESTIONS = [
   "Why did this ad win?",
   "Why have you not bought yet?",
-  "What is the e value?",
+  "What is the E value?",
   "How much have you spent?",
 ];
 

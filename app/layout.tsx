@@ -15,10 +15,10 @@ const mono = IBM_Plex_Mono({
   display: "swap",
 });
 
-const title = "banditd, an agent that runs your ads and buys its own credits";
+const title = "banditd, an agent that tests your ads and buys its own credits";
 
 const description =
-  "banditd researches your market, writes four ad creatives, measures which one actually wins, and buys more render credits by itself through Prava, inside the limits you set.";
+  "banditd researches your market, writes four ad creatives, measures which one wins on simulated traffic, and buys more render credits by itself through Prava, inside the limits you signed.";
 
 const site = "https://banditd.vercel.app";
 

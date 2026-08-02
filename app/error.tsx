@@ -36,9 +36,10 @@ export default function ErrorBoundary({
             This page stopped before it finished loading
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-muted">
-            Nothing was charged and no mandate was touched. Try again first. If the page keeps
-            failing, the run saved in this browser is damaged, and clearing it starts a fresh run
-            from the home page.
+            This is the page failing to render, not a charge failing. Whether anything was charged is
+            in the payment ledger and the audit log, which are the record, not this screen. Try again
+            first. If the page keeps failing, the run saved in this browser is damaged, and clearing
+            it starts a fresh run from the home page.
           </p>
 
           <div className="mt-5 flex flex-col gap-2 sm:flex-row">

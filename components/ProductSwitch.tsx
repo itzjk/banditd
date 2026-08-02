@@ -161,7 +161,7 @@ export default function ProductSwitch({ product, hasRun, disabled, onApply }: Pr
     <form onSubmit={submit} className="min-w-0">
       <h3 className="text-[13px] font-semibold text-white">Change the product</h3>
       <p className="mt-0.5 break-words text-[12px] leading-snug text-zinc-400">
-        Type a name and the catalogue fills the rest, typos included.
+        Type a name and the catalog fills the rest, typos and all.
       </p>
 
       <div className="mt-2 space-y-3">

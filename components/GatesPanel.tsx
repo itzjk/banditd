@@ -280,7 +280,7 @@ export default function GatesPanel({
             <SimTag />
           </div>
           <p className="mt-2.5 break-words text-[13px] leading-relaxed text-zinc-400">
-            No evaluation yet. They fill in here once traffic starts.
+            No evaluation yet. The four gates fill in here once traffic starts.
           </p>
         </div>
         <ul className="grid gap-px bg-white/[0.07] sm:grid-cols-2">
@@ -329,7 +329,7 @@ export default function GatesPanel({
       current: count(impressions),
       unit: onCandidate ? "on the candidate" : "across the cohort",
       required: `${count(minImpressions)} needed`,
-      action: `The candidate needs ${count(missing)} more simulated impressions. Keep the test running.`,
+      action: `The candidate needs ${count(missing)} more simulated ${missing === 1 ? "impression" : "impressions"}. Keep the test running.`,
       progress: ratio(impressions, minImpressions),
     },
     {

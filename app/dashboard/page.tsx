@@ -698,8 +698,8 @@ function Preview({ items }: { items: Upcoming[] }) {
       </ul>
       <p className="mt-2 break-words text-[12px] leading-relaxed text-zinc-400">
         Each panel opens itself the moment the run produces the data behind it, so nothing on screen
-        is an empty box. The proof lab further down needs no run at all: it replays thousands of
-        tests in your own browser and scores the four gates against the obvious rule.
+        is an empty box. The proof lab further down needs no run at all: it replays two hundred tests
+        a click in your own browser and scores the four gates against the obvious rule.
       </p>
     </div>
   );
@@ -1340,7 +1340,7 @@ export default function Dashboard() {
         ok: true,
         slot: "steps",
         text: res.decision.shouldBuy
-          ? `It wants to spend $${money(res.decision.amount)}. The card at the top of the page carries its reason and the button that lets it.`
+          ? `It wants to spend $${money(res.decision.amount)}. The card at the top of the page carries its reason and the button that fires the charge, because you are driving this run by hand. The full run charges on its own.`
           : "It held the money. The card at the top of the page carries the reason, and the four gates below say which one stopped it.",
       };
     });
@@ -1614,6 +1614,12 @@ export default function Dashboard() {
                   : `Let it spend $${money(decision.amount)}`}
               </button>
             ) : null}
+            {decision.shouldBuy ? (
+              <p className="mt-2 break-words text-[12px] leading-relaxed text-zinc-400">
+                This button exists because you are stepping through the run by hand. In the full run
+                the agent fires this charge itself, with nobody approving it.
+              </p>
+            ) : null}
           </section>
         ) : null}
 
@@ -1653,13 +1659,14 @@ export default function Dashboard() {
                 ))}
               </div>
               <p className="text-[12px] leading-snug text-zinc-400 sm:hidden">
-                Swipe sideways to put the {cohort.length} ads next to each other.
+                Swipe sideways to put the {cohort.length} {cohort.length === 1 ? "ad" : "ads"} next
+                to each other.
               </p>
 
               {creatives.length > cohort.length ? (
                 <Fold
                   title="Retired variants"
-                  hint={`The ${creatives.length - cohort.length} ads from earlier generations, kept so you can see what the winner beat.`}
+                  hint={`The ${creatives.length - cohort.length} ${creatives.length - cohort.length === 1 ? "ad" : "ads"} from earlier generations, kept so you can see what the winner beat.`}
                 >
                   <div className="-mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
                     {creatives
@@ -1718,7 +1725,7 @@ export default function Dashboard() {
           summary={
             hasTraffic
               ? "Everything the agent read before it was allowed to spend: what it recommends you do next off that evidence, what it believes about each ad, the four gates it has to clear, the family tree of winners, the market it researched, and a lab that lets you measure the gates against the obvious rule yourself."
-              : "The proof lab needs no agent and no run behind it. It replays thousands of tests in your own browser and scores the four gates against the rule most teams stop on. What the agent believed about each ad, and the gates it had to clear, land beside it once the run has numbers."
+              : "The proof lab needs no agent and no run behind it. It replays two hundred tests a click in your own browser and scores the four gates against the rule most teams stop on. What the agent believed about each ad, and the gates it had to clear, land beside it once the run has numbers."
           }
         >
           {hasTraffic ? (
@@ -1953,8 +1960,9 @@ export default function Dashboard() {
                   {busy === "force" ? "Sending the over cap charge" : "Force a charge over the cap"}
                 </span>
                 <span className="mt-0.5 block break-words text-[12px] leading-snug text-zinc-400">
-                  Fires a charge ten times the ceiling on purpose. The mandate refuses it and the
-                  refusal appears right under this button with its reason. Nothing is spent.
+                  Fires a $50.00 charge against the smallest signed mandate, whose ceiling is $5.00,
+                  on purpose. The mandate refuses it and the refusal appears right under this button
+                  with its reason. Nothing is spent.
                 </span>
               </button>
 

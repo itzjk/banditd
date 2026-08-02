@@ -434,7 +434,7 @@ export default function ProductRefiner({
             </span>
           </div>
           <p className="mt-1 break-words text-[12px] leading-snug text-zinc-400">
-            The model reading the category, nothing was looked up.
+            This is the model reading the category. Nothing was looked up.
           </p>
 
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">

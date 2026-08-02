@@ -27,7 +27,7 @@ export default function AuditLog({ entries, initial = 8 }: Props) {
     return (
       <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5">
         <p className="text-[14px] leading-relaxed text-zinc-400">
-          Nothing yet. Every move the agent makes lands here, in the order it made them.
+          Nothing yet. Every move the agent makes lands here, in the order they happened.
         </p>
       </section>
     );

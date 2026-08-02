@@ -53,9 +53,10 @@ export default function GlobalError({
             <p className="eyebrow">Something went wrong</p>
             <h1>banditd could not render this page</h1>
             <p className="body">
-              Nothing was charged and no mandate was touched. Try again first. If it keeps failing,
-              the run saved in this browser is damaged, and clearing it starts a fresh run from the
-              home page.
+              This is the page failing to render, not a charge failing. Whether anything was charged
+              is in the payment ledger and the audit log, which are the record, not this screen. Try
+              again first. If the page keeps failing, the run saved in this browser is damaged, and
+              clearing it starts a fresh run from the home page.
             </p>
             <div className="row">
               <button type="button" className="primary" onClick={reset}>

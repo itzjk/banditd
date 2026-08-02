@@ -261,7 +261,7 @@ export default function BudgetShift({
                   <span key={`${cycle}-${i}`} className="bsx-seg" style={segStyle(i)} />
                 </div>
                 <p
-                  className="mt-1.5 break-words font-mono text-[0.5625rem] uppercase leading-snug tracking-[0.06em] sm:truncate sm:text-[0.625rem] sm:tracking-[0.14em]"
+                  className="mt-1.5 break-words font-mono text-[0.6875rem] uppercase leading-snug tracking-[0.14em] sm:truncate"
                   style={{ color: i === activePhase ? INK : MUT }}
                 >
                   {`0${i + 1}`} {p}
@@ -271,7 +271,7 @@ export default function BudgetShift({
           </div>
 
           <p
-            className="mt-5 font-mono text-[0.5625rem] uppercase leading-snug tracking-[0.12em]"
+            className="mt-5 font-mono text-[0.6875rem] uppercase leading-snug tracking-[0.14em]"
             style={{ color: MUT }}
           >
             Open any ad to see the copy behind it
@@ -375,7 +375,7 @@ export default function BudgetShift({
                         {ads[i].angle} angle
                       </span>
                       <span
-                        className="rounded-sm border px-1.5 py-0.5 font-mono text-[0.5625rem] uppercase tracking-[0.1em]"
+                        className="rounded-sm border px-1.5 py-0.5 font-mono text-[0.625rem] uppercase tracking-[0.14em]"
                         style={{ borderColor: LINE, color: MUT }}
                       >
                         Example copy
@@ -389,7 +389,7 @@ export default function BudgetShift({
                       &ldquo;{ads[i].headline}&rdquo;
                     </p>
                     <p
-                      className="mt-1.5 font-mono text-[0.5625rem] leading-relaxed"
+                      className="mt-1.5 font-mono text-[0.6875rem] leading-relaxed"
                       style={{ color: MUT }}
                     >
                       Written for this illustration, not output from the model.
@@ -404,7 +404,7 @@ export default function BudgetShift({
 
                     <div className="mt-3 border-t pt-2.5" style={{ borderColor: LINE }}>
                       <p
-                        className="font-mono text-[0.5625rem] uppercase tracking-[0.14em]"
+                        className="font-mono text-[0.6875rem] uppercase tracking-[0.14em]"
                         style={{ color: MUT }}
                       >
                         Where the money goes

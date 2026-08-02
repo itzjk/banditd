@@ -367,7 +367,7 @@ export default function CampaignMetrics({
 
             <p className="mt-3 break-words text-[12px] leading-relaxed text-zinc-300">
               {roas !== null && revenue !== null && media !== null
-                ? `${pct(rate, 1)} of ${clicks.toLocaleString()} simulated clicks is ${Math.round(
+                ? `${pct(rate, 1)} of ${clicks.toLocaleString()} simulated clicks comes to ${Math.round(
                     orders,
                   ).toLocaleString()} orders at $${money(perOrder)}, so $${money(
                     revenue,

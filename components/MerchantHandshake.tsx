@@ -127,7 +127,7 @@ export default function MerchantHandshake({
       <p className="mt-2 text-xs leading-relaxed text-muted sm:text-sm">
         banditd reads the store profile at <span className="break-all">/.well-known/ucp</span>, sends its own
         published agent profile so the store can identify who is calling, and asks the catalog for a price. Every
-        field below came back from that store just now.
+        field below came back from that store on the run shown here.
       </p>
 
       <div className="mt-4 flex flex-wrap gap-1.5">
@@ -272,8 +272,8 @@ export default function MerchantHandshake({
 
       <p className="mt-4 rounded-lg border border-border bg-surface-2 px-3 py-2 text-[11px] leading-relaxed text-muted">
         <span className="font-medium text-foreground">Nothing is bought here.</span> banditd does not place an
-        order at this store and no card is ever presented to it. This panel proves one thing only: the agent
-        speaks the protocol that real stores publish, and a real store accepts it as a caller. The charge in the
+        order at this store and no card is presented to it. This panel shows one thing only: the agent
+        speaks the protocol that real stores publish, and this store answered it. The charge in the
         demo runs against the render credit merchant on Prava, which is stated as a stand in wherever it appears.
       </p>
     </section>
