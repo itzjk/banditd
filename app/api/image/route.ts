@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fromOurPage, OFF_PAGE_CODE, OFF_PAGE_MESSAGE } from "@/lib/same-origin";
 import { openSession, commit, logAudit, logCredit, ledgerBalance } from "@/lib/store";
 import { generateImage, isAngle, startBudget } from "@/lib/openai";
 
@@ -7,6 +8,9 @@ export const maxDuration = 300;
 const IMAGE_BUDGET_MS = Number(process.env.CREATIVES_IMAGE_BUDGET_MS ?? 90000);
 
 export async function POST(req: Request) {
+  if (!fromOurPage(req)) {
+    return NextResponse.json({ error: OFF_PAGE_MESSAGE, code: OFF_PAGE_CODE }, { status: 403 });
+  }
   const body = (await req.json().catch(() => ({}))) as {
     creativeId?: unknown;
     imagePrompt?: unknown;

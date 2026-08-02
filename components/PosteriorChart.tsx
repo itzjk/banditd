@@ -346,8 +346,9 @@ export default function PosteriorChart({ creatives, winnerIndex }: Props) {
 
       <p className="mt-2 text-[12px] leading-relaxed text-zinc-400">
         Each curve is one variant, and it covers the click rates the agent still considers possible.
-        Wide is uncertainty, narrow is confidence. Serve more impressions and the curves tighten. The
-        moment one pulls clear of the rest, the agent has a winner.
+        Wide is uncertainty, narrow is confidence. Serve more impressions and the curves tighten. One
+        curve pulling clear of the rest is not enough on its own, which is what the four gates are
+        for.
       </p>
     </section>
   );

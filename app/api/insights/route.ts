@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fromOurPage, OFF_PAGE_CODE, OFF_PAGE_MESSAGE } from "@/lib/same-origin";
 import { openSession, commit, logAudit } from "@/lib/store";
 import { recommendPlays, startBudget, failureBody } from "@/lib/openai";
 import type { InsightContext } from "@/lib/openai";
@@ -13,6 +14,9 @@ function rate(impressions: number, clicks: number): string {
 }
 
 export async function POST(req: Request) {
+  if (!fromOurPage(req)) {
+    return NextResponse.json({ error: OFF_PAGE_MESSAGE, code: OFF_PAGE_CODE }, { status: 403 });
+  }
   const body = (await req.json().catch(() => ({}))) as { state?: unknown };
   const session = openSession(body.state);
   const state = session.state;

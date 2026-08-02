@@ -111,6 +111,17 @@ function isPublicHost(host: string): boolean {
   return !/^\d+\.\d+\.\d+\.\d+$/.test(host);
 }
 
+function isPublicEndpoint(raw: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+  return isPublicHost(url.hostname.toLowerCase());
+}
+
 function str(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
@@ -391,6 +402,13 @@ export async function searchCatalog(input: SearchInput): Promise<CatalogOutcome>
     detail,
     ms: Date.now() - started,
   });
+
+  if (!isPublicEndpoint(endpoint)) {
+    return fail(
+      "protocol_error",
+      "The MCP endpoint the profile advertised does not resolve to a public https host, so it was not called.",
+    );
+  }
 
   const body = {
     jsonrpc: "2.0",

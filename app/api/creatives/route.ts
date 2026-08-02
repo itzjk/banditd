@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fromOurPage, OFF_PAGE_CODE, OFF_PAGE_MESSAGE } from "@/lib/same-origin";
 import { openSession, commit, logAudit } from "@/lib/store";
 import { generateVariants, startBudget, failureBody } from "@/lib/openai";
 import type { Creative } from "@/lib/store";
@@ -8,6 +9,9 @@ export const maxDuration = 300;
 const TEXT_BUDGET_MS = Number(process.env.CREATIVES_TEXT_BUDGET_MS ?? 70000);
 
 export async function POST(req: Request) {
+  if (!fromOurPage(req)) {
+    return NextResponse.json({ error: OFF_PAGE_MESSAGE, code: OFF_PAGE_CODE }, { status: 403 });
+  }
   const body = (await req.json().catch(() => ({}))) as { parentId?: string; state?: unknown };
   const session = openSession(body.state);
   const state = session.state;

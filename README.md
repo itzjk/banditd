@@ -2,7 +2,7 @@ banditd
 
 An agent that tests ads, decides which ones to switch off, and spends its own money building on the one that won.
 
-Built at the Agentic Commerce Hackathon, Jul 31 – Aug 2 2026.
+Built at the Agentic Commerce Hackathon, Jul 31 to Aug 2 2026.
 
 Why
 
@@ -97,7 +97,7 @@ Next 16 App Router, React 19, Tailwind 4, TypeScript. No database, no session st
 
 The whole run is one JSON object that travels in the request body. Every route takes a `state`, returns the state it produced, and the browser holds it in localStorage between calls. That is not a shortcut, it is the deployment target: on Vercel each invocation is a separate instance, so anything left in module memory is gone by the next request. Running locally the store also writes `data/state.json`, which is convenience for poking at it with curl, not the source of truth.
 
-Six routes, one step each:
+Seven routes carry the run itself, one step each. The rest of `app/api` is around them: export, insights, chat, merchant lookup, product refinement and mandate revocation.
 
 `POST /api/product` takes name, price, description and starts a clean run.
 
@@ -137,7 +137,9 @@ Every arm gets a Beta posterior over its click rate with a Jeffreys prior, Beta(
 
 Now the wrong part. "Probability of being the best is over 0.95" is not an error rate. It is a statement about one look at the data, and an agent that re-checks after every batch of traffic is not taking one look. Measured against known truth, two identical arms at 3% and 48 evaluations: the naive rule calls a false winner 44.5% of the time over 200 runs, and about 49% once you push it to 2000, where the estimate settles. Four identical arms, same conditions: 8.5%. That is not a decision, that is a coin.
 
-So the gate is three things and all three have to hold:
+So the gate is four things and all four have to hold:
+
+At least 200 impressions on the candidate arm. The traffic floor, and the only one of the four that is not about the shape of the evidence.
 
 Probability of being best over 0.95.
 
@@ -145,7 +147,7 @@ Expected loss below 1% of the posterior mean. This is the effect size gate. It s
 
 An anytime-valid boundary. The e-value is a Bayes factor between two models of the cohort, one in which every creative shares a single click rate and one in which exactly one creative differs, divided by a calibration constant of 1.4 so that its expectation under the null stays at or below 1 everywhere we could measure it. It has to clear 1/alpha, which is 20 at alpha 0.05. Ville's inequality bounds the probability that it ever crosses 20 under the null at 5%, however many times you look. That is the piece the naive rule does not have.
 
-Same conditions: false positives drop to 2.5% with two arms over 200 runs, settling near 1.25% at 2000 where the estimate stops moving, and to 0.7% with four. And when it fires on a cohort that really does have a winner, it names that winner in 4,495 of the 4,500 runs behind the power tables below.
+Same conditions: false positives drop to 2.5% with two arms over 200 runs, settling near 1.25% at 2000 where the estimate stops moving. With four arms over the same 200 runs the gates fire on no run at all, and near 0.7% once the estimate is pushed out to 2000. And when it fires on a cohort that really does have a winner, it names that winner in 4,495 of the 4,500 runs behind the power tables below.
 
 Credit where it belongs. None of that boundary is new mathematics and we are not claiming it is. What is implemented is an e-value, a nonnegative statistic whose expectation under the null is at most 1, read against Ville's inequality. The modern account of that is Grünwald, de Heide and Koolen, *Safe Testing* ([arXiv:1906.07801](https://arxiv.org/abs/1906.07801), later in *JRSS-B*), and the survey of the field is Ramdas, Grünwald, Vovk and Shafer, *Game-theoretic statistics and safe anytime-valid inference* ([arXiv:2210.01948](https://arxiv.org/abs/2210.01948)). The nearest relative to the specific test in `bandit.ts` is Turner, Ly and Grünwald on safe two-sample tests for contingency tables ([arXiv:2106.02693](https://arxiv.org/abs/2106.02693)), which disposes of the shared base rate by conditioning on the margins where we dispose of it with a prior.
 
@@ -183,7 +185,7 @@ First an even split, the classic A/B holdout, where every impression served unde
 | | 48,000 | 96.7% | 0.0% | 27.7 | 39.3% | 64.2 | 72.0 |
 | | 200,000 | 100.0% | 0.7% | 46.0 | 98.7% | 119.8 | 300.0 |
 
-On lost clicks the naive rule beats us in fourteen of those fifteen cells and ties us in the fifteenth. At a 10% lift over 48,000 impressions it loses 37.7 clicks and we lose 71.2, because we hold and keep paying for the split. Getting 3.0 against 3.3 backwards is cheap, and not deciding is not. That is the case against us and it is a fair one.
+On lost clicks the naive rule beats us in fourteen of those fifteen cells and ties us in the fifteenth. At a 10% lift over 48,000 impressions it loses 37.7 clicks and we lose 71.0, because we hold and keep paying for the split. Getting 3.0 against 3.3 backwards is cheap, and not deciding is not. That is the case against us and it is a fair one.
 
 Then Thompson allocation, which is what banditd actually serves.
 
@@ -213,7 +215,7 @@ Which is the column to read alongside. Over all thirty cells and 4,500 runs the 
 
 The uncomfortable half of the second table used to be our fires column, and it is where the prior fix shows up most. Thompson starves the losing arm to stop paying for it, and the Bayes factor needs data on both arms to rule out that they are the same, so the allocator that earns the money was blindfolding the referee. On a 3.0% against 6.0% race at 12,000 impressions the control has collected about 380 impressions to the winner's 11,600: on that exact table the e-value used to stall at 1.4 against a bar of 20 and now reads 7.15, while the same traffic split evenly still clears 20 by impression 2,000. Across the whole race the gate now certifies the winner 24.7% of the time at 12,000 impressions, 64.7% at 48,000 and 96.7% at 200,000, against 4.7%, 19.3% and 58.0% before, and at 200,000 it costs less than never deciding, 16.3 clicks against 19.4. The referee can see again. It still cannot see a 10% lift under Thompson and nothing below claims otherwise.
 
-So is the bar simply set too high? Section 9 moves it and holds everything else fixed, reusing the same runs, since alpha only changes what the e-value is compared against.
+So is the bar simply set too high? Section 9 moves it and holds everything else fixed, reusing one set of runs per row across all four bars, since alpha only changes what the e-value is compared against.
 
 | setup | median peak e-value | alpha 0.05, bar 20 | 0.10, bar 10 | 0.20, bar 5 | 0.50, bar 2 |
 |---|---|---|---|---|---|
@@ -297,7 +299,7 @@ The honest summary is that we published the error rate and left out the price. T
 
 The Monte Carlo size is 20000 samples, not 500. At 500 the Monte Carlo standard deviation of the probability estimate was 0.0094, and on one dataset sitting near the threshold, byte for byte identical every time, 200 reruns flipped the verdict 100 times. Half. At that point the estimator is the coin, not the data.
 
-`scripts/bandit-test.mts` reproduces all of it: the Beta sampler checked against analytic moments, both null scenarios, the detection runs against known truth, the Monte Carlo noise measurement, the gate by gate breakdown on fixed datasets, the power curve under both allocations, the alpha sweep, the prior comparison, the exact calibration enumeration and the old prior against the new one. It prints the same tables the numbers above came from, in about ten minutes.
+`scripts/bandit-test.mts` reproduces all of it: the Beta sampler checked against analytic moments, both null scenarios, the detection runs against known truth, the Monte Carlo noise measurement, the gate by gate breakdown on fixed datasets, the power curve under both allocations, the alpha sweep, the prior comparison, the exact calibration enumeration and the old prior against the new one. It prints the same tables the numbers above came from, in about eighteen minutes.
 
 OpenAI
 

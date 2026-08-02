@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fromOurPage, OFF_PAGE_CODE, OFF_PAGE_MESSAGE } from "@/lib/same-origin";
 import { openSession } from "@/lib/store";
 import { evaluate, createRng } from "@/lib/bandit";
 import { cohortSeed } from "@/lib/cohort-seed";
@@ -20,6 +21,7 @@ function clean(value: unknown, limit: number): string {
   if (typeof value !== "string") return "";
   return value
     .replace(/[\p{Cc}\p{Cf}]/gu, " ")
+    .replace(/<{2,}|>{2,}/g, " ")
     .replace(/[ \t]+/g, " ")
     .trim()
     .slice(0, limit);
@@ -136,6 +138,9 @@ function buildSnapshot(state: State): ChatSnapshot {
 }
 
 export async function POST(req: Request) {
+  if (!fromOurPage(req)) {
+    return NextResponse.json({ error: OFF_PAGE_MESSAGE, code: OFF_PAGE_CODE }, { status: 403 });
+  }
   const body = (await req.json().catch(() => ({}))) as { messages?: unknown; state?: unknown };
   const turns = readTurns(body.messages);
 

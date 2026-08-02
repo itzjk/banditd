@@ -10,108 +10,72 @@ so they follow light and dark automatically.
 
 ---
 
-## RunLedger
+## CampaignMetrics
 
-`components/RunLedger.tsx`, dark palette, dashboard.
+`components/CampaignMetrics.tsx`, dark palette, dashboard.
 
-What a seller paid for the run: model calls and their estimated cost, what was charged to the
-mandate, how many impressions were served, and the cost per point of CTR won over an even split.
-A collapsible section breaks the model spend into line items.
+The tile row over the creative grid: impressions and clicks served, the cohort average CTR, the
+leader and its lift over that average, what has been charged against the mandate and what was
+blocked, the render credit balance, and the cost per click once money has actually moved. A
+projection panel turns a typed conversion rate, order value and CPM into an estimated return.
 
-Every number is tagged: **Measured** for what came from the log or a receipt, **Estimate** for the
-token derived costs, **Simulated** for anything from the traffic model.
+Every tile is tagged at source: **Sim** for anything from the traffic model, **Sandbox** for what
+came back from Prava, **Mixed** where the two are combined.
 
 ### Props
 
-| prop | type | default | meaning |
-| --- | --- | --- | --- |
-| `state` | `State \| null` | required | The agent state. `null` renders the zero state. |
-| `pricing` | `Partial<LedgerPricing>` | published rates | `textInputPerMillion` 0.20, `textOutputPerMillion` 1.20, `imagePerRender` 0.01 |
-| `models` | `Partial<typeof DEFAULT_MODELS>` | `gpt-5.6-luna`, `gpt-5.6-terra`, `gpt-image-1-mini` | Labels shown on the line items. Change these if `OPENAI_*_MODEL` is overridden in the env. |
+| prop | type | meaning |
+| --- | --- | --- |
+| `cohort` | `Creative[]` | The newest generation, which is what the tiles measure. |
+| `creatives` | `Creative[]` | Every creative in the run, used for the generation count. |
+| `purchases` | `PurchaseEvent[]` | Real Prava sandbox results. Charged and blocked come from here. |
+| `cap` | `number` | The mandate ceiling, for the share-used bar. |
+| `credits` | `number` | Render credit balance from the ledger. |
+| `evaluation` | `Confidence \| null` | `probabilityBest`, `sufficientEvidence` and an optional `candidateId`. |
+| `winnerId` | `string \| null` | Forces the winner. Falls back to the top CTR in the cohort. |
+| `generation` | `number` | The live generation number. |
 
-Also exports `DEFAULT_PRICING` and `DEFAULT_MODELS`.
-
-### How the numbers are derived
-
-- Model calls come from `state.audit`: one search call per `research` entry, one text call per
-  `creatives` entry, one text call per `decision` entry. If the log was trimmed, it falls back to
-  the number of generations in `state.creatives`.
-- Image renders are one per creative, minus any the log reports as blank
-  (`N image(s) ran out of render time`).
-- Tokens per call are fixed averages for these prompts, not billed usage. That is why the OpenAI
-  figure is labeled an estimate.
-- Charged and blocked come from `state.purchases`, which are real Prava sandbox results.
-- Cost per CTR point compares the best CTR in the newest generation against the CTR the cohort
-  would have had spread evenly, then divides the run total by the points of difference.
-
-### Example
-
-```tsx
-import RunLedger from "@/components/RunLedger";
-
-<RunLedger state={state} />
-```
+Renders nothing at all when `creatives` is empty.
 
 ---
 
-## WinnerBrief
+## RunExport
 
-`components/WinnerBrief.tsx`, dark palette, dashboard.
+`components/RunExport.tsx`, dark palette, dashboard. Uses `components/export-run.ts`, no route.
 
-Reads as a brief a marketer would keep: the winning ad and its angle, its CTR, the impressions
-behind it, the lift over the runner up, the whole field as bars, and one paragraph on what
-separates first from second. Nothing here calls OpenAI.
-
-If no `evaluation` is passed it runs `evaluate` from `lib/bandit` locally with a seeded RNG, so the
-number is stable across renders and matches on the server and the client. Pass the real evaluation
-from `/api/decide` when there is one and it wins over the local estimate.
+One button. It builds the whole run as a single self contained HTML file in the browser and saves
+it: the four ads with their images inlined, which one won, the four gates, the money that moved and
+what it recommends next. The file says on its face that the performance figures are simulated and
+that the payments are sandbox.
 
 ### Props
 
-| prop | type | default | meaning |
-| --- | --- | --- | --- |
-| `cohort` | `Creative[]` | required | The newest generation. Memoize it, the local evaluation reruns when the array identity changes. |
-| `evaluation` | `BriefEvaluation \| null` | `null` | Accepts the `Evaluation` object from `DemoRunner` or `/api/decide` as is. All fields optional. |
-| `winnerId` | `string \| null` | `null` | Forces the winner. Otherwise: `evaluation.candidateId`, then `candidateIndex`, then the local evaluation, then the top CTR. |
-| `seed` | `number` | `7` | Seed for the local sampler. |
+| prop | type | meaning |
+| --- | --- | --- |
+| `state` | `State \| null` | The run to export. |
+| `images` | `Record<string, string>` | Image data by creative id, inlined into the file. |
+| `evaluation` | `RunEvaluation \| null` | The evaluation to print alongside the winner. |
 
-Empty cohort or zero impressions renders an explanatory empty state, not a blank box.
-
-### Example
-
-```tsx
-import WinnerBrief from "@/components/WinnerBrief";
-
-<WinnerBrief cohort={cohort} evaluation={freshEvaluation} winnerId={winnerId} />
-```
+The button disables itself and reads "Nothing to export yet" until the run has creatives.
 
 ---
 
-## ExportPanel
+## WinnerExport
 
-`components/ExportPanel.tsx`, dark palette, dashboard. Pairs with `app/api/export/route.ts`.
+`components/WinnerExport.tsx`, dark palette, dashboard. Uses `components/export-run.ts`.
 
-Four buttons: the whole run as JSON, the ads as CSV, the charges as CSV, the whole run as one
-sectioned CSV. Each button shows its row count and disables itself when there is nothing to write.
-The file is fetched, turned into a blob and saved with the filename the route sends back.
+Two buttons on the winning ad: save its image to downloads, and copy the headline and body to the
+clipboard. If the clipboard is blocked the copy comes down as a text file instead, and the panel
+says so rather than failing silently.
 
 ### Props
 
-| prop | type | default | meaning |
-| --- | --- | --- | --- |
-| `state` | `State \| null` | required | The run to export. |
-| `endpoint` | `string` | `/api/export` | Override only if the route moves. |
-| `disabled` | `boolean` | `false` | Lock the buttons while the agent is busy. |
-
-Also exports the `ExportSection` and `ExportFormat` types.
-
-### Example
-
-```tsx
-import ExportPanel from "@/components/ExportPanel";
-
-<ExportPanel state={state} disabled={busy !== null} />
-```
+| prop | type | meaning |
+| --- | --- | --- |
+| `creative` | `Creative` | The winning ad. Its `imageData` is what the image button saves. |
+| `productName` | `string \| null` | Optional, used in the filename and the copied text. |
+| `probabilityBest` | `number \| null` | Optional, printed with the copy. |
+| `style` | `CSSProperties` | Optional, passed to the outer element. |
 
 ---
 
@@ -296,12 +260,12 @@ Measured in the browser, runs where a winner was declared:
 
 | runs | naive rule | four gates |
 | --- | --- | --- |
-| 200 | 44.5% | 0.5% |
-| 2000 | 48.9% | 0.35% |
+| 200 | 44.5% | 2.5% |
+| 2000 | 48.9% | 1.25% |
 
-The 44.5% and 0.5% in the root README come from a 200 run sample. Let the lab keep going and the
+The 44.5% and 2.5% in the root README come from a 200 run sample. Let the lab keep going and the
 naive rule settles near 49%, so the lab is harder on it than the README is, not softer. With four
-identical ads the naive rate falls to roughly 7%, which is the point worth making out loud: 95% is
+identical ads the naive rate falls to roughly 8.5%, which is the point worth making out loud: 95% is
 harder to reach with more ads to beat, so the error hides rather than disappears.
 
 ---
@@ -432,9 +396,9 @@ It exists as a fallback to point at, in case a store rejects the extra top level
 
 ## Suggested placement on the dashboard
 
-`WinnerBrief` reads best directly under the creative grid, while the winner is still on screen.
-`RunLedger` and `ExportPanel` belong at the end of the run, after the purchase receipts: one
-answers what it cost, the other lets the seller walk away with the result.
+`CampaignMetrics` reads best directly over the creative grid, while the winner is still on screen.
+`WinnerExport` belongs on the winning ad itself. `RunExport` belongs at the end of the run, after
+the purchase receipts, so the seller can walk away with the result.
 
 `MerchantHandshake` belongs wherever the merchant gets explained, next to the first purchase receipt
 or right under it. It is the answer to "your merchant is invented", so it should be one scroll away

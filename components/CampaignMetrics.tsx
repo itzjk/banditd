@@ -411,7 +411,8 @@ export default function CampaignMetrics({
 
       <p className="mt-2.5 break-words text-[12px] leading-relaxed text-zinc-400">
         Impressions, clicks, click through rates and confidence come from simulated traffic, not from
-        a live ad platform. Budget used is real money moved through the Prava sandbox. Cost per click
+        a live ad platform. Budget used is sandbox money moved on a real Visa mandate, so the charge
+        is real and the funds are not. Cost per click
         mixes the two: sandbox spend divided by simulated clicks. Render credits are the goods that
         money buys: every approved charge adds them, every image render burns one, and at zero the
         agent cannot render until it buys again.

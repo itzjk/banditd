@@ -400,7 +400,7 @@ const LIMITS: { label: string; detail: string }[] = [
 const HERO_STATS: { value: string; label: string }[] = [
   { value: "44.5%", label: "false winners, naive rule" },
   { value: "2.5%", label: "false winners, four gates" },
-  { value: "100%", label: "correct pick when it fires" },
+  { value: "99.9%", label: "correct pick when it fires" },
 ];
 
 const METHOD: { value: string; label: string }[] = [
@@ -576,7 +576,7 @@ export default function Home() {
               <Caption className="mt-5 max-w-xl text-muted">
                 The rule most agents use calls a false winner 44.5% of the time. This one calls a
                 false winner 2.5% of the time, on the same runs against known truth, and the script
-                that proves it runs on your laptop in three and a half minutes with no keys.
+                that proves it runs on your laptop in about eighteen minutes with no keys.
               </Caption>
             </div>
 
@@ -1082,7 +1082,7 @@ export default function Home() {
                   </div>
                   <BigNumber
                     className="min-w-0 sm:flex-1"
-                    value={0.5}
+                    value={2.5}
                     decimals={1}
                     suffix="%"
                     countUp={false}
@@ -1112,12 +1112,13 @@ export default function Home() {
                   <Eyebrow className="text-muted">And when it does fire</Eyebrow>
                   <BigNumber
                     className="mt-4"
-                    value={100}
+                    value={99.9}
+                    decimals={1}
                     suffix="%"
                     countUp={false}
                     tone="accent"
-                    label="Correct ad, every time"
-                    detail="The ad the gates point at is the truly best ad, across the same runs against known truth."
+                    label="Correct ad when it fires"
+                    detail="Across the 4,500 runs behind the power tables in the README the gates named a false winner five times. Not zero, and the README prints the row where that cost us."
                   />
                 </Surface>
               </Rise>

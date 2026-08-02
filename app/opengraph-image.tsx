@@ -192,7 +192,7 @@ export default async function Image() {
                     color: ACCENT,
                   }}
                 >
-                  0.5%
+                  2.5%
                 </div>
                 <div style={{ display: "flex", fontSize: 21, color: MUTED, marginTop: 16 }}>
                   With banditd, over 200 runs
