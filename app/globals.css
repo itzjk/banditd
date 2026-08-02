@@ -998,7 +998,61 @@
   max-width: 40vw;
   pointer-events: none;
   opacity: 1;
-  filter: drop-shadow(0 0 90px rgba(34, 227, 255, 0.20));
+  mix-blend-mode: screen;
+  -webkit-mask-image: radial-gradient(closest-side at 52% 50%, #000 52%, transparent 88%);
+  mask-image: radial-gradient(closest-side at 52% 50%, #000 52%, transparent 88%);
+  filter: drop-shadow(0 0 90px rgba(34, 227, 255, 0.18));
+}
+
+.bd-stars {
+  position: absolute;
+  inset: -20%;
+  z-index: -2;
+  pointer-events: none;
+  background-repeat: repeat;
+  background-image:
+    radial-gradient(1.4px 1.4px at 12% 18%, rgba(255,255,255,0.75), transparent 55%),
+    radial-gradient(1.1px 1.1px at 34% 62%, rgba(198,238,255,0.60), transparent 55%),
+    radial-gradient(1.6px 1.6px at 68% 28%, rgba(255,255,255,0.55), transparent 55%),
+    radial-gradient(1px 1px at 84% 74%, rgba(180,226,255,0.55), transparent 55%),
+    radial-gradient(1.2px 1.2px at 22% 84%, rgba(255,255,255,0.45), transparent 55%),
+    radial-gradient(1px 1px at 56% 8%, rgba(214,244,255,0.50), transparent 55%),
+    radial-gradient(1.3px 1.3px at 92% 44%, rgba(255,255,255,0.40), transparent 55%),
+    radial-gradient(1px 1px at 6% 52%, rgba(190,232,255,0.42), transparent 55%);
+  background-size: 620px 620px, 470px 470px, 830px 830px, 380px 380px,
+    700px 700px, 540px 540px, 910px 910px, 430px 430px;
+  animation: bd-rise 90s linear infinite;
+}
+
+.bd-motes {
+  position: absolute;
+  inset: -20%;
+  z-index: -2;
+  pointer-events: none;
+  background-repeat: repeat;
+  background-image:
+    radial-gradient(2.6px 2.6px at 18% 30%, rgba(255, 214, 160, 0.20), transparent 60%),
+    radial-gradient(2px 2px at 62% 70%, rgba(34, 227, 255, 0.18), transparent 60%),
+    radial-gradient(3px 3px at 40% 12%, rgba(255, 226, 186, 0.14), transparent 60%),
+    radial-gradient(1.8px 1.8px at 86% 52%, rgba(34, 227, 255, 0.14), transparent 60%);
+  background-size: 520px 520px, 660px 660px, 780px 780px, 590px 590px;
+  animation: bd-rise 58s linear infinite reverse;
+  opacity: 0.7;
+}
+
+.bd-stars-far {
+  animation-duration: 320s;
+  animation-direction: reverse;
+  opacity: 0.55;
+}
+
+@keyframes bd-rise {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-90px, -620px, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bd-stars, .bd-motes { animation: none; }
 }
 
 .bd-stage :where(.t-display, .t-headline, .t-title) { color: #f4f7f9; }

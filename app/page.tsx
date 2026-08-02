@@ -748,6 +748,9 @@ export default function Home() {
       <main id="main" tabIndex={-1} className="relative z-10 flex-1">
         <section className="bd-stage relative overflow-hidden">
           <div aria-hidden className="bd-stage-bg" />
+          <div aria-hidden className="bd-stars bd-stars-far" />
+          <div aria-hidden className="bd-stars" />
+          <div aria-hidden className="bd-motes" />
           <div aria-hidden className="bd-stage-veil" />
           <StageMotion />
           <div aria-hidden className="bd-stage-halo" />
