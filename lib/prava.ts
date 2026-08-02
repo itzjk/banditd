@@ -1,3 +1,5 @@
+import { PROVIDER_UNREACHABLE } from "./declines.ts";
+
 const BASE_URL = process.env.PRAVA_BASE_URL ?? "https://sandbox.api.prava.space";
 
 function secretKey(): string {
@@ -200,6 +202,10 @@ interface RawCharge {
   errorMessage?: string;
 }
 
+function unreachable(status: number): boolean {
+  return status >= 500 || status === 408 || status === 429;
+}
+
 function declineCode(rawCode: string | undefined, message: string): string {
   const text = message.toLowerCase();
   if (text.includes("exceeds threshold")) return "THRESHOLD_EXCEEDED";
@@ -238,7 +244,13 @@ export async function chargeMandate(
     raw = await call<RawCharge>(`/v1/mandates/${mandateId}/charge`, "POST", body);
   } catch (e) {
     if (e instanceof PravaError) {
-      return { ok: false, code: e.code, message: e.message, httpStatus: e.status, mandateId };
+      return {
+        ok: false,
+        code: unreachable(e.status) ? PROVIDER_UNREACHABLE : e.code,
+        message: e.message,
+        httpStatus: e.status,
+        mandateId,
+      };
     }
     throw e;
   }

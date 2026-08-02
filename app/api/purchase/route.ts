@@ -54,7 +54,7 @@ const DECLINE_MESSAGES: Record<string, string> = {
   VISA_CONFIRMATION_FAILED:
     "The charge went out and Visa never confirmed the result, so the payment provider could not close it. No rule on the mandate refused this spend. Check the transaction reference on the Prava side before charging again.",
   [PROVIDER_UNREACHABLE]:
-    "The call to the payment provider never came back, so the charge could not be completed. Nothing was spent and no rule on the mandate refused it: what broke is the connection to Prava, not the authorization the seller signed.",
+    "The payment provider failed on its own side, so the charge could not be completed. Nothing was spent and no rule on the mandate refused it: what broke is Prava, not the authorization the seller signed.",
 };
 
 function fallbackMessage(code: string, upstream: string | null): string {
