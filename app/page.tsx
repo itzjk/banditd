@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { State } from "@/lib/store";
+import { archiveRun } from "@/lib/history";
 import { searchCatalog, type CatalogProduct } from "@/lib/catalog";
 import Glossary from "@/components/Glossary";
 import ProofLab from "@/components/ProofLab";
@@ -35,6 +36,7 @@ import {
 } from "@/components/visuals";
 
 const STORAGE_KEY = "banditd_state";
+const IMAGES_KEY = "banditd_images";
 const MARKET_CONTEXT_MAX = 500;
 const MARKET_LINKS_MAX = 4;
 
@@ -66,6 +68,14 @@ function savedRun(raw: string | null): SavedRun | null {
     return { creatives, purchases };
   } catch {
     return null;
+  }
+}
+
+function dropImages() {
+  try {
+    window.localStorage.removeItem(IMAGES_KEY);
+  } catch {
+    return;
   }
 }
 
@@ -400,7 +410,7 @@ export default function Home() {
   const [marketContext, setMarketContext] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [confirmWipe, setConfirmWipe] = useState(false);
+  const [confirmArchive, setConfirmArchive] = useState(false);
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const [estimated, setEstimated] = useState(false);
@@ -482,11 +492,11 @@ export default function Home() {
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (busy) return;
-    if (saved && !confirmWipe) {
-      setConfirmWipe(true);
+    if (saved && !confirmArchive) {
+      setConfirmArchive(true);
       return;
     }
-    setConfirmWipe(false);
+    setConfirmArchive(false);
     setError(null);
     setBusy(true);
     try {
@@ -501,6 +511,8 @@ export default function Home() {
         setBusy(false);
         return;
       }
+      archiveRun(readSaved());
+      dropImages();
       if (data) saveState(data);
       router.push("/dashboard");
     } catch {
@@ -762,14 +774,16 @@ export default function Home() {
                     ) : null}
 
                     {saved ? (
-                      <div className="rounded-lg border border-warn/30 bg-warn-soft px-3 py-3">
+                      <div className="rounded-lg border border-border bg-surface-2 px-3 py-3">
                         <p className="text-sm font-semibold text-foreground">
                           A run is already saved in this browser
                         </p>
                         <Small className="mt-1.5 block text-muted">
                           {saved.creatives} {saved.creatives === 1 ? "ad" : "ads"} and{" "}
                           {saved.purchases} {saved.purchases === 1 ? "charge" : "charges"}. Handing
-                          over a new product wipes it and starts from nothing.
+                          over a new product files that run in the history and starts the board
+                          fresh. Nothing is lost, and the dashboard can open it again or set it
+                          beside the new one.
                         </Small>
                         <Link
                           href="/dashboard"
@@ -784,25 +798,25 @@ export default function Home() {
                       type="submit"
                       disabled={busy}
                       className={`focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground min-h-[3.25rem] w-full rounded-lg px-4 text-[0.9375rem] font-semibold transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 ${
-                        confirmWipe
-                          ? "bg-danger text-white"
+                        confirmArchive
+                          ? "bg-accent text-accent-foreground"
                           : "bg-foreground text-background"
                       }`}
                     >
                       {busy
                         ? "Handing it to the agent"
-                        : confirmWipe
-                          ? "Click again to wipe the saved run"
+                        : confirmArchive
+                          ? "Click again to file the saved run and start fresh"
                           : "Hand it to the agent"}
                     </button>
 
-                    {confirmWipe && !busy ? (
+                    {confirmArchive && !busy ? (
                       <button
                         type="button"
-                        onClick={() => setConfirmWipe(false)}
+                        onClick={() => setConfirmArchive(false)}
                         className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground -mt-1 block min-h-11 w-full rounded-lg text-[0.8125rem] font-medium text-muted hover:text-foreground"
                       >
-                        Keep the saved run
+                        Stay on the saved run
                       </button>
                     ) : null}
 
