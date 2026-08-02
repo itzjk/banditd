@@ -25,6 +25,8 @@ export interface MandateCandidate {
   approvedAmount: number;
   remaining: number;
   reserved: boolean;
+  foreign: boolean;
+  merchantName: string | null;
   chargedThisCycle: boolean;
   lastChargeStatus: string | null;
   lastChargeAt: string | null;
@@ -46,6 +48,18 @@ function isReserved(m: ListedMandate): boolean {
   return toAmount(m.approvedAmount, 0) === reservedAmount();
 }
 
+function renderMerchantName(): string {
+  return (process.env.RENDER_MERCHANT_NAME ?? "Banditd Render Credits").trim().toLowerCase();
+}
+
+function isForeignMerchant(m: ListedMandate): boolean {
+  const pinned = process.env.PRAVA_MERCHANT_DEMO_MANDATE_ID;
+  if (pinned && m.id === pinned) return true;
+  const name = (m.merchantName ?? "").trim().toLowerCase();
+  if (!name) return false;
+  return name !== renderMerchantName();
+}
+
 function chargedThisCycle(m: ListedMandate): boolean {
   const approved = toAmount(m.approvedAmount, 0);
   const remaining = toAmount(m.remaining, approved);
@@ -64,6 +78,8 @@ function toCandidate(m: ListedMandate): MandateCandidate {
     approvedAmount: approved,
     remaining: toAmount(m.remaining, approved),
     reserved: isReserved(m),
+    foreign: isForeignMerchant(m),
+    merchantName: m.merchantName ?? null,
     chargedThisCycle: chargedThisCycle(m),
     lastChargeStatus: m.lastCharge?.status ?? null,
     lastChargeAt: m.lastCharge?.at ?? null,
@@ -76,6 +92,8 @@ function unknownCandidate(id: string): MandateCandidate {
     approvedAmount: 0,
     remaining: 0,
     reserved: false,
+    foreign: false,
+    merchantName: null,
     chargedThisCycle: false,
     lastChargeStatus: null,
     lastChargeAt: null,
@@ -86,6 +104,7 @@ export interface MandateQueue {
   all: MandateCandidate[];
   candidates: MandateCandidate[];
   skipped: MandateCandidate[];
+  foreign: MandateCandidate[];
   reserved: MandateCandidate | null;
   listError: string | null;
 }
@@ -103,14 +122,16 @@ export async function mandateQueue(
       all: preferredId ? [unknownCandidate(preferredId)] : [],
       candidates: preferredId ? [unknownCandidate(preferredId)] : [],
       skipped: [],
+      foreign: [],
       reserved: null,
       listError: e instanceof Error ? e.message : String(e),
     };
   }
 
   const all = listed.filter(usable).map(toCandidate);
-  const reserved = all.find((c) => c.reserved) ?? null;
-  const pool = all.filter((c) => !c.reserved);
+  const reserved = all.find((c) => c.reserved && !c.foreign) ?? null;
+  const foreign = all.filter((c) => c.foreign);
+  const pool = all.filter((c) => !c.reserved && !c.foreign);
   const candidates = pool.filter((c) => !c.chargedThisCycle && c.remaining >= amount);
   const skipped = pool.filter((c) => c.chargedThisCycle || c.remaining < amount);
 
@@ -125,7 +146,7 @@ export async function mandateQueue(
     candidates.push(unknownCandidate(preferredId));
   }
 
-  return { all, candidates, skipped, reserved, listError: null };
+  return { all, candidates, skipped, foreign, reserved, listError: null };
 }
 
 export function exhaustionMessage(queue: MandateQueue, amount: string): string {
@@ -144,7 +165,8 @@ export function exhaustionMessage(queue: MandateQueue, amount: string): string {
 export function rejectionTarget(queue: MandateQueue, preferredId: string | null): MandateCandidate | null {
   if (queue.reserved) return queue.reserved;
   if (queue.candidates.length) return queue.candidates[0];
-  const live = queue.all.find((c) => !c.chargedThisCycle) ?? queue.all[0];
+  const own = queue.all.filter((c) => !c.foreign);
+  const live = own.find((c) => !c.chargedThisCycle) ?? own[0];
   if (live) return live;
   return preferredId ? unknownCandidate(preferredId) : null;
 }

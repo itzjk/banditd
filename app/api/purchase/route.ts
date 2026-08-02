@@ -221,7 +221,14 @@ export async function POST(req: Request) {
         { status: 409 },
       );
     }
-    queue = { all: [demo], candidates: [demo], skipped: [], reserved: null, listError: null };
+    queue = {
+      all: [demo],
+      candidates: [demo],
+      skipped: [],
+      foreign: [],
+      reserved: null,
+      listError: null,
+    };
     attempts = [demo];
     amount = scopeDemoAmount(demo);
     chargeContext = renderCreditsContext(amount);
@@ -234,6 +241,7 @@ export async function POST(req: Request) {
     const target = forceCap ? rejectionTarget(queue, preferredId) : null;
     attempts = forceCap ? (target ? [target] : []) : queue.candidates;
     amount = forceCap ? overCapAmount(target) : requested!;
+    if (!forceCap) chargeContext = renderCreditsContext(amount);
   }
 
   const winnerId = provenWinner ?? body.winnerId?.trim() ?? "unknown_creative";
@@ -269,6 +277,14 @@ export async function POST(req: Request) {
       state,
       "purchase",
       `Forcing a ${amount} render credits charge against mandate ${attempts[0].id}, which the seller signed for ${DEMO_MERCHANT_NAME} only, to show the merchant scope guardrail rejecting the agent`,
+    );
+  }
+
+  if (!force && queue.foreign.length) {
+    logAudit(
+      state,
+      "mandate",
+      `${queue.foreign.length} signed mandate(s) are outside the render credits merchant (${queue.foreign.map((m) => `${m.id} signed for ${m.merchantName ?? "an unnamed merchant"}`).join("; ")}) and the agent never charges them for render credits, they stay out of the queue`,
     );
   }
 
