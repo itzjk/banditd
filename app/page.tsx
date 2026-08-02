@@ -18,6 +18,7 @@ import { armAutorun } from "@/lib/autorun";
 import { searchCatalog, type CatalogProduct } from "@/lib/catalog";
 import Glossary from "@/components/Glossary";
 import ProofLab from "@/components/ProofLab";
+import StageMotion from "@/components/visuals/StageMotion";
 import {
   BanditLearning,
   BigNumber,
@@ -747,6 +748,7 @@ export default function Home() {
         <section className="bd-stage relative overflow-hidden border-b border-border">
           <div aria-hidden className="bd-stage-bg" />
           <div aria-hidden className="bd-stage-veil" />
+          <StageMotion />
           <img aria-hidden alt="" src="/brand/hero-web.png" className="bd-stage-hero" />
           <div className="relative mx-auto w-full max-w-5xl px-gutter pb-16 pt-12 sm:pb-24 sm:pt-16 lg:pb-28 lg:pt-16">
             <div className="enter max-w-4xl">

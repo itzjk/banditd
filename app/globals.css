@@ -1009,3 +1009,51 @@
   .bd-stage-hero { display: none; }
   .bd-stage-bg { background-position: center 60%; }
 }
+
+.bd-stage-motion {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+@keyframes bd-float {
+  0%, 100% { transform: translateY(-50%) translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translateY(-50%) translate3d(0, -18px, 0) rotate(-1.4deg); }
+}
+
+@keyframes bd-breathe {
+  0%, 100% { opacity: 0.55; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 0.85; transform: translate(-50%, -50%) scale(1.06); }
+}
+
+.bd-stage-hero {
+  animation: bd-float 9s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  will-change: transform;
+}
+
+.bd-stage-halo {
+  position: absolute;
+  z-index: -2;
+  right: -6%;
+  top: 50%;
+  width: 640px;
+  max-width: 52vw;
+  aspect-ratio: 1 / 1;
+  margin-right: calc(-320px + 320px);
+  transform: translate(-50%, -50%);
+  left: auto;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(122, 211, 240, 0.16), rgba(122, 211, 240, 0.04) 46%, transparent 68%);
+  animation: bd-breathe 9s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bd-stage-hero { animation: none; }
+  .bd-stage-halo { animation: none; }
+}
+
+@media (max-width: 1023px) {
+  .bd-stage-halo { display: none; }
+}
