@@ -744,8 +744,10 @@ export default function Home() {
       </header>
 
       <main id="main" tabIndex={-1} className="relative z-10 flex-1">
-        <section className="relative overflow-hidden border-b border-border">
-          <MeshField variant="flow" intensity="soft" parallax position="absolute" />
+        <section className="bd-stage relative overflow-hidden border-b border-border">
+          <div aria-hidden className="bd-stage-bg" />
+          <div aria-hidden className="bd-stage-veil" />
+          <img aria-hidden alt="" src="/brand/hero-web.png" className="bd-stage-hero" />
           <div className="relative mx-auto w-full max-w-5xl px-gutter pb-16 pt-12 sm:pb-24 sm:pt-16 lg:pb-28 lg:pt-16">
             <div className="enter max-w-4xl">
               <Eyebrow className="text-muted">The expensive call is when to stop</Eyebrow>
@@ -753,15 +755,14 @@ export default function Home() {
                 <span className="size-1.5 shrink-0 rounded-full bg-accent" />
                 Prava sandbox, no real money moves
               </span>
-              <Display className="mt-4">
-                Stop paying for the ads that lost. banditd decides which one to switch off, and
-                when.
+              <Display className="mt-4 max-w-3xl">
+                Write four ads. Wait for proof.{" "}
+                <span className="text-accent">Then pay for the winner yourself.</span>
               </Display>
-              <Lead className="mt-5 max-w-2xl">
-                Hand it a product. It writes four different ads, puts them in front of traffic, and
-                holds the call until the evidence is good enough to act on. Plenty of tools write
-                ads and hand you the file. This one spends on its own, so the part worth building is
-                not the writing. It is when it is allowed to act.
+              <Lead className="mt-5 max-w-xl">
+                One sentence about what you sell. It reads the market, writes the ads, serves them
+                traffic, and holds the call until the evidence would survive a statistician. Only
+                then does it charge a mandate you signed once with a passkey.
               </Lead>
             </div>
 
