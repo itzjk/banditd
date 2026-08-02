@@ -569,8 +569,10 @@ export default function Home() {
               </Display>
               <Lead className="mt-5 max-w-2xl">
                 Hand it a product. It writes four different ads, puts them in front of traffic, and
-                holds the call until the evidence is good enough to act on. Then it pays for the
-                next round of work itself, inside the limits you set.
+                holds the call until the evidence is good enough to act on. Plenty of tools write
+                ads and hand you the file. This one carries a payment credential and spends on its
+                own, inside limits you signed with a passkey, so the part worth building is not the
+                writing. It is when it is allowed to act.
               </Lead>
               <Small className="mt-5 max-w-xl">
                 The rule most agents use calls a false winner{" "}
