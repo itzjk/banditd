@@ -717,7 +717,7 @@ export default function Home() {
     <div className="flex min-h-full flex-1 flex-col [overflow-wrap:anywhere]">
       <MeshField variant="grid" intensity="faint" parallax position="fixed" />
 
-      <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur-md">
+      <header className="sticky top-0 z-40 bg-background/85 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-gutter py-3.5">
           <div className="flex min-w-0 items-center gap-2.5">
             <Mark className="size-5 shrink-0 text-foreground" />
@@ -746,7 +746,7 @@ export default function Home() {
       </header>
 
       <main id="main" tabIndex={-1} className="relative z-10 flex-1">
-        <section className="bd-stage relative overflow-hidden border-b border-border">
+        <section className="bd-stage relative overflow-hidden">
           <div aria-hidden className="bd-stage-bg" />
           <div aria-hidden className="bd-stage-veil" />
           <StageMotion />
@@ -771,16 +771,14 @@ export default function Home() {
             </div>
 
             <div className="enter mt-8 sm:mt-10" style={{ animationDelay: "80ms" }}>
-              <Surface level="feature" id="start" className="scroll-mt-20 p-5 sm:p-7">
+              <div id="start" className="scroll-mt-20">
                 <Eyebrow className="text-muted">No form, one sentence</Eyebrow>
                 <Headline as="h2" className="mt-3">
                   Say what you sell. It starts on its own.
                 </Headline>
-                <Body className="mt-4 max-w-xl text-muted">
-                  Write it the way you would say it. The agent reads the product, the price and the
-                  line about it out of that sentence, then runs the whole thing without another
-                  click: research, four ads, traffic in rounds, and the call at the end. It still
-                  cannot spend a cent until the four gates open.
+                <Body className="mt-4 max-w-lg text-muted">
+                  Write it the way you would say it. It reads the product, the price and the line
+                  about it out of that sentence, then runs the whole thing without another click.
                 </Body>
 
                 <form onSubmit={onBrief} className="mt-5">
@@ -911,7 +909,7 @@ export default function Home() {
                     ) : null}
                   </div>
                 ) : null}
-              </Surface>
+              </div>
             </div>
 
             <div className="mt-4 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,23rem)] lg:gap-10">
@@ -1174,7 +1172,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className={`border-b border-border ${SECTION_PAD}`}>
+        <section className={`${SECTION_PAD}`}>
           <div className="mx-auto w-full max-w-5xl px-gutter">
             <Rise>
               <Eyebrow className="text-muted">What makes it different</Eyebrow>
@@ -1214,7 +1212,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className={`border-b border-border ${SECTION_PAD}`}>
+        <section className={`${SECTION_PAD}`}>
           <div className="mx-auto w-full max-w-5xl px-gutter">
             <Rise>
               <Eyebrow className="text-muted">Why you can trust it with money</Eyebrow>
@@ -1299,7 +1297,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className={`border-b border-border ${SECTION_PAD}`}>
+        <section className={`${SECTION_PAD}`}>
           <div className="mx-auto w-full max-w-5xl px-gutter">
             <Rise>
               <Eyebrow className="text-muted">Who it is for, and what it would cost</Eyebrow>
@@ -1402,7 +1400,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className={`border-b border-border ${SECTION_PAD}`}>
+        <section className={`${SECTION_PAD}`}>
           <div className="mx-auto w-full max-w-5xl px-gutter">
             <Rise>
               <Eyebrow className="text-muted">How it works</Eyebrow>
@@ -1491,7 +1489,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className={`border-b border-border ${SECTION_PAD}`}>
+        <section className={`${SECTION_PAD}`}>
           <div className="mx-auto w-full max-w-5xl px-gutter">
             <Rise>
               <Eyebrow className="text-muted">The reasoning, in the open</Eyebrow>
@@ -1583,7 +1581,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className={`border-b border-border ${SECTION_PAD}`}>
+        <section className={`${SECTION_PAD}`}>
           <div className="mx-auto w-full max-w-5xl px-gutter">
             <Rise>
               <Eyebrow className="text-muted">Measured, not claimed</Eyebrow>
@@ -1685,7 +1683,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section className={`border-b border-border ${SECTION_PAD}`}>
+        <section className={`${SECTION_PAD}`}>
           <div className="mx-auto w-full max-w-5xl px-gutter">
             <Rise>
               <Eyebrow className="text-muted">What is not real yet</Eyebrow>
