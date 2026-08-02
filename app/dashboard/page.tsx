@@ -653,7 +653,7 @@ function Band({
 }) {
   return (
     <section className="mx-auto mt-12 w-full max-w-5xl sm:mt-16">
-      <div className="rounded-3xl border border-white/[0.07] bg-white/[0.012] p-3 sm:p-5">
+      <div className="rounded-3xl border border-white/[0.07] bg-white/[0.012] p-0 sm:p-5">
         <div className="border-b border-white/[0.07] px-1 pb-4 sm:pb-5">
           <div className="flex items-center gap-2">
             <span aria-hidden="true" className="h-px w-5 shrink-0 bg-white/25" />

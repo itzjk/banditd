@@ -161,7 +161,6 @@ const ROUND_GROWTH = 1.8;
 const ROUND_CEILING = 400000;
 const ROUND_SAMPLES = 20000;
 export const EVIDENCE_TARGET = 20;
-const ROUND_PAUSE = 180;
 
 const CYCLE_BLOCKS = new Set(["NO_MANDATE_AVAILABLE", "CYCLE_ALREADY_CHARGED"]);
 
@@ -501,7 +500,6 @@ export default function DemoRunner({
   const [waited, setWaited] = useState(0);
 
   const controllerRef = useRef<AbortController | null>(null);
-  const pauseRef = useRef<{ timer: number; release: () => void } | null>(null);
   const cancelledRef = useRef(false);
   const seqRef = useRef(0);
 
@@ -561,18 +559,6 @@ export default function DemoRunner({
     [],
   );
 
-  const breathe = useCallback(
-    (ms: number) =>
-      new Promise<void>((resolve) => {
-        const timer = window.setTimeout(() => {
-          pauseRef.current = null;
-          resolve();
-        }, ms);
-        pauseRef.current = { timer, release: resolve };
-      }),
-    [],
-  );
-
   const step = useCallback(
     async (
       task: Task,
@@ -629,12 +615,6 @@ export default function DemoRunner({
   const cancel = useCallback(() => {
     cancelledRef.current = true;
     controllerRef.current?.abort();
-    const waiting = pauseRef.current;
-    if (waiting) {
-      window.clearTimeout(waiting.timer);
-      pauseRef.current = null;
-      waiting.release();
-    }
   }, []);
 
   const start = useCallback(async () => {
@@ -742,8 +722,6 @@ export default function DemoRunner({
             break;
           }
 
-          guard();
-          await breathe(ROUND_PAUSE);
           guard();
         }
 
@@ -1097,7 +1075,7 @@ export default function DemoRunner({
       controllerRef.current = null;
       onRunningChange(false);
     }
-  }, [state, absorb, impressions, call, step, breathe, onDecision, onReceipt, onRunningChange]);
+  }, [state, absorb, impressions, call, step, onDecision, onReceipt, onRunningChange]);
 
   const ready = Boolean(state?.product);
   const patience = active !== null && waited >= PATIENCE_AFTER;
@@ -1133,11 +1111,9 @@ export default function DemoRunner({
         </div>
 
         <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-zinc-300">
-          End to end: research the market, write four ads with images, then serve traffic in rounds
-          starting at {impressions.toLocaleString()} impressions and re-read the evidence after
-          every round, up to {MAX_ROUNDS} looks. It spends only when all four gates open, then
-          breeds the winner and retests. The manual controls below stay live for anyone who wants to
-          walk it step by step.
+          Research, four ads with images, then traffic in rounds of{" "}
+          {impressions.toLocaleString()} with the evidence re-read after each one, up to{" "}
+          {MAX_ROUNDS} looks. It spends only when all four gates open.
         </p>
 
         {running ? (

@@ -333,7 +333,11 @@ Return two lists and a price reading for the category the seller typed.
 
 variants: between four and six real builds of that category, the ones that actually change who buys it and what it costs. Separate them by the thing that matters most in that category, usually the material, sometimes the format, the size or the mechanism. Each one is a noun phrase of two to four words a shopper would recognise on a shelf, for example insulated aluminium or collapsible silicone. Name only the part that differs, never repeat the product name inside the option, so a bottle category gives aluminium and glass, not aluminium bottle and glass bottle. No sentences, no adjectives of praise, no prices.
 
-brands: between four and six brands a shopper would actually name in that category, strongest first. Real brands that sell this exact thing today. Never invent one, never pad the list with a retailer, a marketplace or a parent company that does not put its name on the product. If you genuinely know fewer than four for this category, return only the ones you are sure of.
+brands: this list exists so a seller in an open category can point at the name they are measured against, so it only earns its place when the seller left the brand open.
+
+Read what the seller typed and decide which case it is. If a brand is already in it, either because they named one outright, as in Nike running shoes, or because the thing they typed is one company's own product and could not be anyone else's, as in AirPods Pro, PlayStation 5 or Dyson Airwrap, then the choice is already made. Return that one brand on its own, or an empty list if you are not certain which company it belongs to. Never offer a rival: putting Samsung in front of someone selling AirPods Pro is wrong, there is nothing there to choose.
+
+Otherwise the seller typed an open category and the list does its job. Return between four and six brands a shopper would actually name in that category, strongest first. Real brands that sell this exact thing today. Never invent one, never pad the list with a retailer, a marketplace or a parent company that does not put its name on the product. If you genuinely know fewer than four for this category, return only the ones you are sure of.
 
 If the seller already typed something specific, keep the lists inside that same category and offer the neighbouring builds of it, never a different product.
 
@@ -429,6 +433,7 @@ Description: ${product.description}${chosen.spec}
 Find who actually buys this, the angles competitors use in their ads, and where this price sits against comparable products.${seller.block}${steer}${narrow}`,
           },
         ],
+        reasoning: { effort: "low" },
         text: { format: zodTextFormat(ResearchSchema, "market_research") },
         max_output_tokens: 3000,
       },
@@ -586,6 +591,7 @@ ${brief}
 For each variant also write the imagePrompt: the scene for that angle, following the art direction above. Four angles means four visibly different photographs, different framing, different light, different context.`,
           },
         ],
+        reasoning: { effort: "low" },
         text: { format: zodTextFormat(VariantsSchema, "creative_variants") },
         max_output_tokens: 3400,
       },

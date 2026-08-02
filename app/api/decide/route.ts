@@ -108,12 +108,15 @@ export async function POST(req: Request) {
     },
   );
 
-  const mandate = await readMandate(state.mandateId);
+  const [mandate, queue] = await Promise.all([
+    readMandate(state.mandateId),
+    mandateQueue(Number(CREDIT_PRICE), state.mandateId, process.env.PRAVA_USER_ID),
+  ]);
+
   if (state.mandateId && !mandate.live) {
     logAudit(state, "mandate", "Prava did not answer, deciding without live mandate data");
   }
 
-  const queue = await mandateQueue(Number(CREDIT_PRICE), state.mandateId, process.env.PRAVA_USER_ID);
   const poolRemaining = queue.candidates.reduce((sum, m) => sum + m.remaining, 0);
   const pool = queue.listError
     ? "signed mandate pool unknown, Prava did not answer"
