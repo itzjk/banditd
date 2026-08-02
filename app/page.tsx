@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { State } from "@/lib/store";
 import { archiveRun } from "@/lib/history";
+import { armAutorun } from "@/lib/autorun";
 import { searchCatalog, type CatalogProduct } from "@/lib/catalog";
 import Glossary from "@/components/Glossary";
 import ProofLab from "@/components/ProofLab";
@@ -97,6 +98,41 @@ const EXAMPLE = {
   price: "$28.00",
   description: "A 32oz bottle of slow-steeped concentrate that makes 16 cups.",
 };
+
+const BRIEF_EXAMPLES: { label: string; sentence: string }[] = [
+  {
+    label: "Cold brew concentrate, $28",
+    sentence: "I sell cold brew coffee concentrate at $28, a 32oz bottle that makes 16 cups.",
+  },
+  {
+    label: "Soy candles, no price in it",
+    sentence: "handmade soy candles, 9oz, wooden wick, about 50 hours of burn",
+  },
+  {
+    label: "Road bike, 420 pounds",
+    sentence: "refurbished steel road bike, 54cm frame, new drivetrain, £420",
+  },
+  {
+    label: "Mochilas, en español",
+    sentence: "Vendo mochilas de lona impermeable de 30 litros a 65 dolares",
+  },
+];
+
+interface Reading {
+  name: string;
+  description: string;
+  estimate: { price: string; name: string } | null;
+}
+
+interface BriefResponse {
+  understood?: boolean;
+  name?: string;
+  price?: string;
+  description?: string;
+  question?: string;
+  estimate?: { price: string; name: string } | null;
+  error?: string;
+}
 
 const SECTION_PAD = "py-14 sm:py-24 lg:py-32";
 const RISE_EASE = "cubic-bezier(0.22, 0.61, 0.36, 1)";
@@ -453,7 +489,15 @@ export default function Home() {
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const [estimated, setEstimated] = useState(false);
+  const [brief, setBrief] = useState("");
+  const [briefBusy, setBriefBusy] = useState(false);
+  const [briefNote, setBriefNote] = useState<string | null>(null);
+  const [briefError, setBriefError] = useState<string | null>(null);
+  const [reading, setReading] = useState<Reading | null>(null);
+  const [askPrice, setAskPrice] = useState("");
   const comboRef = useRef<HTMLDivElement | null>(null);
+  const briefRef = useRef<HTMLTextAreaElement | null>(null);
+  const askRef = useRef<HTMLInputElement | null>(null);
   const storedRun = useSyncExternalStore(subscribeSaved, readSaved, () => null);
   const saved = useMemo(() => savedRun(storedRun), [storedRun]);
   const matches = useMemo(() => (suggestOpen ? searchCatalog(name) : []), [suggestOpen, name]);
@@ -471,6 +515,11 @@ export default function Home() {
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, [listOpen]);
+
+  useEffect(() => {
+    if (!reading) return;
+    askRef.current?.focus();
+  }, [reading]);
 
   useEffect(() => {
     if (!listOpen || activeSuggestion < 0) return;
@@ -528,31 +577,137 @@ export default function Home() {
     setError(null);
   }
 
-  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (busy) return;
-    setError(null);
-    setBusy(true);
+  async function handOver(
+    product: { name: string; price: string; description: string },
+    auto: boolean,
+  ): Promise<string | null> {
     try {
       const res = await fetch("/api/product", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, price, description, marketContext }),
+        body: JSON.stringify({ ...product, marketContext }),
       });
       const data = (await res.json().catch(() => null)) as (State & { error?: string }) | null;
-      if (!res.ok) {
-        setError(data?.error ?? "Could not save the product. Try again.");
-        setBusy(false);
-        return;
-      }
+      if (!res.ok) return data?.error ?? "Could not save the product. Try again.";
       archiveRun(readSaved());
       dropImages();
       if (data) saveState(data);
+      if (auto) armAutorun();
       router.push("/dashboard");
+      return null;
     } catch {
-      setError("Network error. Try again.");
+      return "Network error. Try again.";
+    }
+  }
+
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (busy || briefBusy) return;
+    setError(null);
+    setBusy(true);
+    const failed = await handOver({ name, price, description }, false);
+    if (failed) {
+      setError(failed);
       setBusy(false);
     }
+  }
+
+  async function onBrief(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (busy || briefBusy) return;
+    const sentence = brief.trim();
+    setBriefError(null);
+    setBriefNote(null);
+    setReading(null);
+    if (!sentence) {
+      setBriefError("Write one line about what you sell, with the price in it.");
+      briefRef.current?.focus();
+      return;
+    }
+    setBriefBusy(true);
+    try {
+      const res = await fetch("/api/interpret", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: sentence }),
+      });
+      const data = (await res.json().catch(() => null)) as BriefResponse | null;
+      if (!res.ok || !data) {
+        setBriefError(data?.error ?? "Could not read that sentence. Try again.");
+        setBriefBusy(false);
+        return;
+      }
+      if (!data.understood || !data.name) {
+        setBriefError(
+          data.question ?? "It could not tell what the product is. Name it and give the price.",
+        );
+        setBriefBusy(false);
+        return;
+      }
+
+      setName(data.name);
+      setDescription(data.description ?? "");
+      setEstimated(false);
+      setSuggestOpen(false);
+
+      if (!data.price) {
+        setPrice("");
+        setAskPrice("");
+        setReading({
+          name: data.name,
+          description: data.description ?? "",
+          estimate: data.estimate ?? null,
+        });
+        setBriefBusy(false);
+        return;
+      }
+
+      setPrice(data.price);
+      setBriefNote(`Read it as ${data.name} at ${data.price}. Starting the run.`);
+      const failed = await handOver(
+        { name: data.name, price: data.price, description: data.description ?? "" },
+        true,
+      );
+      if (failed) {
+        setBriefNote(null);
+        setBriefError(failed);
+        setBriefBusy(false);
+      }
+    } catch {
+      setBriefError("Network error. Try again.");
+      setBriefBusy(false);
+    }
+  }
+
+  async function onAskPrice(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (busy || briefBusy || !reading) return;
+    const typed = askPrice.trim();
+    if (!typed) {
+      askRef.current?.focus();
+      return;
+    }
+    setBriefError(null);
+    setPrice(typed);
+    setBriefBusy(true);
+    setBriefNote(`Read it as ${reading.name} at ${typed}. Starting the run.`);
+    const failed = await handOver(
+      { name: reading.name, price: typed, description: reading.description },
+      true,
+    );
+    if (failed) {
+      setBriefNote(null);
+      setBriefError(failed);
+      setBriefBusy(false);
+    }
+  }
+
+  function fillSentence(sentence: string) {
+    setBrief(sentence);
+    setBriefError(null);
+    setBriefNote(null);
+    setReading(null);
+    briefRef.current?.focus();
   }
 
   return (
@@ -609,7 +764,130 @@ export default function Home() {
               </Lead>
             </div>
 
-            <div className="mt-8 grid items-start gap-6 sm:mt-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,23rem)] lg:gap-10">
+            <div className="enter mt-8 sm:mt-10" style={{ animationDelay: "80ms" }}>
+              <Surface level="feature" id="start" className="scroll-mt-20 p-5 sm:p-7">
+                <Eyebrow className="text-muted">No form, one sentence</Eyebrow>
+                <Headline as="h2" className="mt-3">
+                  Say what you sell. It starts on its own.
+                </Headline>
+                <Body className="mt-4 max-w-xl text-muted">
+                  Write it the way you would say it. The agent reads the product, the price and the
+                  line about it out of that sentence, then runs the whole thing without another
+                  click: research, four ads, traffic in rounds, and the call at the end. It still
+                  cannot spend a cent until the four gates open.
+                </Body>
+
+                <form onSubmit={onBrief} className="mt-5">
+                  <label htmlFor="brief" className="mb-1.5 block text-sm font-medium">
+                    What do you sell, and for how much
+                  </label>
+                  <textarea
+                    id="brief"
+                    ref={briefRef}
+                    className="field resize-none"
+                    rows={3}
+                    value={brief}
+                    onChange={(e) => {
+                      setBrief(e.target.value);
+                      setBriefError(null);
+                      setReading(null);
+                    }}
+                    placeholder="I sell cold brew coffee concentrate at $28, a 32oz bottle that makes 16 cups."
+                    disabled={briefBusy}
+                  />
+                  <button
+                    type="submit"
+                    disabled={briefBusy || busy}
+                    className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground mt-3 min-h-[3.25rem] w-full rounded-lg bg-foreground px-4 text-[0.9375rem] font-semibold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {briefBusy ? "Reading your sentence" : "Hand it to the agent"}
+                  </button>
+                </form>
+
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <Eyebrow as="span" className="mr-1 text-muted">
+                    Try one
+                  </Eyebrow>
+                  {BRIEF_EXAMPLES.map((item) => (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => fillSentence(item.sentence)}
+                      disabled={briefBusy}
+                      className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground hover-tint inline-flex min-h-11 items-center rounded-lg border border-border bg-surface-2 px-3 text-[0.8125rem] font-medium text-muted hover:border-border-strong hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+
+                {briefError ? (
+                  <p
+                    role="alert"
+                    className="mt-4 rounded-lg border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger"
+                  >
+                    {briefError}
+                  </p>
+                ) : null}
+
+                {briefNote ? (
+                  <p aria-live="polite" className="mt-4 text-sm text-muted">
+                    {briefNote}
+                  </p>
+                ) : null}
+
+                {reading ? (
+                  <div className="mt-4 rounded-lg border border-border bg-surface-2 px-3 py-3">
+                    <p className="text-sm font-semibold text-foreground">
+                      No price in that sentence
+                    </p>
+                    <Small className="mt-1.5 block text-muted">
+                      It read the product as {reading.name}. It will not guess what you charge, so
+                      give it the price and the run starts.
+                    </Small>
+                    <form onSubmit={onAskPrice} className="mt-2.5 flex flex-wrap gap-2">
+                      <label htmlFor="ask-price" className="sr-only">
+                        Price
+                      </label>
+                      <input
+                        id="ask-price"
+                        ref={askRef}
+                        className="field w-full sm:w-40"
+                        value={askPrice}
+                        onChange={(e) => setAskPrice(e.target.value)}
+                        placeholder="$34.00"
+                        inputMode="decimal"
+                        autoComplete="off"
+                        disabled={briefBusy}
+                      />
+                      <button
+                        type="submit"
+                        disabled={briefBusy}
+                        className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground min-h-[3.25rem] w-full rounded-lg bg-foreground px-4 text-[0.9375rem] font-semibold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                      >
+                        Start the run
+                      </button>
+                    </form>
+                    {reading.estimate ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAskPrice(reading.estimate?.price ?? "");
+                          askRef.current?.focus();
+                        }}
+                        disabled={briefBusy}
+                        className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground mt-2.5 inline-flex min-h-11 items-center rounded-lg border border-border bg-surface px-3 text-[0.8125rem] font-medium text-muted hover:border-border-strong hover:text-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {reading.estimate.price} is typical for {reading.estimate.name}, an estimate,
+                        not your price
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+              </Surface>
+            </div>
+
+            <div className="mt-4 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,23rem)] lg:gap-10">
               <div className="enter order-1 min-w-0" style={{ animationDelay: "200ms" }}>
                 <Surface level="feature" className="p-5 sm:p-7">
                   <Eyebrow className="text-muted">The first question everyone asks</Eyebrow>
@@ -649,10 +927,10 @@ export default function Home() {
               </div>
 
               <div className="enter order-2 min-w-0" style={{ animationDelay: "120ms" }}>
-                <Surface level="feature" id="start" className="scroll-mt-20 p-5 sm:p-6">
+                <Surface level="feature" className="p-5 sm:p-6">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <Headline as="h2">Start with a product</Headline>
+                      <Headline as="h2">Or fill in the fields</Headline>
                       <Small className="mt-1">Name, price, one line about it.</Small>
                     </div>
                     <button

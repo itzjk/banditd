@@ -1,16 +1,31 @@
 import { NextResponse } from "next/server";
-import { AGENT_PROFILE_PATH, greetMerchant, type Handshake } from "@/lib/ucp";
+import {
+  AGENT_PROFILE_PATH,
+  CATALOG_SEARCH,
+  greetMerchant,
+  type CatalogReason,
+  type Handshake,
+} from "@/lib/ucp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const FALLBACK_ORIGIN = "https://banditd.vercel.app";
 
+const NEVER_SENT = new Set<CatalogReason>([
+  "no_endpoint",
+  "capability_absent",
+  "version_unsupported",
+  "version_not_declared",
+  "version_profile_error",
+]);
+
 interface Body {
   domain?: unknown;
   query?: unknown;
   country?: unknown;
   profile?: unknown;
+  version?: unknown;
 }
 
 function publicOrigin(req: Request): string {
@@ -35,16 +50,30 @@ function summarize(shake: Handshake): string {
   if (!shake.discovery.ok) return shake.discovery.detail;
 
   const { profile } = shake.discovery;
-  const head = `${profile.domain} speaks UCP ${profile.version ?? "of an undeclared version"}.`;
+  const chosen = shake.negotiation?.chosen;
+  const head = chosen
+    ? `${profile.domain} offers ${shake.negotiation?.offered.join(" and ")} and this run settled on ${chosen}${
+        shake.negotiation?.pinned ? ", pinned by hand" : ""
+      }.`
+    : `${profile.domain} speaks UCP ${profile.version ?? "of an undeclared version"}.`;
+
+  const declined = shake.capabilities.filter((cap) => cap.verdict === "declined").length;
+  const tail = declined
+    ? ` ${declined} capabilit${declined === 1 ? "y it offers was" : "ies it offers were"} left unused on purpose.`
+    : "";
 
   if (!shake.catalog) return head;
   if (shake.catalog.ok) {
-    return `${head} The catalog search answered with ${shake.catalog.products.length} priced product${
-      shake.catalog.products.length === 1 ? "" : "s"
-    }.`;
+    return `${head} The store advertises ${CATALOG_SEARCH}, so the search ran and answered with ${
+      shake.catalog.products.length
+    } priced product${shake.catalog.products.length === 1 ? "" : "s"}.${tail}`;
   }
 
-  return `${head} The catalog search did not complete: ${shake.catalog.detail}`;
+  const lead = NEVER_SENT.has(shake.catalog.reason)
+    ? "No search request was sent"
+    : "The search request went out and did not complete";
+
+  return `${head} ${lead}: ${shake.catalog.detail}${tail}`;
 }
 
 async function run(req: Request, input: Body) {
@@ -67,6 +96,7 @@ async function run(req: Request, input: Body) {
       profileUrl,
       query: text(input.query, 120),
       country: text(input.country, 2).toUpperCase() || undefined,
+      version: text(input.version, 10) || undefined,
     });
   } catch (error) {
     return NextResponse.json(
@@ -86,10 +116,14 @@ async function run(req: Request, input: Body) {
       ok: shake.spokeUcp,
       domain: shake.domain,
       profileUrl: shake.profileUrl,
+      agentVersion: shake.agentVersion,
       summary: summarize(shake),
       purchased: false,
       ms: shake.ms,
       discovery: shake.discovery,
+      negotiation: shake.negotiation,
+      capabilities: shake.capabilities,
+      payment: shake.payment,
       catalog: shake.catalog,
     },
     { status: 200, headers: { "Cache-Control": "no-store" } },
@@ -103,6 +137,7 @@ export async function GET(req: Request) {
     query: params.get("query"),
     country: params.get("country"),
     profile: params.get("profile"),
+    version: params.get("version"),
   });
 }
 

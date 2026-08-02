@@ -38,6 +38,7 @@ import PosteriorChart from "@/components/PosteriorChart";
 import CampaignMetrics from "@/components/CampaignMetrics";
 import AgentReadout from "@/components/AgentReadout";
 import PerformanceChart from "@/components/PerformanceChart";
+import ReplayAudit from "@/components/ReplayAudit";
 import GatesPanel from "@/components/GatesPanel";
 import LineageTree from "@/components/LineageTree";
 import MarketPanel from "@/components/MarketPanel";
@@ -75,7 +76,7 @@ const UNREADABLE =
 const PATCHED =
   "A saved session in this browser had damaged entries. They were dropped and the rest was restored.";
 const ADOPTED =
-  "Another tab of this dashboard moved the run forward, so this tab picked up its state. Nothing was overwritten.";
+  "The run moved forward somewhere else, either the agent working through the chat or another tab of this dashboard, so this tab picked up that state. Nothing was overwritten.";
 const RENDER_FAILED =
   "An image render came back empty, so that card is showing no picture. The copy, the traffic test and the mandate are untouched, and no render credit was debited for it. Everything else in the run stands.";
 
@@ -1786,6 +1787,12 @@ export default function Dashboard() {
               generation={generation}
               rounds={state?.rounds ?? []}
             />
+          </Reveal>
+        ) : null}
+
+        {hasTraffic ? (
+          <Reveal delay={180}>
+            <ReplayAudit rounds={state?.rounds ?? []} creatives={state?.creatives ?? []} />
           </Reveal>
         ) : null}
 
