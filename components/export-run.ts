@@ -1,5 +1,6 @@
 import type { Creative, PurchaseEvent, State } from "@/lib/store";
 import { ctr, money, pct, plain, strength } from "./format";
+import { declineFamily } from "@/lib/declines";
 
 export interface RunEvaluation {
   candidateId?: string | null;
@@ -242,6 +243,15 @@ function adBlock(
     </article>`;
 }
 
+function outcomeLabel(p: PurchaseEvent): string {
+  if (p.ok) return "Charged";
+  const family = declineFamily(p.errorCode);
+  if (family === "guardrail") return "Blocked by the mandate";
+  if (family === "request") return "Rejected before the mandate";
+  if (family === "provider") return "Not processed by the provider";
+  return "Not completed";
+}
+
 function purchaseRows(purchases: PurchaseEvent[]): string {
   if (purchases.length === 0) {
     return '<tr><td colspan="6" class="muted">The agent never reached for the card in this run.</td></tr>';
@@ -250,7 +260,7 @@ function purchaseRows(purchases: PurchaseEvent[]): string {
     .map(
       (p) => `<tr>
         <td>${escapeHtml(readable(p.at))}</td>
-        <td class="${p.ok ? "ok" : "no"}">${p.ok ? "Charged" : "Blocked"}</td>
+        <td class="${p.ok ? "ok" : "no"}">${escapeHtml(outcomeLabel(p))}</td>
         <td class="num">$${escapeHtml(money(p.amount))}</td>
         <td>${escapeHtml(p.transactionId ?? p.errorCode ?? "")}</td>
         <td>${p.cardLast4 ? `card ${escapeHtml(p.cardLast4)}` : ""}</td>

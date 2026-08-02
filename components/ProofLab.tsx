@@ -44,6 +44,7 @@ interface Props {
   seed?: number;
   tone?: ProofTone;
   folded?: boolean;
+  headingLevel?: 3 | 4;
   onScore?: (score: ProofScore) => void;
 }
 
@@ -477,6 +478,7 @@ function RuleCard({
   truth,
   gated,
   looks,
+  headingLevel = 4,
 }: {
   title: string;
   rule: string;
@@ -485,7 +487,9 @@ function RuleCard({
   truth: ProofTruth;
   gated: boolean;
   looks: number;
+  headingLevel?: 3 | 4;
 }) {
+  const Heading = headingLevel === 3 ? "h3" : "h4";
   const started = Boolean(snap && snap.look > 0);
   const done = Boolean(snap?.finished);
   const state = verdict.fired
@@ -547,9 +551,9 @@ function RuleCard({
     <div className={`min-w-0 rounded-xl border bg-surface-2 p-3 ${tone}`}>
       <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
         <div className="min-w-0">
-          <h4 className="t-caption min-w-0 break-words font-semibold leading-tight text-foreground">
+          <Heading className="t-caption min-w-0 break-words font-semibold leading-tight text-foreground">
             {title}
-          </h4>
+          </Heading>
           <p className="mt-0.5 break-words text-[0.75rem] leading-snug text-subtle">{rule}</p>
         </div>
         <span
@@ -688,6 +692,7 @@ export default function ProofLab({
   seed = 4000,
   tone = "auto",
   folded = false,
+  headingLevel = 4,
   onScore,
 }: Props) {
   const [truth, setTruth] = useState<ProofTruth>(defaultTruth);
@@ -968,6 +973,7 @@ export default function ProofLab({
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <RuleCard
+          headingLevel={headingLevel}
           title="Naive rule"
           rule="Stops as soon as P(best) passes 95%"
           verdict={live?.naive ?? blankVerdict()}
@@ -977,6 +983,7 @@ export default function ProofLab({
           looks={setup.looks}
         />
         <RuleCard
+          headingLevel={headingLevel}
           title="Banditd, four gates"
           rule="P(best), enough traffic, a gap worth money, and an anytime valid bound"
           verdict={live?.gated ?? blankVerdict()}

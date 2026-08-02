@@ -6,6 +6,7 @@ import type { PurchaseEvent } from "@/lib/store";
 import type { SignedMandate } from "@/lib/authorization";
 import { money, shortId, toNumber } from "./format";
 import { useCountUp } from "./motion";
+import { declineFamily } from "@/lib/declines";
 
 interface Props {
   mandateId: string | null;
@@ -125,7 +126,12 @@ export default function MandateBar({
   }, [mandateId, revoked, purchases.length]);
 
   const spent = purchases.filter((p) => p.ok).reduce((sum, p) => sum + toNumber(p.amount), 0);
-  const blocked = purchases.filter((p) => !p.ok).length;
+  const blocked = purchases.filter(
+    (p) => !p.ok && declineFamily(p.errorCode) === "guardrail",
+  ).length;
+  const unfinished = purchases.filter(
+    (p) => !p.ok && declineFamily(p.errorCode) !== "guardrail",
+  ).length;
   const charges = purchases.filter((p) => p.ok).length;
   const armed = Boolean(mandateId);
   const dry = armed && !chargeable;
@@ -320,7 +326,11 @@ export default function MandateBar({
               </div>
 
               <p className="mt-2.5 max-w-3xl break-words text-[12px] leading-snug text-zinc-400">
-                {charges} paid, {blocked} blocked in this run, on mandate {shortId(shownId, 8)}.
+                {charges} paid, {blocked} refused by the mandate
+                {unfinished > 0
+                  ? `, ${unfinished} the payment provider could not process`
+                  : ""}{" "}
+                in this run, on mandate {shortId(shownId, 8)}.
               </p>
 
               {revoked ? (

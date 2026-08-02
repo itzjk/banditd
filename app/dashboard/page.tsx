@@ -76,6 +76,8 @@ const PATCHED =
   "A saved session in this browser had damaged entries. They were dropped and the rest was restored.";
 const ADOPTED =
   "Another tab of this dashboard moved the run forward, so this tab picked up its state. Nothing was overwritten.";
+const RENDER_FAILED =
+  "An image render came back empty, so that card is showing no picture. The copy, the traffic test and the mandate are untouched, and no render credit was debited for it. Everything else in the run stands.";
 
 type Images = Record<string, string>;
 
@@ -522,19 +524,30 @@ class ApiError extends Error {
   }
 }
 
+const OFFLINE_CALL =
+  "The browser could not reach the server, so that request never left. Nothing on this screen says whether a step already in flight finished: the payment ledger and the audit log are the record of whether money moved.";
+
+const UNREADABLE_CALL =
+  "with no answer this page could read. That is the request being dropped on the way, not a rule on the mandate refusing a spend. The payment ledger and the audit log are the record of whether money moved.";
+
 async function api<T>(url: string, body?: unknown): Promise<T> {
-  const res = await fetch(url, {
-    method: body === undefined ? "GET" : "POST",
-    headers: { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-    cache: "no-store",
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: body === undefined ? "GET" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch {
+    throw new ApiError(OFFLINE_CALL, 0);
+  }
   const data: unknown = await res.json().catch(() => null);
   if (!res.ok) {
     const message =
       data && typeof data === "object" && "error" in data
         ? String((data as { error: unknown }).error)
-        : `Request failed with status ${res.status}`;
+        : `The server answered HTTP ${res.status} ${UNREADABLE_CALL}`;
     throw new ApiError(message, res.status);
   }
   return data as T;
@@ -730,27 +743,34 @@ function evidence(evaluation: Evaluation): string {
 function outcome(
   amount: string | number | null | undefined,
   code: string | null | undefined,
-): { guardrail: boolean; text: string } {
+): { guardrail: boolean; text: string; lead: string } {
   const family = declineFamily(code);
   const shown = code ?? "no reason code";
   const at = `$${money(amount)}`;
   if (family === "guardrail") {
-    return { guardrail: true, text: `Blocked at ${at}: ${shown}. Nothing was spent.` };
+    return {
+      guardrail: true,
+      lead: `Blocked at ${at}: ${shown}.`,
+      text: `Blocked at ${at}: ${shown}. Nothing was spent.`,
+    };
   }
   if (family === "provider") {
     return {
       guardrail: false,
+      lead: `Not processed at ${at}: ${shown}, a payment provider fault, not the mandate.`,
       text: `Not processed at ${at}: ${shown} is a payment provider fault, not the mandate. Nothing was spent and no mandate rule refused it.`,
     };
   }
   if (family === "request") {
     return {
       guardrail: false,
+      lead: `Not processed at ${at}: ${shown} rejected the request itself, not the mandate.`,
       text: `Not processed at ${at}: ${shown} rejected the request itself, not the mandate. Nothing was spent and no mandate rule refused it.`,
     };
   }
   return {
     guardrail: false,
+    lead: `Not processed at ${at}: ${shown} came back without saying whether a mandate rule stopped it.`,
     text: `Not processed at ${at}: ${shown} came back without saying whether a mandate rule stopped it. Nothing was spent.`,
   };
 }
@@ -1075,6 +1095,7 @@ export default function Dashboard() {
           });
         } catch (e) {
           if (e instanceof ApiError && e.status === 402) setNotice(e.message);
+          else setNotice((prev) => prev ?? RENDER_FAILED);
         } finally {
           settle(c.id);
         }
@@ -1315,7 +1336,7 @@ export default function Dashboard() {
       ok: false,
       warn: !read.guardrail,
       slot: "charge",
-      text: `${read.text}${p.message ? ` ${p.message}` : ""}`,
+      text: p.message ? `${read.lead} ${p.message}` : read.text,
       target: "ledger",
     };
   };
@@ -2011,9 +2032,11 @@ export default function Dashboard() {
                   {busy === "force" ? "Sending the over cap charge" : "Force a charge over the cap"}
                 </span>
                 <span className="mt-0.5 block break-words text-[12px] leading-snug text-zinc-400">
-                  Fires a $50.00 charge against the smallest signed mandate, whose ceiling is $5.00,
-                  on purpose. The mandate refuses it and the refusal appears right under this button
-                  with its reason. Nothing is spent.
+                  Fires a charge ten times the ceiling of the smallest signed mandate at that
+                  mandate on purpose, so it lands far over the line the seller signed. The mandate
+                  refuses it and the refusal appears right under this button with its reason. The
+                  amount is read from Prava when the charge goes out, so if Prava is down the button
+                  falls back to a larger figure and says so in the answer. Nothing is spent.
                 </span>
               </button>
 

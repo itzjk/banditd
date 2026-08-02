@@ -58,8 +58,10 @@ const DECLINE_MESSAGES: Record<string, string> = {
     "The payment provider failed on its own side, so the charge could not be completed. Nothing was spent and no rule on the mandate refused it: what broke is Prava, not the authorization the seller signed.",
 };
 
-function fallbackMessage(code: string, upstream: string | null): string {
-  const detail = upstream ? ` Prava said: ${upstream}` : "";
+function fallbackMessage(code: string, upstream: string | null, status: number): string {
+  const answered = status > 0 ? ` Prava answered HTTP ${status}.` : "";
+  const said = upstream ? ` Prava said: ${upstream}` : "";
+  const detail = `${answered}${said}`;
   const family = declineFamily(code);
   if (family === "provider") {
     return `The charge could not be processed on the payment provider side (${code}). Nothing was spent and no rule on the mandate refused this spend.${detail}`;
@@ -346,7 +348,7 @@ export async function POST(req: Request) {
     const code = result ? result.code : NO_MANDATE_AVAILABLE;
     const family = declineFamily(code);
     const message = result
-      ? (DECLINE_MESSAGES[code] ?? fallbackMessage(code, result.message ?? null))
+      ? (DECLINE_MESSAGES[code] ?? fallbackMessage(code, result.message ?? null, result.httpStatus))
       : exhaustionMessage(queue, amount);
 
     const event: PurchaseEvent = {

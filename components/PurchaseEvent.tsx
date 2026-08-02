@@ -58,9 +58,9 @@ const DECLINES: Record<string, { title: string; plain: string }> = {
       "The charge went out and Visa did not come back with a confirmation, so the payment provider could not close it. No rule on the mandate refused this spend. The reference below is what to check on the Prava side before the agent charges again.",
   },
   PROVIDER_UNREACHABLE: {
-    title: "The payment provider did not answer",
+    title: "The payment provider could not process it",
     plain:
-      "The call to Prava never came back, so the charge could not be completed. Nothing was spent and no rule on the mandate refused it: what broke is the connection to the payment provider, not the authorization the seller signed.",
+      "Prava either failed on its own side or never answered, so the charge could not be completed and no card was issued. Nothing was spent and no rule on the mandate refused it: what broke is the payment provider, not the authorization the seller signed.",
   },
   DECLINED: {
     title: "The charge came back declined",
@@ -111,6 +111,20 @@ function explain(code: string | null): Reason {
       family,
       title: "The payment provider did not answer",
       plain: `The payment sandbox replied with ${status} instead of a result, so the charge never reached a card. No rule on the mandate refused this spend and nothing was spent.`,
+    };
+  }
+  if (family === "provider") {
+    return {
+      family,
+      title: "The payment provider could not process it",
+      plain: `Prava came back with ${code} instead of a card, so the charge could not be completed. No rule on the mandate refused this spend and nothing was spent: the failure is on the payment provider side.`,
+    };
+  }
+  if (family === "request") {
+    return {
+      family,
+      title: "The request was rejected before any mandate rule",
+      plain: `Prava rejected the request itself with ${code}. That is a fault on our side of the call, not the mandate protecting the seller. Nothing was spent.`,
     };
   }
   return { family, title: "The charge did not complete", plain: UNKNOWN_PLAIN };

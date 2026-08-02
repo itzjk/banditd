@@ -292,10 +292,15 @@ export async function chargeMandate(
   }
 
   if (raw.status === "failed" || !raw.credentials) {
-    const message = raw.errorMessage ?? "Charge was declined";
+    const cardless = raw.status !== "failed" && !raw.credentials && !raw.errorCode;
+    const message =
+      raw.errorMessage ??
+      (cardless
+        ? "Prava answered the charge without card credentials, so no card was ever issued"
+        : "Charge was declined");
     return {
       ok: false,
-      code: declineCode(raw.errorCode, message),
+      code: cardless ? "NO_TOKEN" : declineCode(raw.errorCode, message),
       message,
       httpStatus: 200,
       mandateId: raw.mandateId ?? mandateId,

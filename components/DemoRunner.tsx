@@ -199,6 +199,31 @@ interface Ending {
 
 class Cancelled extends Error {}
 
+const LEDGER_IS_THE_RECORD =
+  "The payment ledger and the audit log are the record of whether money moved, not this screen. Read the ledger before firing another charge.";
+
+function offlineText(label: string, money: boolean): string {
+  if (money) {
+    return `${label} never reached the server: the browser lost its connection while the charge was in flight, so this screen cannot say whether the charge went out. No rule on the mandate refused anything. ${LEDGER_IS_THE_RECORD}`;
+  }
+  return `${label} never reached the server: the browser lost its connection mid request. This step never charges anything, so nothing was spent. Check the connection and fire the step again from the manual controls below.`;
+}
+
+function unreadableText(status: number, label: string, money: boolean): string {
+  if (money) {
+    return `${label} came back as HTTP ${status} with no answer this page could read. That is the request being dropped on the way, not a rule on the mandate refusing the spend, and whether Prava completed the charge cannot be told from here. ${LEDGER_IS_THE_RECORD}`;
+  }
+  return `${label} came back as HTTP ${status} with no answer this page could read. That is the server failing rather than the agent refusing anything, and nothing was spent. Fire the step again from the manual controls below.`;
+}
+
+function timedOutText(label: string, ms: number, money: boolean): string {
+  const seconds = Math.round(ms / 1000);
+  if (money) {
+    return `${label} ran past ${seconds} seconds without answering. The charge may still be finishing on the server, so this screen cannot say whether it went out, and no rule on the mandate refused it. ${LEDGER_IS_THE_RECORD}`;
+  }
+  return `${label} ran past ${seconds} seconds without answering. The server may still be finishing it, wait a moment and fire that step by hand from the manual controls.`;
+}
+
 interface Props {
   state: State | null;
   absorb: (next: State) => State;
@@ -531,7 +556,13 @@ export default function DemoRunner({
   }, [activeId]);
 
   const call = useCallback(
-    async <T,>(url: string, body: unknown, ms: number, label: string): Promise<T> => {
+    async <T,>(
+      url: string,
+      body: unknown,
+      ms: number,
+      label: string,
+      money = false,
+    ): Promise<T> => {
       const controller = new AbortController();
       controllerRef.current = controller;
       let expired = false;
@@ -550,21 +581,18 @@ export default function DemoRunner({
         });
         const data: unknown = await res.json().catch(() => null);
         if (!res.ok) {
-          const message =
+          const said =
             data && typeof data === "object" && "error" in data
               ? String((data as { error: unknown }).error)
-              : `The server answered ${res.status} and gave no reason`;
-          throw new Error(message);
+              : null;
+          throw new Error(said ?? unreadableText(res.status, label, money));
         }
         return data as T;
       } catch (e) {
         if (cancelledRef.current) throw new Cancelled();
-        if (expired) {
-          throw new Error(
-            `${label} ran past ${Math.round(ms / 1000)} seconds without answering. The server may still be finishing it, wait a moment and fire that step by hand from the manual controls.`,
-          );
-        }
-        throw e instanceof Error ? e : new Error("The request never reached the server");
+        if (expired) throw new Error(timedOutText(label, ms, money));
+        if (e instanceof TypeError) throw new Error(offlineText(label, money));
+        throw e instanceof Error ? e : new Error(offlineText(label, money));
       } finally {
         clearTimeout(timer);
         controllerRef.current = null;
@@ -915,6 +943,7 @@ export default function DemoRunner({
           },
           TIMEOUT.purchase,
           "The purchase",
+          true,
         );
         held.current = absorb(res);
         onReceipt(res.lastPurchase ?? null);

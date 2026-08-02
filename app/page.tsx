@@ -1102,7 +1102,7 @@ export default function Home() {
             </Rise>
 
             <Rise delay={140} className="mt-4">
-              <ProofLab folded batchSize={200} />
+              <ProofLab folded batchSize={200} headingLevel={3} />
             </Rise>
 
             <div className="mt-4 grid gap-4 lg:grid-cols-2">

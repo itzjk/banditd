@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import type { Creative, PurchaseEvent } from "@/lib/store";
 import { ctr, money, pct, toNumber } from "./format";
+import { declineFamily } from "@/lib/declines";
 
 const RAMP = ["var(--curve-1)", "var(--curve-2)", "var(--curve-3)", "var(--curve-4)"];
 
@@ -101,7 +102,10 @@ export default function CampaignMetrics({
 
   const paid = purchases.filter((p) => p.ok);
   const spent = paid.reduce((sum, p) => sum + toNumber(p.amount), 0);
-  const blocked = purchases.length - paid.length;
+  const blocked = purchases.filter(
+    (p) => !p.ok && declineFamily(p.errorCode) === "guardrail",
+  ).length;
+  const unfinished = purchases.length - paid.length - blocked;
   const used = cap > 0 ? Math.min(1, spent / cap) : 0;
 
   const impressions = cohort.reduce((sum, c) => sum + c.arm.impressions, 0);
@@ -239,7 +243,9 @@ export default function CampaignMetrics({
           <Tile
             label="Generations"
             value={String(generations)}
-            hint={`${creatives.length} variants tested, ${paid.length} paid, ${blocked} blocked`}
+            hint={`${creatives.length} variants tested, ${paid.length} paid, ${blocked} refused by the mandate${
+              unfinished > 0 ? `, ${unfinished} not processed by the provider` : ""
+            }`}
           />
         </div>
       </div>

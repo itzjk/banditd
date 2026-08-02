@@ -145,7 +145,9 @@ Probability of being best over 0.95.
 
 Expected loss below 1% of the posterior mean. This is the effect size gate. It stops the agent paying $4 for a difference that is real and too small to care about.
 
-An anytime-valid boundary. The e-value is a Bayes factor between two models of the cohort, one in which every creative shares a single click rate and one in which exactly one creative differs, divided by a calibration constant of 1.4 so that its expectation under the null stays at or below 1 everywhere we could measure it. It has to clear 1/alpha, which is 20 at alpha 0.05. Ville's inequality bounds the probability that it ever crosses 20 under the null at 5%, however many times you look. That is the piece the naive rule does not have.
+An anytime-valid boundary. The e-value is a Bayes factor between two models of the cohort, one in which every creative shares a single click rate and one in which exactly one creative differs, divided by a calibration constant of 1.4. It has to clear 1/alpha, which is 20 at alpha 0.05. That is the piece the naive rule does not have.
+
+Now the part we owe you, because the easy sentence here would be wrong. The Bayes factor is a test martingale under its own prior-averaged null, and against that null Ville's inequality applies exactly. It is not a supermartingale under an arbitrary fixed base rate: hold the rate at 0.3% and the expectation climbs from 0.99 at n=25 to 1.24 at n=1,600, and dividing by a constant cannot give back a property the process never had pointwise. The 1.4 is not a proof either. It is the worst expectation an exact enumeration found over the grid we searched, and a wider search finds 1.47 at n1=500 against n2=10,000,000, which after the divide leaves 1.05. So the honest claim is the narrow one: valid in the prior-averaged sense, plus a measured false positive rate that never exceeded 2.5% across twelve null cells at four base rates under both even and Thompson allocation. Treat the 5% as a budget we have measured ourselves against, not as a theorem we are entitled to cite without a footnote.
 
 Same conditions: false positives drop to 2.5% with two arms over 200 runs, settling near 1.25% at 2000 where the estimate stops moving. With four arms over the same 200 runs the gates fire on no run at all, and near 0.7% once the estimate is pushed out to 2000. And when it fires on a cohort that really does have a winner, it names that winner in 4,495 of the 4,500 runs behind the power tables below.
 
@@ -377,6 +379,19 @@ What it does not show is a completed purchase. A sandbox card on a live merchant
 There is no Meta or Google integration. The ad circuit is the simulator and nothing else, so what this demonstrates is the governance of autonomous spend, not the buying of media. The payment circuit is the half that is real.
 
 And the engine decides on click through rate, which is an imperfect stand in for a sale. The mathematics is indifferent to which event it counts, a posterior over purchases behaves exactly like a posterior over clicks and none of the four gates change. What changes is the wait: the floor of the trade is around 50 conversion events per variant, so on conversions the same engine needs a lot more traffic before it will call anything.
+
+The last one is the worst and we found it after the power tables above were written, which is why it is not in them. The gate is not monotone in the size of the win. Under Thompson allocation over 12,000 impressions, 200 runs a cell:
+
+| truth | gate fires | median impressions left on the control |
+|---|---|---|
+| 3% to 4.5% | 7.0% | 749 |
+| 3% to 6% | 30.0% | 357 |
+| 3% to 9% | 69.5% | 150 |
+| 3% to 12% | 85.5% | 90 |
+| 3% to 20% | 63.5% | 46 |
+| 3% to 35% | 5.0% | 21 |
+
+A creative eleven times better than its cohort gets certified 5% of the time. One four times better gets certified 85.5%. The cause is in the last column: Thompson starves the loser faster the bigger the gap, the control never collects enough impressions to be a comparison, and a two-sample test cannot conclude anything about a sample that stopped growing. The agent refuses to buy exactly when the creative is a runaway. Our power grid stopped at a 100% lift, so we never looked past the point where this begins, and the five false winners quoted earlier come from that same truncated grid. The standard repair is a floor on the traffic the trailing arm keeps receiving, which is not in this build.
 
 Stack
 

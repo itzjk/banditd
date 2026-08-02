@@ -165,6 +165,27 @@
 }
 
 @layer components {
+  .skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 100;
+    padding: 0.75rem 1rem;
+    border-radius: 0.625rem;
+    background: var(--foreground);
+    color: var(--background);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .skip-link:focus {
+    left: 1rem;
+    top: 1rem;
+    outline: 2px solid var(--foreground);
+    outline-offset: 2px;
+  }
+
   .grid-bg {
     background-image:
       linear-gradient(to right, var(--grid-line) 1px, transparent 1px),
