@@ -755,7 +755,7 @@ export default function Home() {
           <StageMotion />
           <div aria-hidden className="bd-stage-halo" />
           <img aria-hidden alt="" src="/brand/hero-web.png" className="bd-stage-hero" />
-          <div className="relative mx-auto w-full max-w-5xl px-gutter pb-16 pt-12 sm:pb-24 sm:pt-16 lg:pb-28 lg:pt-16">
+          <div className="relative mx-auto w-full max-w-5xl px-gutter pb-14 pt-6 sm:pb-20 sm:pt-8">
             <div className="enter max-w-4xl">
               <Eyebrow className="text-muted">The expensive call is when to stop</Eyebrow>
               <span className="mt-2 flex items-center gap-1.5 text-[0.8125rem] text-muted lg:hidden">
@@ -955,11 +955,11 @@ export default function Home() {
               </div>
 
               <div className="enter order-2 min-w-0" style={{ animationDelay: "120ms" }}>
-                <Surface level="feature" className="p-5 sm:p-6">
+                <div className="border-t border-border pt-6">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <Headline as="h2">Or fill in the fields</Headline>
-                      <Small className="mt-1">Name, price, one line about it.</Small>
+                      <Headline as="h2" className="t-title">Or fill in the fields</Headline>
+                      <Small className="mt-1 text-muted">Name, price, one line about it.</Small>
                     </div>
                     <button
                       type="button"
@@ -1168,7 +1168,7 @@ export default function Home() {
                       Payments run against the Prava sandbox.
                     </Caption>
                   </form>
-                </Surface>
+                </div>
               </div>
             </div>
 
