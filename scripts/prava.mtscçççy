@@ -101,9 +101,9 @@ async function charge(mandateId: string, amount: string) {
   console.log("CHARGE OK");
   console.log("  transactionId ", result.transactionId);
   console.log("  status        ", result.status);
-  console.log("  deduplicated  ", result.deduplicated);
-  console.log("  card last4    ", result.credentials.token);
-  console.log("  dynamicCvv    ", result.credentials.dynamicCvv);
+  console.log("  deduplicate   ", result.deduplicated);
+  console.log("  card last     ", result.credentials.token.slice(-4));
+  console.log("  dynamicCvv    ", result.credentials.dynamicCvv ? "present" : "missing");
   console.log("  expiry        ", `${result.credentials.expiryMonth}/${result.credentials.expiryYear}`);
 
   console.log("");

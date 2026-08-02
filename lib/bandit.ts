@@ -20,6 +20,7 @@ export interface EvaluateOptions {
   priorBeta?: number;
   effectSizeTolerance?: number;
   alpha?: number;
+  evidenceConcentration?: number;
 }
 
 export interface Evaluation {
@@ -43,6 +44,11 @@ export const DEFAULT_PRIOR_BETA = 0.5;
 export const DEFAULT_SAMPLES = 20000;
 export const DEFAULT_EFFECT_SIZE_TOLERANCE = 0.01;
 export const DEFAULT_ALPHA = 0.05;
+export const DEFAULT_EVIDENCE_CONCENTRATION = 50;
+export const EVIDENCE_CALIBRATION = 1.4;
+
+const EVIDENCE_GRID_STEP = 0.15;
+const EVIDENCE_GRID_SPAN = 9.5;
 
 export function createRng(seed: number): Rng {
   let s = seed >>> 0;
@@ -131,6 +137,80 @@ export function logMixtureBayesFactor(arms: Arm[], priorAlpha: number, priorBeta
   let acc = 0;
   for (const t of terms) acc += Math.exp(t - top);
   return top + Math.log(acc / arms.length);
+}
+
+interface EvidenceBasis {
+  alpha: Float64Array;
+  beta: Float64Array;
+  base: Float64Array;
+}
+
+const evidenceBases = new Map<number, EvidenceBasis>();
+
+function evidenceBasis(concentration: number): EvidenceBasis {
+  const cached = evidenceBases.get(concentration);
+  if (cached) return cached;
+  const rates: number[] = [];
+  for (let z = -EVIDENCE_GRID_SPAN; z <= EVIDENCE_GRID_SPAN + 1e-9; z += EVIDENCE_GRID_STEP) {
+    rates.push(1 / (1 + Math.exp(-z)));
+  }
+  const built: EvidenceBasis = {
+    alpha: new Float64Array(rates.length),
+    beta: new Float64Array(rates.length),
+    base: new Float64Array(rates.length),
+  };
+  for (let g = 0; g < rates.length; g++) {
+    built.alpha[g] = concentration * rates[g];
+    built.beta[g] = concentration * (1 - rates[g]);
+    built.base[g] = logBetaFn(built.alpha[g], built.beta[g]);
+  }
+  evidenceBases.set(concentration, built);
+  return built;
+}
+
+function logSumExp(values: number[]): number {
+  let top = -Infinity;
+  for (const v of values) if (v > top) top = v;
+  if (!Number.isFinite(top)) return top;
+  let acc = 0;
+  for (const v of values) acc += Math.exp(v - top);
+  return top + Math.log(acc);
+}
+
+export function logCohortBayesFactor(
+  arms: Arm[],
+  concentration: number = DEFAULT_EVIDENCE_CONCENTRATION,
+): number {
+  if (arms.length < 2) return 0;
+  let clicks = 0;
+  let misses = 0;
+  for (const arm of arms) {
+    clicks += arm.clicks;
+    misses += arm.impressions - arm.clicks;
+  }
+  const basis = evidenceBasis(concentration);
+  const grid = basis.base.length;
+  const pooled: number[] = [];
+  for (let g = 0; g < grid; g++) {
+    pooled.push(logBetaFn(basis.alpha[g] + clicks, basis.beta[g] + misses) - basis.base[g]);
+  }
+  const logPooled = logSumExp(pooled);
+
+  const split: number[] = [];
+  for (const arm of arms) {
+    const miss = arm.impressions - arm.clicks;
+    const terms: number[] = [];
+    for (let g = 0; g < grid; g++) {
+      terms.push(
+        logBetaFn(basis.alpha[g] + arm.clicks, basis.beta[g] + miss) -
+          basis.base[g] +
+          logBetaFn(basis.alpha[g] + clicks - arm.clicks, basis.beta[g] + misses - miss) -
+          basis.base[g],
+      );
+    }
+    split.push(logSumExp(terms));
+  }
+  return logSumExp(split) - Math.log(arms.length) - logPooled;
 }
 
 export function evaluate(arms: Arm[], options: EvaluateOptions = {}): Evaluation {
@@ -226,8 +306,8 @@ export function evaluate(arms: Arm[], options: EvaluateOptions = {}): Evaluation
   const posteriorMean =
     alpha[candidateIndex] / (alpha[candidateIndex] + beta[candidateIndex]);
 
-  const logBf = logMixtureBayesFactor(arms, priorAlpha, priorBeta);
-  const eValue = probabilityBest <= 0 ? 0 : Math.exp(Math.log(probabilityBest) + logBf);
+  const logBf = logCohortBayesFactor(arms, options.evidenceConcentration);
+  const eValue = Math.exp(logBf) / EVIDENCE_CALIBRATION;
 
   const thresholdMet = probabilityBest > threshold;
   const minImpressionsMet = arms[candidateIndex].impressions >= minImpressions;

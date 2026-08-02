@@ -3,6 +3,11 @@ import {
   sampleBeta,
   simulateTraffic,
   createRng,
+  logGamma,
+  logMixtureBayesFactor,
+  logCohortBayesFactor,
+  DEFAULT_EVIDENCE_CONCENTRATION,
+  EVIDENCE_CALIBRATION,
   type Arm,
   type Allocation,
   type EvaluateOptions,
@@ -410,6 +415,164 @@ function alphaSweep(
   }
 }
 
+function priorScaleTable() {
+  console.log(
+    "== 10. the prior inside the bayes factor, two arms at n=24000 each, effect in sd of the difference ==",
+  );
+  console.log("  the number is the bayes factor before the calibration divide");
+  console.log("  base     sd   old Beta(.5,.5)   old Beta(3,97)   cohort prior");
+  for (const base of [0.005, 0.03, 0.2, 0.5]) {
+    for (const z of [0, 3, 5]) {
+      const n = 24000;
+      const se = Math.sqrt((2 * base * (1 - base)) / n);
+      const arms: Arm[] = [
+        { impressions: n, clicks: Math.round(n * base) },
+        { impressions: n, clicks: Math.round(n * (base + z * se)) },
+      ];
+      console.log(
+        `  ${pct(base).padStart(6)}  ${z}  `,
+        [
+          logMixtureBayesFactor(arms, 0.5, 0.5),
+          logMixtureBayesFactor(arms, 3, 97),
+          logCohortBayesFactor(arms),
+        ]
+          .map((x) => Math.exp(x).toExponential(2).padStart(15))
+          .join(" "),
+      );
+    }
+  }
+  console.log("");
+}
+
+function logBinomPmf(n: number, k: number, p: number): number {
+  return (
+    logGamma(n + 1) -
+    logGamma(k + 1) -
+    logGamma(n - k + 1) +
+    k * Math.log(p) +
+    (n - k) * Math.log(1 - p)
+  );
+}
+
+function pointNullExpectation(n1: number, n2: number, p: number): number {
+  const build = (n: number) => {
+    const mean = n * p;
+    const sd = Math.sqrt(n * p * (1 - p));
+    const lo = Math.max(0, Math.floor(mean - 11 * sd - 6));
+    const hi = Math.min(n, Math.ceil(mean + 11 * sd + 6));
+    const w: number[] = [];
+    for (let c = lo; c <= hi; c++) w.push(Math.exp(logBinomPmf(n, c, p)));
+    return { lo, w };
+  };
+  const a = build(n1);
+  const b = build(n2);
+  let acc = 0;
+  for (let i = 0; i < a.w.length; i++) {
+    if (a.w[i] < 1e-14) continue;
+    for (let j = 0; j < b.w.length; j++) {
+      const w = a.w[i] * b.w[j];
+      if (w < 1e-15) continue;
+      acc +=
+        w *
+        Math.exp(
+          logCohortBayesFactor([
+            { impressions: n1, clicks: a.lo + i },
+            { impressions: n2, clicks: b.lo + j },
+          ]),
+        );
+    }
+  }
+  return acc;
+}
+
+function calibrationTable() {
+  console.log("== 11. is the e-value an e-value, exact enumeration over both arms under a point null ==");
+  console.log("  an e-variable has expectation at most 1, so every cell after the divide must be at or below 1");
+  console.log("  n1/n2         base    raw bayes factor   after divide");
+  const sizes: [number, number][] = [
+    [200, 200],
+    [500, 500],
+    [2000, 2000],
+    [300, 4000],
+    [200, 8000],
+  ];
+  let worst = 0;
+  for (const [n1, n2] of sizes) {
+    for (const p of [0.001, 0.004, 0.02, 0.12, 0.5]) {
+      if (n1 * p > 900 || n2 * p > 900) continue;
+      const raw = pointNullExpectation(n1, n2, p);
+      if (raw > worst) worst = raw;
+      console.log(
+        `  ${String(n1).padStart(5)}/${String(n2).padEnd(5)} ${pct(p).padStart(7)}   ${raw.toFixed(4).padStart(16)}   ${(raw / EVIDENCE_CALIBRATION).toFixed(4).padStart(12)}`,
+      );
+    }
+  }
+  console.log(
+    `  worst raw expectation ${worst.toFixed(4)}, calibration constant ${EVIDENCE_CALIBRATION}, worst calibrated ${(worst / EVIDENCE_CALIBRATION).toFixed(4)}`,
+  );
+  console.log("");
+}
+
+function priorHeadToHead() {
+  console.log(
+    `== 12. old prior against new prior on the same runs, ${POWER_RUNS} runs, ${POWER_LOOKS} looks, horizon 48000 ==`,
+  );
+  console.log("  only the prior inside the bayes factor changes, alpha and the ville bar are untouched");
+  console.log("  scenario                        allocation    old fires   new fires   new right");
+  const step = Math.floor(48000 / POWER_LOOKS);
+  const cases: [string, number[], number, Allocation][] = [
+    ["null 0.5% vs 0.5%", [0.005, 0.005], -1, "even"],
+    ["null 0.5% vs 0.5%", [0.005, 0.005], -1, "thompson"],
+    ["null 3.0% vs 3.0%", [0.03, 0.03], -1, "even"],
+    ["null 3.0% vs 3.0%", [0.03, 0.03], -1, "thompson"],
+    ["null 20% vs 20%", [0.2, 0.2], -1, "even"],
+    ["null 20% vs 20%", [0.2, 0.2], -1, "thompson"],
+    ["null 50% vs 50%", [0.5, 0.5], -1, "even"],
+    ["null 50% vs 50%", [0.5, 0.5], -1, "thompson"],
+    ["power 3.0% -> 3.6%", [0.03, 0.036], 1, "even"],
+    ["power 3.0% -> 4.0%", [0.03, 0.04], 1, "thompson"],
+    ["power 3.0% -> 6.0%", [0.03, 0.06], 1, "thompson"],
+    ["power 20% -> 22%", [0.2, 0.22], 1, "thompson"],
+    ["power 50% -> 55%", [0.5, 0.55], 1, "thompson"],
+  ];
+  for (const [label, rates, best, allocation] of cases) {
+    let oldFires = 0;
+    let newFires = 0;
+    let newRight = 0;
+    for (let r = 0; r < POWER_RUNS; r++) {
+      const seed = 810000 + r * 7919 + Math.round(rates[1] * 100000);
+      const trafficRng = createRng(seed);
+      const evalRng = createRng(seed ^ 0x85ebca6b);
+      let arms = freshArms(2);
+      let oldFired = false;
+      let newFired = false;
+      for (let look = 1; look <= POWER_LOOKS && !(oldFired && newFired); look++) {
+        arms = simulateTraffic(arms, rates, step, trafficRng, allocation);
+        const res = evaluate(arms, { ...CURRENT, rng: evalRng });
+        const ready = res.thresholdMet && res.minImpressionsMet && res.effectSizeOk;
+        if (!ready) continue;
+        const legacyE =
+          res.probabilityBest <= 0
+            ? 0
+            : Math.exp(Math.log(res.probabilityBest) + logMixtureBayesFactor(arms, 0.5, 0.5));
+        if (!oldFired && legacyE >= 20) {
+          oldFired = true;
+          oldFires++;
+        }
+        if (!newFired && res.anytimeValid) {
+          newFired = true;
+          newFires++;
+          if (res.candidateIndex === best) newRight++;
+        }
+      }
+    }
+    console.log(
+      `  ${label.padEnd(30)} ${allocation.padEnd(10)}   ${pct(oldFires / POWER_RUNS).padStart(9)}   ${pct(newFires / POWER_RUNS).padStart(9)}   ${pct(newRight / POWER_RUNS).padStart(9)}`,
+    );
+  }
+  console.log("");
+}
+
 function main() {
   const t0 = Date.now();
   console.log(
@@ -417,7 +580,10 @@ function main() {
   );
   console.log("old rule : Beta(c+1, f+1), candidateRule=sample, gate = P(best) > 0.95 only");
   console.log(
-    "new rule : Jeffreys prior, candidateRule=probabilityBest, gate = P(best) > 0.95 AND expectedLoss < 1% AND eValue >= 20",
+    "new rule : Jeffreys posterior, candidateRule=probabilityBest, gate = P(best) > 0.95 AND expectedLoss < 1% AND eValue >= 20",
+  );
+  console.log(
+    `e-value  : cohort Bayes factor at concentration ${DEFAULT_EVIDENCE_CONCENTRATION}, divided by the calibration constant ${EVIDENCE_CALIBRATION}`,
   );
   console.log("");
 
@@ -540,6 +706,10 @@ function main() {
   alphaSweep("thompson    3.0% -> 4.0% n=48000 ", [0.03, 0.04], 1, 48000, "thompson", 33000);
   alphaSweep("thompson    3.0% -> 6.0% n=48000 ", [0.03, 0.06], 1, 48000, "thompson", 34000);
   console.log("");
+
+  priorScaleTable();
+  calibrationTable();
+  priorHeadToHead();
 
   console.log("== summary: false positive rate under the null, all arms at 3.0 pct ==");
   console.log("  looks    old rule    new rule    arms");

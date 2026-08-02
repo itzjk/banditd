@@ -3,11 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   DEFAULT_ALPHA,
-  DEFAULT_PRIOR_ALPHA,
-  DEFAULT_PRIOR_BETA,
+  EVIDENCE_CALIBRATION,
   createRng,
   evaluate,
-  logMixtureBayesFactor,
+  logCohortBayesFactor,
   simulateTraffic,
   type Arm,
   type EvaluateOptions,
@@ -239,7 +238,7 @@ function reachable(arms: Arm[]): boolean {
   let top = 0;
   for (const arm of arms) if (arm.impressions > top) top = arm.impressions;
   if (top < MIN_IMPRESSIONS) return false;
-  return logMixtureBayesFactor(arms, DEFAULT_PRIOR_ALPHA, DEFAULT_PRIOR_BETA) >= LOG_EVIDENCE;
+  return logCohortBayesFactor(arms) - Math.log(EVIDENCE_CALIBRATION) >= LOG_EVIDENCE;
 }
 
 function stepRun(run: Run, setup: Setup, rates: number[], best: number, detailed: boolean): void {

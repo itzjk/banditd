@@ -399,7 +399,7 @@ const LIMITS: { label: string; detail: string }[] = [
 
 const HERO_STATS: { value: string; label: string }[] = [
   { value: "44.5%", label: "false winners, naive rule" },
-  { value: "0.5%", label: "false winners, four gates" },
+  { value: "2.5%", label: "false winners, four gates" },
   { value: "100%", label: "correct pick when it fires" },
 ];
 
@@ -575,7 +575,7 @@ export default function Home() {
               </Lead>
               <Caption className="mt-5 max-w-xl text-muted">
                 The rule most agents use calls a false winner 44.5% of the time. This one calls a
-                false winner 0.5% of the time, on the same runs against known truth, and the script
+                false winner 2.5% of the time, on the same runs against known truth, and the script
                 that proves it runs on your laptop in three and a half minutes with no keys.
               </Caption>
             </div>
@@ -1285,7 +1285,7 @@ export default function Home() {
                   </Body>
                   <Body className="mt-5 max-w-2xl text-muted">
                     What we can put a number on is the mistake. The rule most agents use calls a
-                    false winner 44.5% of the time. The four gates call one 0.5% of the time. A
+                    false winner 44.5% of the time. The four gates call one 2.5% of the time. A
                     false winner is the expensive kind of error, because the seller believes it and
                     scales it. What the subscription buys is the ones that do not get made, and you
                     know better than we do what a scaled loser costs in your account.
