@@ -50,7 +50,7 @@ PRAVA_USER_ID=seller_demo_1
 PRAVA_USER_EMAIL=seller@banditd.dev
 ```
 
-Everything else has a default and you can skip it: `MANDATE_CAP` (50.00), `RENDER_MERCHANT_NAME`, `RENDER_MERCHANT_URL`, `RENDER_MERCHANT_COUNTRY`, `RENDER_CREDIT_PRICE` (4.00), `OPENAI_TEXT_MODEL` (gpt-5.6-luna), `OPENAI_IMAGE_MODEL` (gpt-image-1-mini), `OPENAI_SEARCH_CONTEXT` (low).
+Everything else has a default and you can skip it: `MANDATE_CAP` (50.00), `RENDER_MERCHANT_NAME`, `RENDER_MERCHANT_URL`, `RENDER_MERCHANT_COUNTRY`, `RENDER_CREDIT_PRICE` (4.00), `OPENAI_TEXT_MODEL` (gpt-5.6-luna), `OPENAI_IMAGE_MODEL` (gpt-image-1), `OPENAI_SEARCH_CONTEXT` (low).
 
 Then you need a signed mandate. Without one the agent has nothing to charge and `/api/purchase` answers 400 telling you so.
 
