@@ -720,7 +720,7 @@ export default function Home() {
       <header className="sticky top-0 z-40 bg-background/85 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-gutter py-3.5">
           <div className="flex min-w-0 items-center gap-2.5">
-            <Mark className="size-5 shrink-0 text-foreground" />
+            <img aria-hidden alt="" src="/brand/logo-256.png" className="size-7 shrink-0" />
             <span className="truncate text-[0.9375rem] font-semibold tracking-tight">banditd</span>
             <span className="hidden text-sm text-muted sm:inline">ad agent</span>
           </div>

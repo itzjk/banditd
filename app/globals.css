@@ -998,7 +998,6 @@
   max-width: 40vw;
   pointer-events: none;
   opacity: 1;
-  mix-blend-mode: screen;
   -webkit-mask-image: radial-gradient(closest-side at 52% 50%, #000 52%, transparent 88%);
   mask-image: radial-gradient(closest-side at 52% 50%, #000 52%, transparent 88%);
   filter: drop-shadow(0 0 90px rgba(34, 227, 255, 0.18));
