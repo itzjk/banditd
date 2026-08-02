@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { openSession, commit, logAudit } from "@/lib/store";
-import { evaluate } from "@/lib/bandit";
+import { evaluate, createRng } from "@/lib/bandit";
+import { cohortSeed } from "@/lib/cohort-seed";
 import { decideSpend, startBudget, failureBody } from "@/lib/openai";
 import { getMandate, listMandates } from "@/lib/prava";
 import { mandateQueue } from "@/lib/mandate";
@@ -100,7 +101,11 @@ export async function POST(req: Request) {
 
   const evaluation = evaluate(
     cohort.map((c) => c.arm),
-    { samples: 20000, candidateRule: "probabilityBest" },
+    {
+      samples: 20000,
+      candidateRule: "probabilityBest",
+      rng: createRng(cohortSeed(cohort)),
+    },
   );
 
   const mandate = await readMandate(state.mandateId);

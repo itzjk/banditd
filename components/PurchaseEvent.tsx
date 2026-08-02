@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import type { PurchaseEvent } from "@/lib/store";
+import { declineFamily, type DeclineFamily } from "@/lib/declines";
 import { clock, money, pct, plain, shortId, timeAgo, toNumber } from "./format";
 
 interface Props {
@@ -41,13 +42,35 @@ const DECLINES: Record<string, { title: string; plain: string }> = {
     plain:
       "A recurring mandate allows one charge per cycle and this one was already used. Nothing was spent. The seller signs another mandate, or the agent waits for the cycle to renew.",
   },
+  FETCH_AGENTIC_CREDS_ERROR: {
+    title: "The payment provider could not issue the card",
+    plain:
+      "Prava could not get the single use card credentials from Visa, so the charge never reached a card. No rule on the mandate refused this spend and nothing was spent: the failure is on the payment provider side. Prava can still count the attempt against this mandate's cycle, so the agent moves to the next signed mandate instead of retrying this one.",
+  },
+  NO_TOKEN: {
+    title: "The provider returned no card to charge",
+    plain:
+      "Prava answered without the single use card credentials, so there was nothing for the charge to run on. Nothing was spent and no rule on the mandate refused it. The same charge can go out again once the provider returns a card.",
+  },
+  VISA_CONFIRMATION_FAILED: {
+    title: "Visa never confirmed the charge",
+    plain:
+      "The charge went out and Visa did not come back with a confirmation, so the payment provider could not close it. No rule on the mandate refused this spend. The reference below is what to check on the Prava side before the agent charges again.",
+  },
+  PROVIDER_UNREACHABLE: {
+    title: "The payment provider did not answer",
+    plain:
+      "The call to Prava never came back, so the charge could not be completed. Nothing was spent and no rule on the mandate refused it: what broke is the connection to the payment provider, not the authorization the seller signed.",
+  },
   DECLINED: {
-    title: "Visa declined the charge",
-    plain: "The card network refused the charge. Nothing was spent and the mandate is untouched.",
+    title: "The charge came back declined",
+    plain:
+      "The card network refused the charge without saying which rule stopped it, so this is not proof the mandate did its job. Nothing was spent.",
   },
   CHARGE_FAILED: {
-    title: "The card declined the charge",
-    plain: "The network refused the charge. Nothing was spent and the mandate is untouched.",
+    title: "The charge did not complete",
+    plain:
+      "Prava returned the charge as failed with no reason code, so it is not clear whether a mandate rule stopped it or the payment side did. Nothing was spent.",
   },
 };
 
@@ -59,21 +82,53 @@ function SimTag() {
   );
 }
 
-function explain(code: string | null): { title: string; plain: string } {
-  if (!code) return { title: "Charge declined", plain: "The charge did not go through." };
+interface Reason {
+  title: string;
+  plain: string;
+  family: DeclineFamily;
+}
+
+const UNKNOWN_PLAIN =
+  "The charge did not complete and Prava did not say whether a rule on the mandate stopped it or the payment side failed, so this is not proof the guardrail did anything. Nothing was spent.";
+
+function explain(code: string | null): Reason {
+  const family = declineFamily(code);
+  if (!code) {
+    return { family, title: "The charge did not complete", plain: UNKNOWN_PLAIN };
+  }
   const known = DECLINES[code];
-  if (known) return known;
+  if (known) return { ...known, family };
   if (code.startsWith("HTTP_")) {
+    const status = code.replace("HTTP_", "status ");
+    if (family === "request") {
+      return {
+        family,
+        title: "The request was rejected before any mandate rule",
+        plain: `The payment sandbox answered with ${status} and refused the request itself. That is a fault on our side of the call, not the mandate protecting the seller. Nothing was spent.`,
+      };
+    }
     return {
-      title: "Prava did not answer",
-      plain: `The payment sandbox replied with ${code.replace("HTTP_", "status ")} instead of a result. No card was charged, the attempt simply never reached one.`,
+      family,
+      title: "The payment provider did not answer",
+      plain: `The payment sandbox replied with ${status} instead of a result, so the charge never reached a card. No rule on the mandate refused this spend and nothing was spent.`,
     };
   }
-  return {
-    title: "Charge declined",
-    plain: "The mandate refused this charge, so nothing was spent.",
-  };
+  return { family, title: "The charge did not complete", plain: UNKNOWN_PLAIN };
 }
+
+const SUMMARY_LINE: Record<DeclineFamily, string> = {
+  guardrail: "Refused on the rail, no money moved.",
+  provider: "The payment provider could not process it, the mandate did not refuse it.",
+  request: "The call was malformed on our side, the mandate did not refuse it.",
+  unknown: "Nothing was spent, and this was not the mandate refusing the charge.",
+};
+
+const BADGE_LABEL: Record<DeclineFamily, string> = {
+  guardrail: "Blocked",
+  provider: "Not processed",
+  request: "Bad request",
+  unknown: "Not completed",
+};
 
 function Caret() {
   return (
@@ -131,6 +186,7 @@ function Total({ label, value, dot }: { label: string; value: string; dot?: stri
 export default function PurchaseEventItem({ event, winnerHeadline, latest }: Props) {
   const ok = event.ok;
   const reason = explain(event.errorCode);
+  const refused = !ok && reason.family === "guardrail";
   const [entrance] = useState(
     () => Boolean(latest) && Date.now() - Date.parse(event.at) < 15000,
   );
@@ -138,27 +194,41 @@ export default function PurchaseEventItem({ event, winnerHeadline, latest }: Pro
   return (
     <details
       className={`group relative overflow-hidden border-l-2 ${
-        entrance ? (ok ? "event-in" : "event-in-blocked") : ""
-      } ${ok ? "border-l-emerald-400/70" : "border-l-rose-400/70 bg-rose-500/[0.04]"}`}
+        entrance ? (ok ? "event-in" : refused ? "event-in-blocked" : "enter-soft") : ""
+      } ${
+        ok
+          ? "border-l-emerald-400/70"
+          : refused
+            ? "border-l-rose-400/70 bg-rose-500/[0.04]"
+            : "border-l-amber-400/70 bg-amber-400/[0.04]"
+      }`}
     >
       <summary className="focus-ring block cursor-pointer list-none px-3 py-3 transition-colors hover:bg-white/[0.03] sm:px-4 [&::-webkit-details-marker]:hidden">
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
           <span
             className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] ${
-              ok ? "bg-emerald-400/20 text-emerald-300" : "bg-rose-400/20 text-rose-300"
+              ok
+                ? "bg-emerald-400/20 text-emerald-300"
+                : refused
+                  ? "bg-rose-400/20 text-rose-300"
+                  : "bg-amber-400/20 text-amber-200"
             }`}
           >
-            {ok ? "Charged" : "Blocked"}
+            {ok ? "Charged" : BADGE_LABEL[reason.family]}
           </span>
           <span
             className={`text-[19px] font-semibold leading-none tabular-nums ${
-              ok ? "text-emerald-200" : "text-rose-200"
+              ok ? "text-emerald-200" : refused ? "text-rose-200" : "text-amber-100"
             }`}
           >
             ${money(event.amount)}
           </span>
           {!ok ? (
-            <span className="rounded-md bg-rose-400/15 px-1.5 py-0.5 font-mono text-[10px] text-rose-300 [overflow-wrap:anywhere]">
+            <span
+              className={`rounded-md px-1.5 py-0.5 font-mono text-[10px] [overflow-wrap:anywhere] ${
+                refused ? "bg-rose-400/15 text-rose-300" : "bg-amber-400/15 text-amber-200"
+              }`}
+            >
               {event.errorCode ?? "DECLINED"}
             </span>
           ) : null}
@@ -173,8 +243,12 @@ export default function PurchaseEventItem({ event, winnerHeadline, latest }: Pro
         </div>
 
         {!ok ? (
-          <p className="mt-2 text-[12px] font-medium leading-snug text-rose-200">
-            {reason.title}. Refused on the rail, no money moved.
+          <p
+            className={`mt-2 text-[12px] font-medium leading-snug ${
+              refused ? "text-rose-200" : "text-amber-100"
+            }`}
+          >
+            {reason.title}. {SUMMARY_LINE[reason.family]}
           </p>
         ) : null}
 
@@ -204,16 +278,34 @@ export default function PurchaseEventItem({ event, winnerHeadline, latest }: Pro
 
       <div className="space-y-3 px-3 pb-3.5 sm:px-4">
         {!ok ? (
-          <div className="rounded-xl border border-rose-400/25 bg-rose-500/[0.07] p-3">
+          <div
+            className={`rounded-xl border p-3 ${
+              refused
+                ? "border-rose-400/25 bg-rose-500/[0.07]"
+                : "border-amber-400/25 bg-amber-400/[0.07]"
+            }`}
+          >
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-md bg-rose-400/15 px-1.5 py-0.5 font-mono text-[11px] text-rose-300">
+              <span
+                className={`rounded-md px-1.5 py-0.5 font-mono text-[11px] ${
+                  refused ? "bg-rose-400/15 text-rose-300" : "bg-amber-400/15 text-amber-200"
+                }`}
+              >
                 {event.errorCode ?? "DECLINED"}
               </span>
-              <span className="text-[13px] font-semibold text-rose-200">{reason.title}</span>
+              <span
+                className={`text-[13px] font-semibold ${
+                  refused ? "text-rose-200" : "text-amber-100"
+                }`}
+              >
+                {reason.title}
+              </span>
             </div>
             <p className="mt-1.5 text-[13px] leading-relaxed text-zinc-300">{reason.plain}</p>
             <div className="mt-2 rounded-lg bg-zinc-950/80 px-2.5 py-1.5 font-mono text-[11px] leading-relaxed text-zinc-300 [overflow-wrap:anywhere]">
-              prava.sandbox: charge declined, code {event.errorCode ?? "DECLINED"}, funds moved 0.00
+              {refused
+                ? `prava.sandbox: charge declined, code ${event.errorCode ?? "DECLINED"}, funds moved 0.00`
+                : `prava.sandbox: charge not completed, code ${event.errorCode ?? "DECLINED"}, no card issued`}
             </div>
           </div>
         ) : null}
@@ -258,14 +350,28 @@ interface LedgerProps {
 
 export function PurchaseLedger({ events, headlineFor }: LedgerProps) {
   const spent = events.reduce((sum, e) => (e.ok ? sum + toNumber(e.amount) : sum), 0);
-  const held = events.reduce((sum, e) => (e.ok ? sum : sum + toNumber(e.amount)), 0);
+  const held = events.reduce(
+    (sum, e) => (!e.ok && declineFamily(e.errorCode) === "guardrail" ? sum + toNumber(e.amount) : sum),
+    0,
+  );
+  const stalled = events.reduce(
+    (sum, e) => (!e.ok && declineFamily(e.errorCode) !== "guardrail" ? sum + toNumber(e.amount) : sum),
+    0,
+  );
   const charged = events.filter((e) => e.ok).length;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
-      <div className="grid grid-cols-3 divide-x divide-white/[0.07] border-b border-white/[0.07] bg-white/[0.02]">
+      <div
+        className={`grid divide-x divide-white/[0.07] border-b border-white/[0.07] bg-white/[0.02] ${
+          stalled > 0 ? "grid-cols-2 divide-y sm:grid-cols-4 sm:divide-y-0" : "grid-cols-3"
+        }`}
+      >
         <Total label="Spent" value={`$${money(spent)}`} dot="bg-emerald-400" />
         <Total label="Blocked" value={`$${money(held)}`} dot="bg-rose-400" />
+        {stalled > 0 ? (
+          <Total label="Not processed" value={`$${money(stalled)}`} dot="bg-amber-400" />
+        ) : null}
         <Total label="Charges" value={`${charged} of ${events.length}`} />
       </div>
 
@@ -284,8 +390,8 @@ export function PurchaseLedger({ events, headlineFor }: LedgerProps) {
         <div className="px-4 py-8 text-center">
           <p className="text-[13px] font-medium text-zinc-200">No money has moved yet.</p>
           <p className="mx-auto mt-1 max-w-sm text-[12px] leading-relaxed text-zinc-400">
-            Every attempt lands here the moment it happens, the charges that clear and the ones
-            the mandate refuses.
+            Every attempt lands here the moment it happens: the charges that clear, the ones the
+            mandate refuses and the ones the payment provider could not process.
           </p>
         </div>
       )}

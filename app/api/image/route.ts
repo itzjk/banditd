@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { openSession, commit, logAudit, logCredit } from "@/lib/store";
+import { openSession, commit, logAudit, logCredit, ledgerBalance } from "@/lib/store";
 import { generateImage, isAngle, startBudget } from "@/lib/openai";
 
 export const maxDuration = 300;
@@ -28,11 +28,14 @@ export async function POST(req: Request) {
   const session = openSession(body.state);
   const state = session.state;
 
-  if (state.credits.balance <= 0) {
+  const balance = ledgerBalance(state.credits.entries);
+  state.credits.balance = balance;
+
+  if (balance <= 0) {
     logAudit(
       state,
       "credits",
-      `Refused to render ${creativeId}: the credit balance is 0, so there is nothing to deliver against`,
+      `Refused to render ${creativeId}: the credit entries on the ledger add up to 0, so there is nothing to deliver against. The server counts the balance from the entries, the caller does not get to declare it.`,
     );
     return NextResponse.json(
       {

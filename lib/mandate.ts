@@ -186,7 +186,7 @@ export function scopeDemoAmount(target: MandateCandidate): string {
 export function renderCreditsContext(amount: string): ChargeContext {
   return {
     merchantName: process.env.RENDER_MERCHANT_NAME ?? "Banditd Render Credits",
-    merchantUrl: process.env.RENDER_MERCHANT_URL ?? "https://render.banditd.dev",
+    merchantUrl: process.env.RENDER_MERCHANT_URL ?? "https://banditd.vercel.app",
     merchantCountry: process.env.RENDER_MERCHANT_COUNTRY ?? "US",
     productDescription: "Ad creative render credits",
     unitPrice: amount,

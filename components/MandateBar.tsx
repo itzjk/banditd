@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import Link from "next/link";
 import type { PurchaseEvent } from "@/lib/store";
 import { money, shortId, toNumber } from "./format";
 import { useCountUp } from "./motion";
@@ -375,6 +376,19 @@ export default function MandateBar({
               </div>
             </>
           )}
+
+          <div className="mt-3 border-t border-white/10 pt-3">
+            <Link
+              href="/merchant-check"
+              className="inline-flex min-h-[2.5rem] items-center gap-1.5 rounded-lg border border-white/15 bg-white/[0.05] px-3 text-[12px] font-semibold text-zinc-200 transition-colors hover:border-white/30 hover:text-white"
+            >
+              Watch a real store answer the protocol
+            </Link>
+            <p className="mt-1.5 max-w-3xl break-words text-[12px] leading-snug text-zinc-400">
+              The merchant lock only means something if the merchant is real. Point the agent at any
+              storefront and read what it answers.
+            </p>
+          </div>
         </div>
       </div>
     </>

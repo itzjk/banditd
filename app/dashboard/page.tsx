@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type CSSProperties,
 } from "react";
 import Link from "next/link";
 import type {
@@ -49,6 +50,7 @@ const MANDATE_BLOCKS = new Set([
 ]);
 const STORAGE_KEY = "banditd_state";
 const IMAGES_KEY = "banditd_images";
+const REV_KEY = "banditd_rev";
 const ANGLES: CreativeAngle[] = ["price", "ritual", "gift", "quality"];
 const CREDIT_KINDS: CreditKind[] = ["purchase", "render", "grant"];
 const MAX_AUDIT = 200;
@@ -59,6 +61,8 @@ const UNREADABLE =
   "A saved session in this browser could not be read, so it was discarded. You are starting clean.";
 const PATCHED =
   "A saved session in this browser had damaged entries. They were dropped and the rest was restored.";
+const ADOPTED =
+  "Another tab of this dashboard moved the run forward, so this tab picked up its state. Nothing was overwritten.";
 
 type Images = Record<string, string>;
 
@@ -194,16 +198,18 @@ function safeCreditEntry(value: unknown): CreditEntry | null {
   return { at: text(e.at), kind: e.kind as CreditKind, amount, ref: text(e.ref) };
 }
 
+function ledgerBalance(entries: CreditEntry[]): number {
+  return Math.max(0, entries.reduce((sum, e) => sum + e.amount, 0));
+}
+
 function safeCredits(value: unknown): Credits {
   const c = record(value);
   if (!c) return starterCredits();
-  return {
-    balance: Math.max(0, Math.trunc(count(c.balance))),
-    entries: list(c.entries)
-      .map(safeCreditEntry)
-      .filter((e): e is CreditEntry => e !== null)
-      .slice(0, MAX_AUDIT),
-  };
+  const entries = list(c.entries)
+    .map(safeCreditEntry)
+    .filter((e): e is CreditEntry => e !== null)
+    .slice(0, MAX_AUDIT);
+  return { balance: ledgerBalance(entries), entries };
 }
 
 function mergeCredits(prev: State | null, next: State): State {
@@ -223,8 +229,20 @@ function mergeCredits(prev: State | null, next: State): State {
   }
   entries.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
   const capped = entries.slice(0, MAX_AUDIT);
-  const balance = Math.max(0, capped.reduce((sum, e) => sum + e.amount, 0));
-  return { ...next, credits: { balance, entries: capped } };
+  return { ...next, credits: { balance: ledgerBalance(capped), entries: capped } };
+}
+
+function mergeAudit(prev: AuditEntry[], next: AuditEntry[]): AuditEntry[] {
+  const seen = new Set<string>();
+  const entries: AuditEntry[] = [];
+  for (const entry of [...next, ...prev]) {
+    const key = `${entry.at}|${entry.kind}|${entry.detail}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    entries.push(entry);
+  }
+  entries.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+  return entries.slice(0, MAX_AUDIT);
 }
 
 function sanitize(value: unknown): State | null {
@@ -273,9 +291,19 @@ function split(input: State): { clean: State; images: Images } {
   return { clean, images };
 }
 
-function save(value: State) {
+function readRev(): number {
+  try {
+    const n = Number(window.localStorage.getItem(REV_KEY));
+    return Number.isFinite(n) ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function save(value: State, rev: number) {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+    window.localStorage.setItem(REV_KEY, String(rev));
   } catch {
     return;
   }
@@ -313,6 +341,7 @@ function forget() {
   try {
     window.localStorage.removeItem(STORAGE_KEY);
     window.localStorage.removeItem(IMAGES_KEY);
+    window.localStorage.removeItem(REV_KEY);
   } catch {
     return;
   }
@@ -539,6 +568,37 @@ function Band({
   );
 }
 
+function Note({
+  note,
+  onJump,
+}: {
+  note: ManualNote;
+  onJump: (target: "ledger" | "ads") => void;
+}) {
+  const target = note.target;
+  return (
+    <div
+      role="status"
+      className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-[13px] leading-snug ${
+        note.ok
+          ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-100"
+          : "border-rose-400/40 bg-rose-500/10 text-rose-100"
+      }`}
+    >
+      <span className="min-w-0 break-words">{note.text}</span>
+      {target ? (
+        <button
+          type="button"
+          onClick={() => onJump(target)}
+          className="shrink-0 rounded-lg border border-white/20 bg-white/[0.06] px-2.5 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-white/[0.14]"
+        >
+          {target === "ledger" ? "Show it in the ledger" : "Show the ads"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function Fold({
   title,
   hint,
@@ -590,6 +650,15 @@ interface ImageResponse {
   state?: State;
 }
 
+type ManualSlot = "steps" | "traffic" | "charge";
+
+interface ManualNote {
+  ok: boolean;
+  text: string;
+  slot: ManualSlot;
+  target?: "ledger" | "ads";
+}
+
 export default function Dashboard() {
   const [state, setState] = useState<State | null>(null);
   const stateRef = useRef<State | null>(null);
@@ -605,13 +674,16 @@ export default function Dashboard() {
   const [impressions, setImpressions] = useState(1000);
   const [autoRunning, setAutoRunning] = useState(false);
   const [revoked, setRevoked] = useState(false);
+  const [stale, setStale] = useState(false);
+  const [manual, setManual] = useState<ManualNote | null>(null);
+  const staleRef = useRef(false);
+  const revRef = useRef(0);
+  const ledgerRef = useRef<HTMLElement | null>(null);
+  const adsRef = useRef<HTMLElement | null>(null);
   const wide = useWide();
 
-  const absorb = useCallback((next: State) => {
-    const sane = sanitize(next);
-    if (!sane) throw new Error("The server answered with something this run could not read. Nothing was changed.");
-
-    const { clean, images: found } = split(mergeCredits(stateRef.current, sane));
+  const take = useCallback((sane: State) => {
+    const { clean, images: found } = split(sane);
     stateRef.current = clean;
     setState(clean);
     if (Object.keys(found).length > 0) {
@@ -621,9 +693,40 @@ export default function Dashboard() {
         return merged;
       });
     }
-    save(clean);
     return clean;
   }, []);
+
+  const absorb = useCallback(
+    (next: State) => {
+      const sane = sanitize(next);
+      if (!sane) throw new Error("The server answered with something this run could not read. Nothing was changed.");
+
+      const clean = take(mergeCredits(stateRef.current, sane));
+      if (staleRef.current) return clean;
+      const rev = Math.max(readRev(), revRef.current) + 1;
+      revRef.current = rev;
+      save(clean, rev);
+      return clean;
+    },
+    [take],
+  );
+
+  const adopt = useCallback(() => {
+    const { state: stored } = restore();
+    revRef.current = Math.max(readRev(), revRef.current);
+    staleRef.current = false;
+    setStale(false);
+    if (stored) take(stored);
+  }, [take]);
+
+  const absorbLedger = useCallback(
+    (next: State) => {
+      const base = stateRef.current;
+      if (!base) return absorb(next);
+      return absorb({ ...base, credits: next.credits, audit: mergeAudit(base.audit, next.audit) });
+    },
+    [absorb],
+  );
 
   const carryDecision = useCallback((next: Decision | null, evaluated: Evaluation | null) => {
     setDecision(next);
@@ -671,6 +774,22 @@ export default function Dashboard() {
       alive = false;
     };
   }, [absorb]);
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== null && e.key !== STORAGE_KEY && e.key !== REV_KEY) return;
+      if (readRev() <= revRef.current) return;
+      if (busy !== null || autoRunning) {
+        staleRef.current = true;
+        setStale(true);
+        return;
+      }
+      adopt();
+      setNotice(ADOPTED);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [adopt, busy, autoRunning]);
 
   const creatives = useMemo(() => state?.creatives ?? [], [state]);
   const generation = creatives.length ? Math.max(...creatives.map((c) => c.generation)) : 0;
@@ -733,7 +852,7 @@ export default function Dashboard() {
             imagePrompt: c.imagePrompt,
             state: stateRef.current,
           });
-          if (res.state) absorb(res.state);
+          if (res.state) absorbLedger(res.state);
           setImages((prev) => {
             const merged = { ...prev, [c.id]: res.imageData };
             saveImages(merged);
@@ -747,7 +866,7 @@ export default function Dashboard() {
       };
       void draw().catch(() => settle(c.id));
     });
-  }, [creatives, images, settle, absorb]);
+  }, [creatives, images, settle, absorbLedger]);
 
   const winner = winnerId ? byId.get(winnerId) : undefined;
   const cohortImpressions = cohort.reduce((sum, c) => sum + c.arm.impressions, 0);
@@ -768,33 +887,113 @@ export default function Dashboard() {
   const hasResearch = Boolean(state?.research);
   const hasCreatives = cohort.length > 0;
   const hasTraffic = cohortImpressions > 0;
-  const locked = busy !== null || autoRunning;
+  const locked = busy !== null || autoRunning || stale;
+
+  const runManual = async (task: Task, slot: ManualSlot, fn: () => Promise<ManualNote>) => {
+    setBusy(task);
+    setError(null);
+    setManual(null);
+    try {
+      setManual(await fn());
+    } catch (e) {
+      const text = e instanceof Error ? e.message : "Something broke on the way to the server";
+      setError(text);
+      setManual({ ok: false, text, slot });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const charged = (p: LastPurchase | undefined): ManualNote => {
+    if (!p) {
+      return {
+        ok: false,
+        slot: "charge",
+        text: "The charge came back with nothing to show for it.",
+        target: "ledger",
+      };
+    }
+    if (p.ok) {
+      return {
+        ok: true,
+        slot: "charge",
+        text:
+          p.message ??
+          `Charged $${money(p.amount)} on a single use card ending ${p.cardLast4 ?? "????"}.`,
+        target: "ledger",
+      };
+    }
+    return {
+      ok: false,
+      slot: "charge",
+      text: `Refused at $${money(p.amount)} with ${p.errorCode ?? "a decline"}. Nothing was spent.${
+        p.message ? ` ${p.message}` : ""
+      }`,
+      target: "ledger",
+    };
+  };
 
   const research = () =>
-    run("research", async () => {
-      absorb(await api<State>("/api/research", { state }));
+    runManual("research", "steps", async () => {
+      const next = absorb(await api<State>("/api/research", { state }));
+      return {
+        ok: true,
+        slot: "steps",
+        text: next.research
+          ? `The market read is in, ${next.research.sources.length} ${
+              next.research.sources.length === 1 ? "source" : "sources"
+            } kept. Market research under Evidence has the whole of it.`
+          : "The agent answered without any research to show.",
+      };
     });
 
   const generate = (parentId?: string) => {
     if (locked) return;
-    return run(parentId ? "evolve" : "creatives", async () => {
-      absorb(await api<State>("/api/creatives", parentId ? { parentId, state } : { state }));
+    return runManual(parentId ? "evolve" : "creatives", "steps", async () => {
+      const next = absorb(
+        await api<State>("/api/creatives", parentId ? { parentId, state } : { state }),
+      );
       setDecision(null);
       setEvaluation(null);
+      const top = next.creatives.length ? Math.max(...next.creatives.map((c) => c.generation)) : 0;
+      const made = next.creatives.filter((c) => c.generation === top).length;
+      return {
+        ok: true,
+        slot: "steps",
+        text: `${made} ${made === 1 ? "ad is" : "ads are"} on the board in generation ${top}.`,
+        target: "ads",
+      };
     });
   };
 
   const simulate = () =>
-    run("simulate", async () => {
-      absorb(await api<State>("/api/simulate", { impressions, state }));
+    runManual("simulate", "traffic", async () => {
+      const next = absorb(await api<State>("/api/simulate", { impressions, state }));
+      const top = next.creatives.length ? Math.max(...next.creatives.map((c) => c.generation)) : 0;
+      const served = next.creatives
+        .filter((c) => c.generation === top)
+        .reduce((sum, c) => sum + c.arm.impressions, 0);
+      return {
+        ok: true,
+        slot: "traffic",
+        text: `Served ${impressions.toLocaleString()} simulated impressions. This generation is on ${served.toLocaleString()} now.`,
+        target: "ads",
+      };
     });
 
   const decide = () =>
-    run("decide", async () => {
+    runManual("decide", "steps", async () => {
       const res = await api<DecideResponse>("/api/decide", { state });
       absorb(res.state);
       setDecision(res.decision);
       setEvaluation(res.evaluation);
+      return {
+        ok: true,
+        slot: "steps",
+        text: res.decision.shouldBuy
+          ? `It wants to spend $${money(res.decision.amount)}. The card at the top of the page carries its reason and the button that lets it.`
+          : "It held the money. The card at the top of the page carries the reason, and the four gates below say which one stopped it.",
+      };
     });
 
   const purchase = () =>
@@ -812,7 +1011,7 @@ export default function Dashboard() {
     });
 
   const forceReject = () =>
-    run("force", async () => {
+    runManual("force", "charge", async () => {
       const res = await api<PurchaseResponse>("/api/purchase", {
         reason:
           "Deliberate over cap charge, fired by hand to show the mandate refusing the agent instead of paying it",
@@ -824,10 +1023,11 @@ export default function Dashboard() {
       });
       absorb(res);
       setReceipt(res.lastPurchase ?? null);
+      return charged(res.lastPurchase);
     });
 
   const forceMerchantReject = () =>
-    run("scope", async () => {
+    runManual("scope", "charge", async () => {
       const res = await api<PurchaseResponse>("/api/purchase", {
         reason:
           "Deliberate charge for the render credits merchant against the mandate signed for Allbirds, fired by hand to show the merchant lock refusing the agent",
@@ -839,7 +1039,15 @@ export default function Dashboard() {
       });
       absorb(res);
       setReceipt(res.lastPurchase ?? null);
+      return charged(res.lastPurchase);
     });
+
+  const jump = (target: "ledger" | "ads") => {
+    const node = target === "ledger" ? ledgerRef.current : adsRef.current;
+    if (!node) return;
+    const top = node.getBoundingClientRect().top + window.scrollY - 72;
+    window.scrollTo({ top: Math.max(0, top), behavior: "instant" });
+  };
 
   const revoke = () =>
     run("revoke", async () => {
@@ -849,7 +1057,10 @@ export default function Dashboard() {
     });
 
   return (
-    <div className="min-h-screen bg-zinc-950 font-sans text-zinc-100">
+    <div
+      className="min-h-screen bg-zinc-950 font-sans text-zinc-100"
+      style={{ "--ring": "rgba(244, 244, 245, 0.92)" } as CSSProperties}
+    >
       <MandateBar
         mandateId={state?.mandateId ?? null}
         cap={MANDATE_CAP}
@@ -878,6 +1089,26 @@ export default function Dashboard() {
         {error ? (
           <div className="rounded-xl border border-rose-400/40 bg-rose-500/10 px-3 py-2.5 text-[13px] text-rose-200">
             {error}
+          </div>
+        ) : null}
+
+        {stale ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-2.5 text-[13px] leading-snug text-amber-100">
+            <span className="min-w-0 break-words">
+              Another tab of this dashboard is further along than this one. Acting here would write
+              the older run over the newer one, so the controls are off and anything this tab
+              finished since then is on screen but not saved. Catch up and the newer run takes over.
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                adopt();
+                setNotice(ADOPTED);
+              }}
+              className="shrink-0 rounded-lg border border-white/20 bg-white/[0.06] px-2.5 py-1.5 text-[12px] font-semibold text-white transition-colors hover:bg-white/[0.14]"
+            >
+              Catch up with the newer tab
+            </button>
           </div>
         ) : null}
 
@@ -928,7 +1159,7 @@ export default function Dashboard() {
           state={state}
           absorb={absorb}
           impressions={impressions}
-          disabled={busy !== null}
+          disabled={busy !== null || stale}
           running={autoRunning}
           onRunningChange={setAutoRunning}
           onDecision={carryDecision}
@@ -1055,7 +1286,7 @@ export default function Dashboard() {
           />
         ) : null}
 
-        <section className="space-y-4 pt-3">
+        <section ref={adsRef} className="scroll-mt-20 space-y-4 pt-3">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <h2 className="text-base font-semibold tracking-tight text-white sm:text-lg">
@@ -1186,7 +1417,7 @@ export default function Dashboard() {
           title="What it left behind"
           summary="The money it actually moved, the log of every move, and the manual controls for anyone who wants to drive it by hand."
         >
-          <section className="space-y-3">
+          <section ref={ledgerRef} className="scroll-mt-20 space-y-3">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <h3 className="text-[14px] font-semibold tracking-tight text-white">
@@ -1241,6 +1472,10 @@ export default function Dashboard() {
                 />
               </div>
 
+              {manual && manual.slot === "steps" ? (
+                <Note note={manual} onJump={jump} />
+              ) : null}
+
               <div className="rounded-xl border border-white/12 bg-white/[0.03] p-3">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div className="min-w-0">
@@ -1287,6 +1522,12 @@ export default function Dashboard() {
                       : `Serve ${impressions.toLocaleString()} impressions`}
                   </button>
                 </div>
+
+                {manual && manual.slot === "traffic" ? (
+                  <div className="mt-3">
+                    <Note note={manual} onJump={jump} />
+                  </div>
+                ) : null}
               </div>
 
               <button
@@ -1300,7 +1541,7 @@ export default function Dashboard() {
                 </span>
                 <span className="mt-0.5 block break-words text-[12px] leading-snug text-zinc-400">
                   Fires a charge ten times the ceiling on purpose. The mandate refuses it and the
-                  rejection lands above with its reason. Nothing is spent.
+                  refusal appears right under this button with its reason. Nothing is spent.
                 </span>
               </button>
 
@@ -1318,10 +1559,14 @@ export default function Dashboard() {
                 <span className="mt-0.5 block break-words text-[12px] leading-snug text-zinc-400">
                   Charges the mandate the seller signed for Allbirds on behalf of the render credits
                   merchant. Prava refuses it with a 403 because that mandate names one merchant, and
-                  the rejection lands above with its reason. Nothing is spent. If the Allbirds
-                  mandate is not signed yet, the agent says so instead of breaking.
+                  the refusal appears right under this button with its reason. Nothing is spent. If
+                  the Allbirds mandate is not signed yet, the agent says so instead of breaking.
                 </span>
               </button>
+
+              {manual && manual.slot === "charge" ? (
+                <Note note={manual} onJump={jump} />
+              ) : null}
             </div>
           </Fold>
 

@@ -248,16 +248,18 @@ function coerceCreditEntry(value: unknown): CreditEntry | null {
   return { at: text(e.at), kind: e.kind as CreditKind, amount, ref: text(e.ref) };
 }
 
+export function ledgerBalance(entries: CreditEntry[]): number {
+  return Math.max(0, entries.reduce((sum, e) => sum + e.amount, 0));
+}
+
 function coerceCredits(value: unknown): Credits {
   const c = record(value);
   if (!c) return starterCredits();
-  return {
-    balance: Math.max(0, Math.trunc(count(c.balance))),
-    entries: list(c.entries)
-      .map(coerceCreditEntry)
-      .filter((e): e is CreditEntry => e !== null)
-      .slice(0, MAX_AUDIT),
-  };
+  const entries = list(c.entries)
+    .map(coerceCreditEntry)
+    .filter((e): e is CreditEntry => e !== null)
+    .slice(0, MAX_AUDIT);
+  return { balance: ledgerBalance(entries), entries };
 }
 
 export function coerceState(value: unknown): State | null {

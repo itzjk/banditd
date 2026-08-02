@@ -24,6 +24,11 @@ export interface ProofScore {
   naiveRight: number;
   gatedFalse: number;
   gatedRight: number;
+  naiveFired: number;
+  gatedFired: number;
+  naiveLost: number;
+  gatedLost: number;
+  heldLost: number;
 }
 
 export type ProofTone = "auto" | "panel";
@@ -106,6 +111,7 @@ interface Verdict {
   firedAt: number;
   probabilityBest: number;
   gates: boolean[];
+  regret: number;
 }
 
 interface Run {
@@ -133,6 +139,11 @@ interface Board {
   naiveRight: number;
   gatedFalse: number;
   gatedRight: number;
+  naiveFired: number;
+  gatedFired: number;
+  naiveLost: number;
+  gatedLost: number;
+  heldLost: number;
   naiveTrail: number[];
   gatedTrail: number[];
 }
@@ -144,6 +155,11 @@ function emptyBoard(): Board {
     naiveRight: 0,
     gatedFalse: 0,
     gatedRight: 0,
+    naiveFired: 0,
+    gatedFired: 0,
+    naiveLost: 0,
+    gatedLost: 0,
+    heldLost: 0,
     naiveTrail: [],
     gatedTrail: [],
   };
@@ -157,6 +173,7 @@ function blankVerdict(): Verdict {
     firedAt: 0,
     probabilityBest: 0,
     gates: [false, false, false, false],
+    regret: 0,
   };
 }
 
@@ -168,6 +185,38 @@ function ratesOf(setup: Setup): number[] {
 
 function bestOf(setup: Setup): number {
   return setup.truth === "winner" ? setup.arms - 1 : -1;
+}
+
+function spanOf(setup: Setup): number {
+  return Math.max(1, Math.floor(setup.horizon / setup.looks)) * setup.looks;
+}
+
+function regretOf(arms: Arm[], rates: number[], best: number): number {
+  if (best < 0) return 0;
+  let acc = 0;
+  for (let i = 0; i < arms.length; i++) acc += arms[i].impressions * (rates[best] - rates[i]);
+  return acc;
+}
+
+function heldCost(setup: Setup, rates: number[], best: number): number {
+  if (best < 0) return 0;
+  const share = spanOf(setup) / setup.arms;
+  let acc = 0;
+  for (const r of rates) acc += share * (rates[best] - r);
+  return acc;
+}
+
+function costOf(
+  verdict: Verdict,
+  setup: Setup,
+  rates: number[],
+  best: number,
+  held: number,
+): number {
+  if (best < 0) return 0;
+  if (!verdict.fired) return held;
+  const picked = rates[verdict.candidate] ?? rates[best];
+  return verdict.regret + Math.max(0, spanOf(setup) - verdict.firedAt) * (rates[best] - picked);
 }
 
 function startRun(setup: Setup, seed: number): Run {
@@ -206,6 +255,7 @@ function stepRun(run: Run, setup: Setup, rates: number[], best: number, detailed
       run.naive.fired = true;
       run.naive.correct = res.candidateIndex === best;
       run.naive.firedAt = res.totalImpressions;
+      run.naive.regret = regretOf(run.arms, rates, best);
     }
   }
 
@@ -230,6 +280,7 @@ function stepRun(run: Run, setup: Setup, rates: number[], best: number, detailed
       run.gated.fired = true;
       run.gated.correct = res.candidateIndex === best;
       run.gated.firedAt = res.totalImpressions;
+      run.gated.regret = regretOf(run.arms, rates, best);
     }
   }
 }
@@ -247,18 +298,39 @@ function snapshot(run: Run, setup: Setup): Snapshot {
   };
 }
 
-function record(board: Board, run: Run): void {
+function record(board: Board, run: Run, setup: Setup, rates: number[], best: number): void {
   board.runs += 1;
   if (run.naive.fired) {
+    board.naiveFired += 1;
     if (run.naive.correct) board.naiveRight += 1;
     else board.naiveFalse += 1;
   }
   if (run.gated.fired) {
+    board.gatedFired += 1;
     if (run.gated.correct) board.gatedRight += 1;
     else board.gatedFalse += 1;
   }
+  const held = heldCost(setup, rates, best);
+  board.heldLost += held;
+  board.naiveLost += costOf(run.naive, setup, rates, best, held);
+  board.gatedLost += costOf(run.gated, setup, rates, best, held);
   board.naiveTrail.push(board.naiveFalse / board.runs);
   board.gatedTrail.push(board.gatedFalse / board.runs);
+}
+
+function scoreOf(board: Board): ProofScore {
+  return {
+    runs: board.runs,
+    naiveFalse: board.naiveFalse,
+    naiveRight: board.naiveRight,
+    gatedFalse: board.gatedFalse,
+    gatedRight: board.gatedRight,
+    naiveFired: board.naiveFired,
+    gatedFired: board.gatedFired,
+    naiveLost: board.naiveLost,
+    gatedLost: board.gatedLost,
+    heldLost: board.heldLost,
+  };
 }
 
 export function runProofBatch(setup: ProofSetup, seed: number, count: number): ProofScore {
@@ -272,15 +344,9 @@ export function runProofBatch(setup: ProofSetup, seed: number, count: number): P
     while (run.look < setup.looks && !(run.naive.fired && run.gated.fired)) {
       stepRun(run, setup, rates, best, false);
     }
-    record(board, run);
+    record(board, run, setup, rates, best);
   }
-  return {
-    runs: board.runs,
-    naiveFalse: board.naiveFalse,
-    naiveRight: board.naiveRight,
-    gatedFalse: board.gatedFalse,
-    gatedRight: board.gatedRight,
-  };
+  return scoreOf(board);
 }
 
 function later(task: () => void): () => void {
@@ -588,6 +654,45 @@ function ScoreRow({
   );
 }
 
+function CostCard({
+  title,
+  fires,
+  lost,
+  worst,
+  runs,
+  tone,
+  bar,
+}: {
+  title: string;
+  fires: number;
+  lost: number;
+  worst: number;
+  runs: number;
+  tone: string;
+  bar: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg border border-border bg-surface px-2.5 py-2">
+      <p className="min-w-0 break-words text-[0.8125rem] font-semibold leading-tight">{title}</p>
+      <p className="mt-1 break-words text-[0.6875rem] leading-snug text-subtle">
+        Called a winner in{" "}
+        <span className="font-mono tabular-nums text-muted">{runs > 0 ? pct(fires) : "0.0%"}</span>{" "}
+        of runs
+      </p>
+      <p className="mt-2 text-[0.6875rem] leading-snug text-subtle">Clicks lost per run</p>
+      <p className={`font-mono text-[1.125rem] font-semibold leading-tight tabular-nums ${tone}`}>
+        {lost.toFixed(1)}
+      </p>
+      <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-foreground/10">
+        <div
+          className={`bar-fill h-full w-full rounded-full ${bar}`}
+          style={{ transform: `scaleX(${worst > 0 ? Math.min(1, lost / worst) : 0})` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function ProofLab({
   className = "",
   defaultTruth = "identical",
@@ -640,13 +745,7 @@ export default function ProofLab({
   );
 
   useEffect(() => {
-    reportRef.current?.({
-      runs: board.runs,
-      naiveFalse: board.naiveFalse,
-      naiveRight: board.naiveRight,
-      gatedFalse: board.gatedFalse,
-      gatedRight: board.gatedRight,
-    });
+    reportRef.current?.(scoreOf(board));
   }, [board]);
 
   const runBatch = useCallback(
@@ -671,7 +770,7 @@ export default function ProofLab({
           }
           stepRun(run, setup, rates, best, false);
           if (run.look >= setup.looks || (run.naive.fired && run.gated.fired)) {
-            record(boardRef.current, run);
+            record(boardRef.current, run, setup, rates, best);
             run = null;
             left -= 1;
           }
@@ -718,7 +817,7 @@ export default function ProofLab({
         return;
       }
       cancelRef.current = null;
-      record(boardRef.current, run);
+      record(boardRef.current, run, setup, rates, best);
       setBoard({ ...boardRef.current });
       if (autoBatch && batchSize > 1) {
         runBatch(batchSize - 1);
@@ -753,6 +852,18 @@ export default function ProofLab({
   const naiveRightRate = rate(board.naiveRight, board.runs);
   const gatedRightRate = rate(board.gatedRight, board.runs);
   const top = Math.max(0.1, naiveFalseRate * 1.25, gatedFalseRate * 1.25);
+  const naiveFireRate = rate(board.naiveFired, board.runs);
+  const gatedFireRate = rate(board.gatedFired, board.runs);
+  const naiveLost = rate(board.naiveLost, board.runs);
+  const gatedLost = rate(board.gatedLost, board.runs);
+  const heldLost = rate(board.heldLost, board.runs);
+  const worstLost = Math.max(heldLost, naiveLost, gatedLost);
+  const cheaper =
+    board.runs === 0 || Math.abs(naiveLost - gatedLost) <= 0.5
+      ? "level"
+      : naiveLost < gatedLost
+        ? "naive"
+        : "gated";
   const served = live?.served ?? 0;
   const progress = setup.horizon > 0 ? Math.min(1, served / setup.horizon) : 0;
   const running = busy !== "idle";
@@ -792,7 +903,8 @@ export default function ProofLab({
         }`.trim()}
       >
         The naive rule stops the moment one ad looks 95% likely to be best. Banditd needs four gates
-        to clear. Choose a truth the ads do not know about, then watch which rule respects it.
+        to clear. Choose a truth the ads do not know about, then watch which rule respects it and
+        what respecting it costs in clicks.
       </p>
 
       <div className="mt-4 grid gap-3 border-t border-border pt-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -1037,6 +1149,92 @@ export default function ProofLab({
         </p>
       </div>
 
+      <div className="mt-3 rounded-xl border border-border bg-surface-2 p-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <span className="eyebrow">What the caution costs</span>
+          {board.runs > 0 ? (
+            <span
+              className={`shrink-0 rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.1em] ${
+                truth === "identical"
+                  ? "border-border bg-surface text-muted"
+                  : cheaper === "naive"
+                    ? "border-danger/40 bg-danger-soft text-danger"
+                    : cheaper === "gated"
+                      ? "border-accent/45 bg-accent-soft text-foreground"
+                      : "border-border bg-surface text-muted"
+              }`}
+            >
+              {truth === "identical"
+                ? "Same price here"
+                : cheaper === "naive"
+                  ? "Naive rule cheaper here"
+                  : cheaper === "gated"
+                    ? "Four gates cheaper here"
+                    : "Level on cost here"}
+            </span>
+          ) : null}
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <CostCard
+            title="Naive rule"
+            fires={naiveFireRate}
+            lost={naiveLost}
+            worst={worstLost}
+            runs={board.runs}
+            tone="text-foreground"
+            bar="bg-foreground/60"
+          />
+          <CostCard
+            title="Banditd, four gates"
+            fires={gatedFireRate}
+            lost={gatedLost}
+            worst={worstLost}
+            runs={board.runs}
+            tone="text-foreground"
+            bar="bg-foreground/60"
+          />
+        </div>
+
+        <p className="mt-2.5 text-pretty text-[0.75rem] leading-relaxed text-muted">
+          {board.runs === 0
+            ? "Run a scenario to price it. Lost clicks are counted against an oracle that knew the winner from the first impression, so lower is better."
+            : truth === "identical"
+              ? `Both rules lose zero clicks here, because every ad pays the same ${pct(
+                  BASE_RATE,
+                  1,
+                )} and there is no better ad to steer traffic to. The whole difference is the false winner rate above. Switch the hidden truth to one ad being better to see what the gate costs.`
+              : cheaper === "naive"
+                ? `The naive rule is cheaper here. It loses ${naiveLost.toFixed(
+                    1,
+                  )} clicks a run against our ${gatedLost.toFixed(
+                    1,
+                  )}, because we keep paying for the even split while we wait. That is the case against us and it is a fair one.`
+                : cheaper === "gated"
+                  ? `The four gates are cheaper here, ${gatedLost.toFixed(
+                      1,
+                    )} clicks a run against the naive rule's ${naiveLost.toFixed(
+                      1,
+                    )}. Its false winners cost more than our waiting does.`
+                  : `Neither rule is cheaper here. The two land within half a click a run of each other.`}
+        </p>
+
+        {truth === "winner" && board.runs > 0 ? (
+          <p className="mt-2 text-pretty text-[0.6875rem] leading-relaxed text-subtle">
+            Never deciding at all costs {heldLost.toFixed(1)} clicks a run. Lost clicks are counted
+            against an oracle that knew the winner from the first impression, so lower is better.
+            When a rule fires, the rest of the run goes to the ad it picked, right or wrong.
+          </p>
+        ) : null}
+
+        <p className="mt-2 text-pretty border-t border-border pt-2.5 text-[0.75rem] leading-relaxed text-muted">
+          The gate protects against declaring a false winner, and that is the error that matters
+          when the spend is automatic and irreversible and the seller then scales the creative. The
+          naive rule decides sooner, and that matters when being wrong is cheap. Both are true at
+          once.
+        </p>
+      </div>
+
       {truth === "identical" && arms === 4 ? (
         <p className="mt-3 text-pretty text-[0.75rem] leading-relaxed text-subtle">
           Four ads look safer than two for the naive rule, and that is the trap. Passing 95% is
@@ -1064,11 +1262,11 @@ export default function ProofLab({
       <summary className="hover-tint focus-ring flex cursor-pointer list-none items-center justify-between gap-3 rounded-2xl border border-border bg-surface-2 px-3 py-3 hover:border-border-strong sm:px-4">
         <span className="min-w-0">
           <span className="block break-words text-[0.8125rem] font-semibold text-foreground">
-            Check the false winner rate yourself
+            Check the false winner rate, and what it costs, yourself
           </span>
           <span className="mt-0.5 block break-words text-[0.6875rem] leading-snug text-muted">
-            Same ads, same traffic, two ways to call a winner. It runs in this browser, calls no API
-            and spends nothing.
+            Same ads, same traffic, two ways to call a winner, scored on both false winners and
+            clicks lost. It runs in this browser, calls no API and spends nothing.
           </span>
         </span>
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-muted transition-transform duration-200 group-open:rotate-180">

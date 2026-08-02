@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { openSession, commit, logAudit, logCredit } from "@/lib/store";
-import { evaluate } from "@/lib/bandit";
+import { evaluate, createRng } from "@/lib/bandit";
+import { cohortSeed } from "@/lib/cohort-seed";
 import { reportCharge } from "@/lib/prava";
 import {
   mandateQueue,
@@ -17,7 +18,8 @@ import {
   MERCHANT_MANDATE_MISSING_MESSAGE,
   DEMO_MERCHANT_NAME,
 } from "@/lib/mandate";
-import type { MandateQueue, MandateCandidate } from "@/lib/mandate";
+import { declineFamily, PROVIDER_UNREACHABLE } from "@/lib/declines";
+import type { MandateQueue, MandateCandidate, RotationResult } from "@/lib/mandate";
 import type { ChargeContext } from "@/lib/prava";
 import type { PurchaseEvent } from "@/lib/store";
 
@@ -45,7 +47,30 @@ const DECLINE_MESSAGES: Record<string, string> = {
   CYCLE_ALREADY_CHARGED:
     "This mandate was already charged in the current monthly cycle, and Prava allows one charge per cycle. Nothing was spent. The agent moves to the next signed mandate, or the seller signs another one.",
   [NO_MANDATE_AVAILABLE]: NO_MANDATE_MESSAGE,
+  FETCH_AGENTIC_CREDS_ERROR:
+    "The charge could not be processed on the payment provider side: Prava failed to fetch the agentic credentials from Visa, so no single use card was ever issued and the charge never reached one. No rule on the mandate refused this spend and nothing was spent. Prava can still count the attempt against this mandate's cycle, so the agent moves to the next signed mandate instead of retrying this one.",
+  NO_TOKEN:
+    "Prava returned the charge without card credentials, so there was nothing to charge. Nothing was spent and no rule on the mandate refused it. The failure is on the payment provider side and the same charge can go out again once it returns a card.",
+  VISA_CONFIRMATION_FAILED:
+    "The charge went out and Visa never confirmed the result, so the payment provider could not close it. No rule on the mandate refused this spend. Check the transaction reference on the Prava side before charging again.",
+  [PROVIDER_UNREACHABLE]:
+    "The call to the payment provider never came back, so the charge could not be completed. Nothing was spent and no rule on the mandate refused it: what broke is the connection to Prava, not the authorization the seller signed.",
 };
+
+function fallbackMessage(code: string, upstream: string | null): string {
+  const detail = upstream ? ` Prava said: ${upstream}` : "";
+  const family = declineFamily(code);
+  if (family === "provider") {
+    return `The charge could not be processed on the payment provider side (${code}). Nothing was spent and no rule on the mandate refused this spend.${detail}`;
+  }
+  if (family === "request") {
+    return `Prava rejected the request itself (${code}): the call was malformed on our side, it was not a mandate rule stopping the spend. Nothing was spent.${detail}`;
+  }
+  return `The charge did not complete (${code}) and Prava did not say whether a rule on the mandate stopped it or the payment side failed, so this is not proof the guardrail refused anything. Nothing was spent.${detail}`;
+}
+
+const SELF_DECLARED_OUTCOME =
+  "The render credits merchant is a first party demo destination this project operates, not an independent store, so the APPROVED outcome is self declared by us and not confirmed by a separate acquirer. What is not self declared is the charge: the mandate, the ceiling, the merchant scope and the single use card all come from the Visa network through Prava, and the credits it delivered are debited for real on every render.";
 
 const MAX_PLAUSIBLE_IMPRESSIONS = 5000000;
 const MAX_PLAUSIBLE_CTR = 0.25;
@@ -99,6 +124,24 @@ export async function POST(req: Request) {
     );
   }
 
+  if (cohort.length < 2) {
+    logAudit(
+      state,
+      "purchase",
+      `Refused the purchase request before touching any mandate: generation ${generation} carries a single creative, and one arm is not a comparison. The agent spends on a variant that beat another one, never on a variant that ran alone.`,
+    );
+    return NextResponse.json(
+      {
+        error:
+          "the evidence does not justify a charge: the live generation carries a single creative, so there is nothing it was measured against. A cohort needs at least two variants before the bandit can call a winner, and the server does not spend on a comparison that never happened.",
+        code: "COHORT_TOO_SMALL",
+        cohortSize: cohort.length,
+        state: commit(session),
+      },
+      { status: 409 },
+    );
+  }
+
   const implausible = implausibility(cohort);
   if (implausible) {
     logAudit(
@@ -122,7 +165,11 @@ export async function POST(req: Request) {
 
   const verdict = evaluate(
     cohort.map((c) => c.arm),
-    { samples: 20000, candidateRule: "probabilityBest" },
+    {
+      samples: 20000,
+      candidateRule: "probabilityBest",
+      rng: createRng(cohortSeed(cohort)),
+    },
   );
 
   if (!force && !verdict.sufficientEvidence) {
@@ -233,7 +280,20 @@ export async function POST(req: Request) {
     );
   }
 
-  const rotation = await chargeWithRotation(attempts, amount, baseReference, chargeContext);
+  const rotation = await chargeWithRotation(attempts, amount, baseReference, chargeContext).catch(
+    (e: unknown): RotationResult => ({
+      charge: {
+        ok: false,
+        code: PROVIDER_UNREACHABLE,
+        message: e instanceof Error ? e.message : String(e),
+        httpStatus: 0,
+        mandateId: attempts[0]?.id,
+      },
+      mandateId: attempts[0]?.id ?? null,
+      reference: baseReference,
+      rotated: [],
+    }),
+  );
 
   for (const skipped of rotation.rotated) {
     logAudit(
@@ -249,8 +309,9 @@ export async function POST(req: Request) {
 
   if (!result || !result.ok) {
     const code = result ? result.code : NO_MANDATE_AVAILABLE;
+    const family = declineFamily(code);
     const message = result
-      ? DECLINE_MESSAGES[code] ?? result.message ?? "The charge was declined"
+      ? (DECLINE_MESSAGES[code] ?? fallbackMessage(code, result.message ?? null))
       : exhaustionMessage(queue, amount);
 
     const event: PurchaseEvent = {
@@ -270,11 +331,17 @@ export async function POST(req: Request) {
 
     state.purchases.unshift(event);
 
+    const upstream = result && result.httpStatus > 0 ? `upstream HTTP ${result.httpStatus}, ` : "";
+
     logAudit(
       state,
       "purchase",
       result
-        ? `Declined ${amount} on mandate ${mandateId}: ${code}. ${message} (upstream HTTP ${result.httpStatus}, reference ${reference})`
+        ? family === "guardrail"
+          ? `Declined ${amount} on mandate ${mandateId}: ${code}. ${message} (${upstream}reference ${reference})`
+          : family === "request"
+            ? `Could not charge ${amount} on mandate ${mandateId}: Prava rejected the request itself with ${code}, no mandate rule was involved. ${message} (${upstream}reference ${reference})`
+            : `Could not charge ${amount} on mandate ${mandateId}: ${code} came back from the payment provider, not from a mandate rule. ${message} (${upstream}reference ${reference})`
         : `Held back ${amount}: ${code}. ${message} (${rotation.rotated.length} signed mandate(s) tried and already charged this cycle, reference ${reference})`,
     );
 
@@ -286,6 +353,7 @@ export async function POST(req: Request) {
         reason,
         winnerId,
         errorCode: code,
+        family,
         message,
         upstreamMessage: result?.message ?? null,
         upstreamStatus: result?.httpStatus ?? null,
@@ -350,6 +418,14 @@ export async function POST(req: Request) {
     );
   }
 
+  if (reported) {
+    logAudit(
+      state,
+      "purchase",
+      `Reported transaction ${transactionId} on mandate ${usedMandateId} to Prava as APPROVED for ${amount}. ${SELF_DECLARED_OUTCOME}`,
+    );
+  }
+
   if (reportError) {
     logAudit(
       state,
@@ -374,6 +450,13 @@ export async function POST(req: Request) {
       deduplicated: result.deduplicated,
       reported,
       reportError,
+      reportedStatus: reported ? "APPROVED" : null,
+      merchant: {
+        name: renderCreditsContext(amount).merchantName,
+        firstParty: true,
+        outcomeSelfDeclared: true,
+        note: SELF_DECLARED_OUTCOME,
+      },
       forced: force,
       reference,
     },

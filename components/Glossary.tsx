@@ -15,7 +15,7 @@ import { createPortal } from "react-dom";
 export const GLOSSARY_TERMS = {
   "four-gates": {
     label: "four gates",
-    body: "Four conditions, and all four have to hold before a cent moves: enough traffic on the candidate, one ad clearly ahead, a gap big enough to be worth money, and a result that holds up to repeated looks. The last two are there because a 95% probability of being best is not a 5% chance of being wrong. That number means different things with 2 variants than with 4, and it inflates every time you look at it: on identical variants, checking 48 times pushes the false alarm rate from 0.7% to 44.5%. The anytime-valid boundary holds no matter how often we look. Measured on 200 runs against known truth, the four together take the false alarm rate down to 0.5%.",
+    body: "Four conditions, and all four have to hold before a cent moves: enough traffic on the candidate, one ad clearly ahead, a gap big enough to be worth money, and a result that holds up to repeated looks. The last two are there because a 95% probability of being best is not a 5% chance of being wrong. That number means different things with 2 variants than with 4, and it inflates every time you look at it: on identical variants, checking 48 times pushes the false alarm rate from 10.5% to 44.5%. The anytime-valid boundary holds no matter how often we look. Measured on 200 runs against known truth, the four together take the false alarm rate down to 0.5%.",
   },
   "thompson-sampling": {
     label: "Thompson sampling",

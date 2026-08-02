@@ -1,6 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { State } from "@/lib/store";
 import Glossary from "@/components/Glossary";
@@ -25,6 +34,37 @@ import {
 } from "@/components/visuals";
 
 const STORAGE_KEY = "banditd_state";
+
+interface SavedRun {
+  creatives: number;
+  purchases: number;
+}
+
+function subscribeSaved(notify: () => void) {
+  window.addEventListener("storage", notify);
+  return () => window.removeEventListener("storage", notify);
+}
+
+function readSaved(): string | null {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function savedRun(raw: string | null): SavedRun | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as { creatives?: unknown; purchases?: unknown };
+    const creatives = Array.isArray(parsed?.creatives) ? parsed.creatives.length : 0;
+    const purchases = Array.isArray(parsed?.purchases) ? parsed.purchases.length : 0;
+    if (creatives === 0 && purchases === 0) return null;
+    return { creatives, purchases };
+  } catch {
+    return null;
+  }
+}
 
 function saveState(value: State) {
   try {
@@ -276,8 +316,8 @@ const DIFFERENCE: { label: string; title: string; body: string }[] = [
   },
   {
     label: "banditd",
-    title: "Decides where the money goes.",
-    body: "It reads the traffic, holds the call until the evidence clears four gates, moves the budget onto the ad that is winning, and pays for the next round of work itself.",
+    title: "Decides which ad gets switched off, and when.",
+    body: "It reads the traffic, holds the call until the evidence clears four gates, names the ad that lost, and pays for the next round of work itself.",
   },
 ];
 
@@ -319,20 +359,27 @@ const BUYER: { label: string; detail: string }[] = [
 ];
 
 const PRICING: { price: string; ceiling: string }[] = [
-  { price: "$149", ceiling: "up to $50,000 a month in managed ad spend" },
-  { price: "$399", ceiling: "up to $250,000 a month" },
-  { price: "$999", ceiling: "up to $1,000,000 a month" },
+  { price: "$149", ceiling: "3 creative tests at once, 12 variants under watch" },
+  { price: "$399", ceiling: "15 tests at once, 60 variants" },
+  { price: "$999", ceiling: "60 tests at once, 240 variants" },
 ];
 
-const PAYBACK: { label: string; value: string }[] = [
-  { label: "Ad spend in a month", value: "$20,000" },
-  { label: "Creative not fit for purpose, at the 54% estimate", value: "$10,800" },
-  { label: "banditd, first tier", value: "$149" },
+const LIMITS: { label: string; detail: string }[] = [
+  {
+    label: "The ad circuit is simulated",
+    detail:
+      "There is no Meta or Google integration. Impressions and clicks come from a simulator, and every figure it produces is labeled as simulated in the dashboard. The payment circuit is the real half: a signed mandate, an agent initiated charge, and a decline that comes from the card network.",
+  },
+  {
+    label: "It decides on clicks, not on sales",
+    detail:
+      "Click through rate is an imperfect stand in for a purchase. The maths does not care which event it counts, a posterior over purchases works exactly like a posterior over clicks, but the standard of the trade is around 50 conversion events per variant. On conversions the same engine needs a lot more traffic before it will call anything.",
+  },
 ];
 
 const HERO_STATS: { value: string; label: string }[] = [
-  { value: "4", label: "ads per run" },
-  { value: "0.5%", label: "false winner rate" },
+  { value: "44.5%", label: "false winners, naive rule" },
+  { value: "0.5%", label: "false winners, four gates" },
   { value: "100%", label: "correct pick when it fires" },
 ];
 
@@ -349,6 +396,9 @@ export default function Home() {
   const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmWipe, setConfirmWipe] = useState(false);
+  const storedRun = useSyncExternalStore(subscribeSaved, readSaved, () => null);
+  const saved = useMemo(() => savedRun(storedRun), [storedRun]);
 
   function fillExample() {
     setName(EXAMPLE.name);
@@ -360,6 +410,11 @@ export default function Home() {
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (busy) return;
+    if (saved && !confirmWipe) {
+      setConfirmWipe(true);
+      return;
+    }
+    setConfirmWipe(false);
     setError(null);
     setBusy(true);
     try {
@@ -394,10 +449,16 @@ export default function Home() {
             <span className="hidden text-sm text-muted sm:inline">ad agent</span>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <span className="hidden items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted md:inline-flex">
+            <span className="hidden items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted lg:inline-flex">
               <span className="size-1.5 rounded-full bg-accent" />
               Prava sandbox
             </span>
+            <Link
+              href="/dashboard"
+              className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground hover-tint inline-flex min-h-11 items-center rounded-lg border border-border bg-surface px-3.5 text-[0.8125rem] font-semibold text-foreground hover:border-border-strong"
+            >
+              Open the dashboard
+            </Link>
             <a
               href="#start"
               className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground inline-flex min-h-11 items-center rounded-lg bg-foreground px-4 text-[0.8125rem] font-semibold text-background transition-opacity hover:opacity-90"
@@ -413,27 +474,20 @@ export default function Home() {
           <MeshField variant="flow" intensity="soft" parallax position="absolute" />
           <div className="relative mx-auto w-full max-w-5xl px-gutter pb-16 pt-12 sm:pb-24 sm:pt-16 lg:pb-28 lg:pt-16">
             <div className="enter max-w-4xl">
-              <Eyebrow className="text-muted">Every ad dollar should work harder</Eyebrow>
+              <Eyebrow className="text-muted">The expensive call is when to stop</Eyebrow>
               <Display className={`mt-4 ${DISPLAY_XL}`}>
-                Stop paying for ads that don&apos;t work. banditd moves your budget to the ones that
-                do.
+                Stop paying for the ads that lost. banditd decides which one to switch off, and
+                when.
               </Display>
               <Lead className="mt-5 max-w-2xl">
-                Hand it a product. It writes four different ads, puts them in front of real traffic,
-                finds the one buyers actually respond to, and moves the money onto that one by
-                itself, inside the limits you set.
+                Hand it a product. It writes four different ads, puts them in front of traffic, and
+                holds the call until the evidence is good enough to act on. Then it pays for the
+                next round of work itself, inside the limits you set.
               </Lead>
               <Caption className="mt-5 max-w-xl text-muted">
-                Meta estimates that 54% of ad spend across its platforms goes to creative that is
-                not fit for purpose.{" "}
-                <a
-                  href="https://bravebison.com/insights/creative-is-the-new-targeting-how-to-ensure-your-performance-media-actually/"
-                  target="_blank"
-                  rel="noreferrer noopener"
-                  className="focus-ring underline decoration-border-strong underline-offset-2 hover:text-foreground"
-                >
-                  Meta estimate, reported by Brave Bison, June 2025
-                </a>
+                The rule most agents use calls a false winner 44.5% of the time. This one calls a
+                false winner 0.5% of the time, on the same runs against known truth, and the script
+                that proves it runs on your laptop in three and a half minutes with no keys.
               </Caption>
             </div>
 
@@ -442,12 +496,15 @@ export default function Home() {
                 <Surface level="raised" className="overflow-hidden">
                   <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-4 py-3 sm:px-5">
                     <Eyebrow as="span" className="min-w-0 text-muted">
-                      Where the money goes
+                      What the decision looks like
                     </Eyebrow>
                     <Mono className="min-w-0 text-muted">illustration</Mono>
                   </div>
                   <div className="px-4 py-5 sm:px-5 sm:py-6">
-                    <BudgetShift />
+                    <BudgetShift
+                      title="A hundred dollar test budget starts split evenly across four ads. Traffic arrives, one ad draws clicks ahead of the rest, and once the gates agree the three that lost are held back to a tenth of the test each."
+                      startNote="Started at an even 25 / 25 / 25 / 25 split. Traffic put one ad ahead, the gates agreed, and the other three were held back to a tenth of the test each."
+                    />
                   </div>
                 </Surface>
               </div>
@@ -527,13 +584,50 @@ export default function Home() {
                       </p>
                     ) : null}
 
+                    {saved ? (
+                      <div className="rounded-lg border border-warn/30 bg-warn-soft px-3 py-3">
+                        <p className="text-sm font-semibold text-foreground">
+                          A run is already saved in this browser
+                        </p>
+                        <Small className="mt-1.5 block text-muted">
+                          {saved.creatives} {saved.creatives === 1 ? "ad" : "ads"} and{" "}
+                          {saved.purchases} {saved.purchases === 1 ? "charge" : "charges"}. Handing
+                          over a new product wipes it and starts from nothing.
+                        </Small>
+                        <Link
+                          href="/dashboard"
+                          className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground mt-2.5 inline-flex min-h-11 items-center rounded-lg border border-border bg-surface px-3.5 text-[0.8125rem] font-semibold text-foreground hover:border-border-strong"
+                        >
+                          Open that run instead
+                        </Link>
+                      </div>
+                    ) : null}
+
                     <button
                       type="submit"
                       disabled={busy}
-                      className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground min-h-[3.25rem] w-full rounded-lg bg-foreground px-4 text-[0.9375rem] font-semibold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                      className={`focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground min-h-[3.25rem] w-full rounded-lg px-4 text-[0.9375rem] font-semibold transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 ${
+                        confirmWipe
+                          ? "bg-danger text-white"
+                          : "bg-foreground text-background"
+                      }`}
                     >
-                      {busy ? "Handing it to the agent" : "Hand it to the agent"}
+                      {busy
+                        ? "Handing it to the agent"
+                        : confirmWipe
+                          ? "Click again to wipe the saved run"
+                          : "Hand it to the agent"}
                     </button>
+
+                    {confirmWipe && !busy ? (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmWipe(false)}
+                        className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground -mt-1 block min-h-11 w-full rounded-lg text-[0.8125rem] font-medium text-muted hover:text-foreground"
+                      >
+                        Keep the saved run
+                      </button>
+                    ) : null}
 
                     <Caption className="text-muted">
                       Performance numbers in the demo are simulated and labeled in the dashboard.
@@ -567,12 +661,12 @@ export default function Home() {
             <Rise>
               <Eyebrow className="text-muted">What makes it different</Eyebrow>
               <Headline className="mt-4 max-w-3xl">
-                Plenty of tools write ads. This one decides where the money goes.
+                Plenty of tools write ads. This one decides which ad stops.
               </Headline>
               <Body className="mt-5 max-w-2xl text-muted">
-                A generator hands you four files and leaves you the expensive part, which one
-                deserves the budget and when that answer can be trusted. That is the part banditd
-                does.
+                A generator hands you four files and leaves you the expensive part, which one you
+                should stop paying for and when that answer can be trusted. That is the part
+                banditd does, and it publishes how often it gets that call wrong.
               </Body>
             </Rise>
 
@@ -989,15 +1083,17 @@ export default function Home() {
                   </div>
 
                   <Body className="mt-6 max-w-2xl text-muted">
-                    Every tier is the same product. The only thing that moves is how much ad spend
-                    the agent is allowed to manage. Above a million a month it stops being a price
-                    list.
+                    Every tier is the same product. The only thing that moves is how many tests it
+                    watches at once. One test is one cohort of four ads judged together. We do not
+                    charge by your ad spend, because the agent does not spend it. Above the top
+                    tier it stops being a price list.
                   </Body>
 
                   <Caption className="mt-5 max-w-2xl text-muted">
                     This is a proposal. banditd has no customers, no revenue and nothing for sale
-                    today. The tiers are drawn against what the market already charges for the same
-                    shape of tool:{" "}
+                    today. The tiers sit next to what the market charges a month for a decision
+                    tool, and those tools bill by managed ad spend, which is a unit we deliberately
+                    do not use:{" "}
                     <a
                       href="https://adalysis.com/pricing/"
                       target="_blank"
@@ -1015,7 +1111,9 @@ export default function Home() {
                     >
                       Optmyzr
                     </a>{" "}
-                    starts at $299 up to $25,000. Neither of them buys anything.
+                    starts at $299 up to $25,000. Both are Google and Microsoft Ads tools sold
+                    mostly to agencies, so they anchor the monthly price of a neighbouring
+                    category, not ours. Neither of them buys anything.
                   </Caption>
                 </div>
               </Surface>
@@ -1025,61 +1123,70 @@ export default function Home() {
               <Surface level="raised" className="mt-4 overflow-hidden">
                 <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-5 py-3.5 sm:px-7">
                   <Eyebrow as="span" className="min-w-0 text-muted">
-                    Where the subscription pays for itself
+                    What it is worth
                   </Eyebrow>
-                  <Mono className="min-w-0 text-muted">a $20,000 a month seller</Mono>
+                  <Mono className="min-w-0 text-muted">no recovery figure of our own</Mono>
                 </div>
 
-                <div className="grid gap-8 px-5 py-6 sm:px-7 sm:py-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,17rem)] lg:gap-12">
-                  <div className="min-w-0">
-                    <dl>
-                      {PAYBACK.map((row) => (
-                        <div
-                          key={row.label}
-                          className="flex items-baseline justify-between gap-4 border-b border-border py-3.5 first:pt-0"
-                        >
-                          <Small as="dt" className="min-w-0">
-                            {row.label}
-                          </Small>
-                          <dd className="t-num min-w-0 text-right font-mono text-base font-medium">
-                            {row.value}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
-                    <Body className="mt-6 max-w-xl text-muted">
-                      So the subscription is covered the moment it moves 1.4% of that wasted spend
-                      onto creative that works, which is 0.75% of the whole budget. Everything past
-                      that line is the seller&apos;s.
-                    </Body>
-                    <Caption className="mt-4 max-w-xl text-muted">
-                      The 54% is Meta&apos;s estimate of how much creative misses, not a claim about
-                      what banditd recovers.{" "}
-                      <a
-                        href="https://bravebison.com/insights/creative-is-the-new-targeting-how-to-ensure-your-performance-media-actually/"
-                        target="_blank"
-                        rel="noreferrer noopener"
-                        className="focus-ring underline decoration-border-strong underline-offset-2 hover:text-foreground"
-                      >
-                        Meta estimate, reported by Brave Bison, June 2025
-                      </a>
-                      . We have never run a paid campaign, so we have no recovery figure of our own.
-                      The arithmetic is here so you can size the bet yourself.
-                    </Caption>
-                  </div>
-
-                  <div className="min-w-0 border-t border-border pt-6 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0">
-                    <BigNumber
-                      value={1.4}
-                      decimals={1}
-                      suffix="%"
-                      countUp={false}
-                      tone="accent"
-                      label="of the waste has to come back"
-                      detail="$149 against the $10,800 a month that is going to creative nobody responds to."
-                    />
-                  </div>
+                <div className="px-5 py-6 sm:px-7 sm:py-8">
+                  <Body className="max-w-2xl">
+                    We have never run a paid campaign, so we have no figure for what banditd saves a
+                    seller, and we are not going to build one out of somebody else&apos;s estimate
+                    of how much advertising is wasted.
+                  </Body>
+                  <Body className="mt-5 max-w-2xl text-muted">
+                    What we can put a number on is the mistake. The rule most agents use calls a
+                    false winner 44.5% of the time. The four gates call one 0.5% of the time. A
+                    false winner is the expensive kind of error, because the seller believes it and
+                    scales it. What the subscription buys is the ones that do not get made, and you
+                    know better than we do what a scaled loser costs in your account.
+                  </Body>
                 </div>
+              </Surface>
+            </Rise>
+          </div>
+        </section>
+
+        <section className={`border-b border-border ${SECTION_PAD}`}>
+          <div className="mx-auto w-full max-w-5xl px-gutter">
+            <Rise>
+              <Eyebrow className="text-muted">What is not real yet</Eyebrow>
+              <Headline className="mt-4 max-w-3xl">
+                Two limits, said here rather than found later.
+              </Headline>
+            </Rise>
+
+            <div className="mt-10 grid gap-3 lg:grid-cols-2">
+              {LIMITS.map((limit, i) => (
+                <Rise key={limit.label} delay={i * 70}>
+                  <Surface level="quiet" className="h-full p-6 sm:p-8">
+                    <div className="flex items-center gap-2">
+                      <span className="size-1.5 shrink-0 rounded-full bg-border-strong" />
+                      <p className="min-w-0 text-[0.9375rem] font-semibold tracking-tight">
+                        {limit.label}
+                      </p>
+                    </div>
+                    <Small className="mt-3 text-muted">{limit.detail}</Small>
+                  </Surface>
+                </Rise>
+              ))}
+            </div>
+
+            <Rise delay={140}>
+              <Surface level="base" className="mt-4 p-6 sm:p-8">
+                <Eyebrow className="text-muted">The half that is real</Eyebrow>
+                <Body className="mt-3 max-w-2xl text-muted">
+                  The commerce protocol is not simulated. Point the agent at any storefront and it
+                  reads the well known profile, asks the store what it sells, and tells you plainly
+                  whether that store speaks the protocol at all.
+                </Body>
+                <Link
+                  href="/merchant-check"
+                  className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground mt-5 inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-surface px-4 text-[0.8125rem] font-semibold text-foreground hover:border-border-strong"
+                >
+                  Check a real store
+                  <ArrowRight className="size-4" />
+                </Link>
               </Surface>
             </Rise>
           </div>
@@ -1095,13 +1202,25 @@ export default function Home() {
                   The whole run takes a few minutes. You can watch the beliefs narrow and the gates
                   disagree while it happens.
                 </Body>
-                <a
-                  href="#start"
-                  className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground mt-8 inline-flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-lg bg-foreground px-6 text-[0.9375rem] font-semibold text-background transition-opacity hover:opacity-90 sm:w-auto"
-                >
-                  Start a run
-                  <ArrowRight className="size-4" />
-                </a>
+                <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                  <a
+                    href="#start"
+                    className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground inline-flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-lg bg-foreground px-6 text-[0.9375rem] font-semibold text-background transition-opacity hover:opacity-90 sm:w-auto"
+                  >
+                    Start a run
+                    <ArrowRight className="size-4" />
+                  </a>
+                  <Link
+                    href="/dashboard"
+                    className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground inline-flex min-h-[3.25rem] w-full items-center justify-center rounded-lg border border-border bg-surface px-6 text-[0.9375rem] font-semibold text-foreground hover:border-border-strong sm:w-auto"
+                  >
+                    Open the last run
+                  </Link>
+                </div>
+                <Caption className="mt-4 text-muted">
+                  The dashboard keeps the last run in this browser, so you can read one without
+                  starting one.
+                </Caption>
               </Surface>
             </Rise>
           </div>

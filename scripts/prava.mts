@@ -8,7 +8,7 @@ import {
 
 const MERCHANT = {
   name: process.env.RENDER_MERCHANT_NAME ?? "Banditd Render Credits",
-  url: process.env.RENDER_MERCHANT_URL ?? "https://render.banditd.dev",
+  url: process.env.RENDER_MERCHANT_URL ?? "https://banditd.vercel.app",
   country: process.env.RENDER_MERCHANT_COUNTRY ?? "US",
 };
 

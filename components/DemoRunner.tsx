@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Creative, State } from "@/lib/store";
 import { evaluate } from "@/lib/bandit";
+import { declineFamily, type DeclineFamily } from "@/lib/declines";
 import AgentStatus from "@/components/AgentStatus";
 import { ctr, money, pct, plain } from "@/components/format";
 
@@ -47,6 +48,7 @@ export interface LastPurchase {
   amount: string;
   reason: string;
   errorCode?: string;
+  family?: DeclineFamily;
   message?: string;
   forced?: boolean;
   cardLast4?: string | null;
@@ -163,7 +165,7 @@ const ROUND_PAUSE = 180;
 
 const CYCLE_BLOCKS = new Set(["NO_MANDATE_AVAILABLE", "CYCLE_ALREADY_CHARGED"]);
 
-type Tone = "done" | "held" | "blocked";
+type Tone = "done" | "held" | "blocked" | "stalled";
 type Status = "running" | Tone | "failed" | "cancelled";
 
 interface Entry {
@@ -188,7 +190,7 @@ interface Round {
 
 type Report = (patch: { detail?: string; note?: string }) => void;
 
-type EndingKind = "complete" | "held" | "blocked" | "failed" | "stopped";
+type EndingKind = "complete" | "held" | "blocked" | "stalled" | "failed" | "stopped";
 
 interface Ending {
   kind: EndingKind;
@@ -423,9 +425,11 @@ function StatusDot({ status }: { status: Status }) {
       ? "border-white/40 bg-white/20 text-white"
       : status === "held"
         ? "border-white/20 bg-white/10 text-zinc-300"
-        : status === "blocked" || status === "failed"
-          ? "border-rose-400/50 bg-rose-500/20 text-rose-300"
-          : "border-white/15 bg-white/10 text-zinc-500";
+        : status === "stalled"
+          ? "border-amber-400/50 bg-amber-400/20 text-amber-200"
+          : status === "blocked" || status === "failed"
+            ? "border-rose-400/50 bg-rose-500/20 text-rose-300"
+            : "border-white/15 bg-white/10 text-zinc-500";
 
   return (
     <span
@@ -463,9 +467,11 @@ function TimelineRow({ entry }: { entry: Entry }) {
         ? "text-white"
         : entry.status === "held"
           ? "text-zinc-200"
-          : entry.status === "blocked" || entry.status === "failed"
-            ? "text-rose-100"
-            : "text-zinc-400";
+          : entry.status === "stalled"
+            ? "text-amber-100"
+            : entry.status === "blocked" || entry.status === "failed"
+              ? "text-rose-100"
+              : "text-zinc-400";
 
   return (
     <li className="flex gap-2.5 px-3 py-2 sm:px-4">
@@ -661,6 +667,7 @@ export default function DemoRunner({
       gate: string | null;
       bought: boolean;
       declined: string | null;
+      family: DeclineFamily;
       round: number;
       opened: boolean;
       parentCtr: number;
@@ -673,6 +680,7 @@ export default function DemoRunner({
       gate: null,
       bought: false,
       declined: null,
+      family: "unknown",
       round: 0,
       opened: false,
       parentCtr: 0,
@@ -942,10 +950,27 @@ export default function DemoRunner({
           };
         }
 
-        held.declined = res.lastPurchase?.errorCode ?? "declined";
+        const code = res.lastPurchase?.errorCode ?? null;
+        held.declined = code;
+        held.family = res.lastPurchase?.family ?? declineFamily(code);
+        const shown = code ?? "no code returned";
+
+        if (held.family === "guardrail") {
+          return {
+            tone: "blocked",
+            detail: `The mandate refused $${money(res.lastPurchase?.amount)}: ${shown}. Nothing was spent.`,
+            note: res.lastPurchase?.message,
+          };
+        }
+
         return {
-          tone: "blocked",
-          detail: `The mandate refused $${money(res.lastPurchase?.amount)}: ${held.declined}. Nothing was spent.`,
+          tone: "stalled",
+          detail:
+            held.family === "request"
+              ? `Prava rejected the request for $${money(res.lastPurchase?.amount)}: ${shown}. The call was malformed on our side, no mandate rule was involved.`
+              : held.family === "provider"
+                ? `The payment provider could not process $${money(res.lastPurchase?.amount)}: ${shown}. The mandate did not refuse it.`
+                : `The charge for $${money(res.lastPurchase?.amount)} did not complete: ${shown}. Prava did not say whether a mandate rule stopped it.`,
           note: res.lastPurchase?.message,
         };
       });
@@ -953,7 +978,36 @@ export default function DemoRunner({
       guard();
 
       if (!held.bought) {
-        const code = held.declined ?? "declined";
+        const code = held.declined ?? "no code returned";
+        const decided = `The gates opened on look ${held.round} and the agent decided to buy, which is the part banditd answers for and it worked.`;
+
+        if (held.family === "provider") {
+          setEnding({
+            kind: "stalled",
+            headline: "The payment provider could not process the charge",
+            text: `${decided} What failed after that is the payment provider: Prava could not complete the charge and came back with ${code}. This is not the guardrail working. No rule on the mandate refused this spend, no money moved and no card was ever issued. The decision above stands and the same charge goes out when the provider can process it.`,
+          });
+          return;
+        }
+
+        if (held.family === "request") {
+          setEnding({
+            kind: "stalled",
+            headline: "The purchase request was rejected before any mandate rule",
+            text: `${decided} The charge never got as far as the mandate: Prava rejected the request itself with ${code}, which is a fault on our side of the call and not the guardrail refusing the spend. Nothing was spent and the run ends here.`,
+          });
+          return;
+        }
+
+        if (held.family === "unknown") {
+          setEnding({
+            kind: "stalled",
+            headline: "The charge did not complete",
+            text: `${decided} The charge came back as ${code} and Prava did not say whether a rule on the mandate stopped it or the payment side failed, so this run does not prove the guardrail did anything. Nothing was spent and the run ends here.`,
+          });
+          return;
+        }
+
         setEnding({
           kind: "blocked",
           headline: CYCLE_BLOCKS.has(code)
@@ -1062,6 +1116,7 @@ export default function DemoRunner({
     if (ending.kind === "complete") return "border-white/25 bg-white/[0.06]";
     if (ending.kind === "held") return "border-white/12 bg-white/[0.03]";
     if (ending.kind === "stopped") return "border-white/15 bg-white/[0.04]";
+    if (ending.kind === "stalled") return "border-amber-400/40 bg-amber-400/[0.08]";
     return "border-rose-400/40 bg-rose-500/[0.08]";
   }, [ending]);
 
@@ -1070,6 +1125,7 @@ export default function DemoRunner({
     if (ending.kind === "complete") return "text-white";
     if (ending.kind === "held") return "text-zinc-300";
     if (ending.kind === "stopped") return "text-zinc-400";
+    if (ending.kind === "stalled") return "text-amber-200";
     return "text-rose-300";
   }, [ending]);
 

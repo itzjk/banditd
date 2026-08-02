@@ -12,6 +12,8 @@ const RUNS = Number(process.env.RUNS ?? 200);
 const MC = Number(process.env.MC ?? 20000);
 const LEGACY_MC = Number(process.env.LEGACY_MC ?? 500);
 const HORIZON = Number(process.env.HORIZON ?? 12000);
+const POWER_RUNS = Number(process.env.POWER_RUNS ?? 150);
+const POWER_LOOKS = Number(process.env.POWER_LOOKS ?? 12);
 const THRESHOLD = 0.95;
 const MIN_IMPRESSIONS = 200;
 
@@ -196,6 +198,218 @@ function boundaryDataset(): Arm[] {
   return [];
 }
 
+interface PowerOutcome {
+  fired: boolean;
+  correct: boolean;
+  lostClicks: number;
+}
+
+interface PowerCell {
+  base: number;
+  lift: number;
+  horizon: number;
+  allocation: Allocation;
+  legacy: { fire: number; right: number; loss: number };
+  current: { fire: number; right: number; loss: number };
+  holdLoss: number;
+}
+
+function expectedRegret(arms: Arm[], rates: number[], bestRate: number): number {
+  let acc = 0;
+  for (let k = 0; k < arms.length; k++) acc += arms[k].impressions * (bestRate - rates[k]);
+  return acc;
+}
+
+function powerRun(
+  rates: number[],
+  bestIndex: number,
+  seed: number,
+  looks: number,
+  horizon: number,
+  allocation: Allocation,
+): { legacy: PowerOutcome; current: PowerOutcome; holdLoss: number } {
+  const bestRate = rates[bestIndex];
+  const trafficRng = createRng(seed);
+  const legacyRng = createRng(seed ^ 0x9e3779b9);
+  const currentRng = createRng(seed ^ 0x85ebca6b);
+  const step = Math.floor(horizon / looks);
+  const span = step * looks;
+  let arms = freshArms(rates.length);
+  let legacyFire: { at: number; index: number; regret: number } | null = null;
+  let currentFire: { at: number; index: number; regret: number } | null = null;
+
+  for (let look = 1; look <= looks; look++) {
+    arms = simulateTraffic(arms, rates, step, trafficRng, allocation);
+    const served = step * look;
+    if (!legacyFire) {
+      const res = evaluate(arms, { ...LEGACY, rng: legacyRng });
+      if (res.thresholdMet && res.minImpressionsMet) {
+        legacyFire = {
+          at: served,
+          index: res.candidateIndex,
+          regret: expectedRegret(arms, rates, bestRate),
+        };
+      }
+    }
+    if (!currentFire) {
+      const res = evaluate(arms, { ...CURRENT, rng: currentRng });
+      if (res.sufficientEvidence) {
+        currentFire = {
+          at: served,
+          index: res.candidateIndex,
+          regret: expectedRegret(arms, rates, bestRate),
+        };
+      }
+    }
+  }
+
+  const holdLoss = expectedRegret(arms, rates, bestRate);
+  const settle = (fire: typeof legacyFire): PowerOutcome =>
+    fire
+      ? {
+          fired: true,
+          correct: fire.index === bestIndex,
+          lostClicks: fire.regret + (span - fire.at) * (bestRate - rates[fire.index]),
+        }
+      : { fired: false, correct: false, lostClicks: holdLoss };
+
+  return { legacy: settle(legacyFire), current: settle(currentFire), holdLoss };
+}
+
+function powerCell(
+  base: number,
+  lift: number,
+  horizon: number,
+  allocation: Allocation,
+  seedBase: number,
+): PowerCell {
+  const rates = [base, base * (1 + lift)];
+  const legacy: PowerOutcome[] = [];
+  const current: PowerOutcome[] = [];
+  let holdLoss = 0;
+  for (let r = 0; r < POWER_RUNS; r++) {
+    const res = powerRun(rates, 1, seedBase + r * 7919, POWER_LOOKS, horizon, allocation);
+    legacy.push(res.legacy);
+    current.push(res.current);
+    holdLoss += res.holdLoss;
+  }
+  const roll = (xs: PowerOutcome[]) => ({
+    fire: xs.filter((o) => o.fired).length / xs.length,
+    right: xs.filter((o) => o.correct).length / xs.length,
+    loss: mean(xs.map((o) => o.lostClicks)),
+  });
+  return {
+    base,
+    lift,
+    horizon,
+    allocation,
+    legacy: roll(legacy),
+    current: roll(current),
+    holdLoss: holdLoss / POWER_RUNS,
+  };
+}
+
+function gapLabel(base: number, lift: number): string {
+  return `${pct(base)} -> ${pct(base * (1 + lift))} (+${(100 * lift).toFixed(0)}%)`;
+}
+
+function powerCurve(allocation: Allocation): PowerCell[] {
+  const cells: PowerCell[] = [];
+  let seed = allocation === "even" ? 20000 : 60000;
+  const grid: [number, number[]][] = [
+    [0.03, [0.1, 0.2, 1 / 3, 1]],
+    [0.01, [0.3]],
+  ];
+  for (const [base, lifts] of grid) {
+    for (const lift of lifts) {
+      for (const horizon of [12000, 48000, 200000]) {
+        const cell = powerCell(base, lift, horizon, allocation, seed);
+        seed += 104729;
+        cells.push(cell);
+        console.log(
+          `  ${gapLabel(base, lift).padEnd(21)}`,
+          `n=${String(horizon).padStart(6)}`,
+          `| old fires ${pct(cell.legacy.fire).padStart(6)} right ${pct(cell.legacy.right).padStart(6)} lost ${cell.legacy.loss.toFixed(1).padStart(7)}`,
+          `| new fires ${pct(cell.current.fire).padStart(6)} right ${pct(cell.current.right).padStart(6)} lost ${cell.current.loss.toFixed(1).padStart(7)}`,
+          `| never commits lost ${cell.holdLoss.toFixed(1).padStart(7)}`,
+        );
+      }
+    }
+  }
+  return cells;
+}
+
+const ALPHAS = [0.05, 0.1, 0.2, 0.5];
+
+function alphaSweep(
+  label: string,
+  rates: number[],
+  bestIndex: number,
+  horizon: number,
+  allocation: Allocation,
+  seedBase: number,
+) {
+  const bestRate = rates[bestIndex];
+  const step = Math.floor(horizon / POWER_LOOKS);
+  const span = step * POWER_LOOKS;
+  const outcomes = ALPHAS.map<PowerOutcome[]>(() => []);
+  const peakE: number[] = [];
+
+  for (let r = 0; r < POWER_RUNS; r++) {
+    const seed = seedBase + r * 7919;
+    const trafficRng = createRng(seed);
+    const currentRng = createRng(seed ^ 0x85ebca6b);
+    let arms = freshArms(rates.length);
+    const fires = ALPHAS.map<{ at: number; index: number; regret: number } | null>(() => null);
+    let peak = 0;
+
+    for (let look = 1; look <= POWER_LOOKS; look++) {
+      arms = simulateTraffic(arms, rates, step, trafficRng, allocation);
+      const res = evaluate(arms, { ...CURRENT, rng: currentRng });
+      if (res.eValue > peak) peak = res.eValue;
+      const preconditions = res.thresholdMet && res.minImpressionsMet && res.effectSizeOk;
+      for (let a = 0; a < ALPHAS.length; a++) {
+        if (fires[a] || !preconditions || res.eValue < 1 / ALPHAS[a]) continue;
+        fires[a] = {
+          at: step * look,
+          index: res.candidateIndex,
+          regret: expectedRegret(arms, rates, bestRate),
+        };
+      }
+    }
+
+    const holdLoss = expectedRegret(arms, rates, bestRate);
+    peakE.push(peak);
+    for (let a = 0; a < ALPHAS.length; a++) {
+      const fire = fires[a];
+      outcomes[a].push(
+        fire
+          ? {
+              fired: true,
+              correct: fire.index === bestIndex,
+              lostClicks: fire.regret + (span - fire.at) * (bestRate - rates[fire.index]),
+            }
+          : { fired: false, correct: false, lostClicks: holdLoss },
+      );
+    }
+  }
+
+  console.log(
+    `  ${label}  peak e-value over the run: median ${quantile(peakE, 0.5).toExponential(2)}  p90 ${quantile(peakE, 0.9).toExponential(2)}`,
+  );
+  for (let a = 0; a < ALPHAS.length; a++) {
+    const xs = outcomes[a];
+    const fired = xs.filter((o) => o.fired).length;
+    const right = xs.filter((o) => o.correct).length;
+    console.log(
+      `    alpha=${ALPHAS[a].toFixed(2)} bar=${String(Math.round(1 / ALPHAS[a])).padStart(2)}`,
+      `fires ${pct(fired / xs.length).padStart(6)}`,
+      `right ${pct(right / xs.length).padStart(6)}`,
+      `lost ${mean(xs.map((o) => o.lostClicks)).toFixed(1).padStart(7)}`,
+    );
+  }
+}
+
 function main() {
   const t0 = Date.now();
   console.log(
@@ -310,6 +524,23 @@ function main() {
   }
   console.log("");
 
+  console.log(
+    `== 8. power curve, 2 arms, ${POWER_RUNS} runs, ${POWER_LOOKS} looks, lost clicks measured against an oracle ==`,
+  );
+  console.log("  8a. even split, the classic a/b holdout: waiting costs on every impression");
+  const evenCells = powerCurve("even");
+  console.log("");
+  console.log("  8b. thompson allocation, what banditd actually serves: waiting is nearly free");
+  const thompsonCells = powerCurve("thompson");
+  console.log("");
+
+  console.log("== 9. is alpha the binding constraint? same runs, e-value bar moved ==");
+  alphaSweep("even split  3.0% -> 3.3% n=48000 ", [0.03, 0.033], 1, 48000, "even", 31000);
+  alphaSweep("even split  3.0% -> 4.0% n=48000 ", [0.03, 0.04], 1, 48000, "even", 32000);
+  alphaSweep("thompson    3.0% -> 4.0% n=48000 ", [0.03, 0.04], 1, 48000, "thompson", 33000);
+  alphaSweep("thompson    3.0% -> 6.0% n=48000 ", [0.03, 0.06], 1, 48000, "thompson", 34000);
+  console.log("");
+
   console.log("== summary: false positive rate under the null, all arms at 3.0 pct ==");
   console.log("  looks    old rule    new rule    arms");
   for (const [looks, o, n] of nullTable) {
@@ -334,6 +565,23 @@ function main() {
     `  ${String(48).padStart(5)}    ${pct(longRun.legacyRate).padStart(9)}   ${pct(longRun.currentRate).padStart(9)}   ${pct(longRun.legacyCorrect).padStart(9)}   ${pct(longRun.currentCorrect).padStart(9)}   horizon 48000`,
   );
   console.log("");
+  for (const [label, cells] of [
+    ["even split", evenCells],
+    ["thompson", thompsonCells],
+  ] as [string, PowerCell[]][]) {
+    console.log(`== summary: power curve and the price of waiting, ${label} ==`);
+    console.log(
+      "  gap                       n   old fires   new fires   old right   new right   old lost   new lost   hold lost   cheaper",
+    );
+    for (const c of cells) {
+      const delta = c.current.loss - c.legacy.loss;
+      const cheaper = Math.abs(delta) < 1 ? "tie" : delta < 0 ? "four gates" : "naive rule";
+      console.log(
+        `  ${gapLabel(c.base, c.lift).padEnd(21)}${String(c.horizon).padStart(7)}   ${pct(c.legacy.fire).padStart(9)}   ${pct(c.current.fire).padStart(9)}   ${pct(c.legacy.right).padStart(9)}   ${pct(c.current.right).padStart(9)}   ${c.legacy.loss.toFixed(1).padStart(8)}   ${c.current.loss.toFixed(1).padStart(8)}   ${c.holdLoss.toFixed(1).padStart(9)}   ${cheaper}`,
+      );
+    }
+    console.log("");
+  }
   console.log(`elapsed ${((Date.now() - t0) / 1000).toFixed(1)}s`);
 }
 
