@@ -1507,9 +1507,10 @@ export default function Dashboard() {
         {stale ? (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-2.5 text-[13px] leading-snug text-amber-100">
             <span className="min-w-0 break-words">
-              Another tab of this dashboard is further along than this one. Acting here would write
-              the older run over the newer one, so the controls are off and anything this tab
-              finished since then is on screen but not saved. Catch up and the newer run takes over.
+              The run moved further along somewhere else, another tab or the agent chat. Acting here
+              would write the older run over the newer one, so the controls are off and anything
+              this tab finished since then is on screen but not saved. Catch up and the newer run
+              takes over.
             </span>
             <button
               type="button"
