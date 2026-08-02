@@ -92,12 +92,12 @@ function Node({
     >
       <div className="flex items-center justify-between gap-1">
         <span
-          className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${ANGLE_STYLE}`}
+          className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${ANGLE_STYLE}`}
         >
           {creative.angle}
         </span>
         {isWinner ? (
-          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-white">
+          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-white">
             Winner
           </span>
         ) : null}
@@ -113,7 +113,7 @@ function Node({
       </p>
 
       <div className="mt-auto border-t border-white/[0.08] pt-1.5">
-        <div className="text-[10px] font-medium uppercase tracking-[0.1em] text-zinc-400">
+        <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-400">
           Sim CTR
         </div>
         <div
@@ -261,7 +261,7 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
             Oldest at the top, the winner of each row breeds the next.
           </div>
         </div>
-        <span className="shrink-0 rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+        <span className="shrink-0 rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
           Simulated traffic
         </span>
       </div>

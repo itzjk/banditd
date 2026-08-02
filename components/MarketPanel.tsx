@@ -174,7 +174,7 @@ export default function MarketPanel({ research, productName }: Props) {
             {productName ? `Evidence behind the ads for ${productName}` : "Evidence behind the ads"}
           </p>
         </div>
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-300">
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.05] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-300">
           <span className="relative flex h-1.5 w-1.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-zinc-300 opacity-60" />
             <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-zinc-200" />
@@ -188,7 +188,7 @@ export default function MarketPanel({ research, productName }: Props) {
           <div className="text-base font-semibold tabular-nums leading-none text-white">
             {sources.length}
           </div>
-          <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-zinc-400">
+          <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-zinc-400">
             Sources read
           </div>
         </div>
@@ -196,13 +196,13 @@ export default function MarketPanel({ research, productName }: Props) {
           <div className="text-base font-semibold tabular-nums leading-none text-white">
             {domains}
           </div>
-          <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-zinc-400">Sites</div>
+          <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-zinc-400">Sites</div>
         </div>
         <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2">
           <div className="text-base font-semibold tabular-nums leading-none text-white">
             {angles.length}
           </div>
-          <div className="mt-1 text-[10px] uppercase tracking-[0.1em] text-zinc-400">Angles</div>
+          <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-zinc-400">Angles</div>
         </div>
       </div>
 
@@ -212,7 +212,7 @@ export default function MarketPanel({ research, productName }: Props) {
       </p>
 
       <div className="mt-4 border-t border-white/10 pt-4">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
           Who buys this
         </div>
         {profile.length ? (
@@ -239,7 +239,7 @@ export default function MarketPanel({ research, productName }: Props) {
 
       <div className="mt-4 border-t border-white/10 pt-4">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
             What competitors say
           </div>
           <span className="text-[12px] tabular-nums text-zinc-400">
@@ -282,7 +282,7 @@ export default function MarketPanel({ research, productName }: Props) {
       </div>
 
       <div className="mt-4 border-t border-white/10 pt-4">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
           Where your price lands
         </div>
         {parsed.price.text ? (
@@ -305,7 +305,7 @@ export default function MarketPanel({ research, productName }: Props) {
 
       <div className="mt-4 border-t border-white/10 pt-4">
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
             Sources
           </div>
           <span className="text-[12px] tabular-nums text-zinc-400">

@@ -33,7 +33,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 function Heading({ label, note }: { label: string; note?: string }) {
   return (
     <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
         {label}
       </div>
       {note ? <span className="text-[12px] text-zinc-400">{note}</span> : null}
@@ -43,7 +43,7 @@ function Heading({ label, note }: { label: string; note?: string }) {
 
 function Sim() {
   return (
-    <span className="shrink-0 rounded border border-white/12 px-1 py-px text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+    <span className="shrink-0 rounded border border-white/12 px-1 py-px text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
       Sim
     </span>
   );
@@ -73,7 +73,7 @@ export default function Insights({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+            <span className="rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
               Read off this run
             </span>
             <Sim />
@@ -211,7 +211,7 @@ export default function Insights({
                     key={`${e.label}-${i}`}
                     className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5"
                   >
-                    <div className="break-words text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400 [overflow-wrap:anywhere]">
+                    <div className="break-words text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400 [overflow-wrap:anywhere]">
                       {plain(e.label)}
                     </div>
                     <div className="mt-1 break-words text-[15px] font-semibold leading-snug tabular-nums text-white [overflow-wrap:anywhere]">

@@ -109,7 +109,7 @@ export default function PerformanceChart({ cohort, winnerId, generation, rounds 
   if (served === 0) {
     return (
       <section className="rounded-2xl border border-white/12 bg-white/[0.03] p-3 sm:p-4">
-        <h2 className="text-[15px] font-semibold tracking-tight text-white sm:text-base">
+        <h2 className="t-title text-white">
           Performance over traffic rounds
         </h2>
         <div className="mt-3 flex h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/12 px-4 text-center sm:h-48">
@@ -137,10 +137,10 @@ export default function PerformanceChart({ cohort, winnerId, generation, rounds 
     <section className="rounded-2xl border border-white/12 bg-white/[0.03] p-3 sm:p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <h2 className="text-[15px] font-semibold tracking-tight text-white sm:text-base">
+          <h2 className="t-title text-white">
             Performance over traffic rounds
           </h2>
-          <span className="shrink-0 rounded-full border border-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-300">
+          <span className="shrink-0 rounded-full border border-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-300">
             Simulated traffic
           </span>
         </div>

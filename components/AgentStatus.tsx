@@ -46,7 +46,7 @@ export default function AgentStatus({ title, steps, intervalMs = 2200 }: Props) 
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-zinc-200" />
           </span>
           <div className="min-w-0">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-200">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-200">
               {title}
             </div>
             <div className="truncate text-[14px] text-zinc-200">{steps[index] ?? steps[0]}</div>

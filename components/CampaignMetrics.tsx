@@ -33,7 +33,7 @@ const TAG: Record<Source, string> = {
 
 function Tag({ source }: { source: Source }) {
   return (
-    <span className="shrink-0 rounded border border-white/15 px-1 py-px text-[10px] font-semibold uppercase tracking-wider text-zinc-300">
+    <span className="shrink-0 rounded border border-white/15 px-1 py-px text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-300">
       {TAG[source]}
     </span>
   );
@@ -55,7 +55,7 @@ function Tile({
   return (
     <div className="min-w-0 bg-zinc-950 px-3 py-3">
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
           {label}
         </span>
         {source ? <Tag source={source} /> : null}
@@ -139,13 +139,13 @@ export default function CampaignMetrics({
     <section className="rounded-2xl border border-white/12 bg-white/[0.03] p-3 sm:p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <h2 className="text-[15px] font-semibold tracking-tight text-white sm:text-base">
+          <h2 className="t-title text-white">
             How the campaign is doing
           </h2>
-          <span className="shrink-0 rounded-full border border-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-300">
+          <span className="shrink-0 rounded-full border border-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-300">
             Simulated traffic
           </span>
-          <span className="shrink-0 rounded-full border border-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-300">
+          <span className="shrink-0 rounded-full border border-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-300">
             Sandbox spend
           </span>
         </div>
@@ -255,10 +255,10 @@ export default function CampaignMetrics({
 
       <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
             ROAS
           </span>
-          <span className="shrink-0 rounded border border-white/15 px-1 py-px text-[10px] font-semibold uppercase tracking-wider text-zinc-300">
+          <span className="shrink-0 rounded border border-white/15 px-1 py-px text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-300">
             {roas !== null ? "Your projection" : "Not measured"}
           </span>
         </div>
@@ -393,7 +393,7 @@ export default function CampaignMetrics({
             className="h-2 w-2 shrink-0 rounded-full"
             style={{ backgroundColor: RAMP[Math.max(0, winnerIndex) % RAMP.length] }}
           />
-          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
             {candidate ? "Winning ad" : "Leading ad"}
           </span>
           <span className="shrink-0 text-[13px] font-semibold capitalize text-white">

@@ -220,7 +220,7 @@ function Group({
                 drawing ? "animate-pulse" : ""
               }`}
             >
-              <span className="text-[10px] uppercase tracking-[0.16em] text-zinc-300">
+              <span className="text-[10px] uppercase tracking-[0.14em] text-zinc-300">
                 {drawing ? "Drawing it" : "No photo"}
               </span>
             </span>
@@ -243,9 +243,9 @@ function Group({
   return (
     <div className="min-w-0">
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-        <h3 className="text-[13px] font-semibold text-white">{title}</h3>
+        <h3 className="t-small font-semibold text-white">{title}</h3>
         {value ? (
-          <span className="rounded-full border border-white/25 bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-200">
+          <span className="rounded-full border border-white/25 bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-200">
             Set
           </span>
         ) : null}
@@ -428,8 +428,8 @@ export default function ProductRefiner({
       {range ? (
         <div className="mt-3 rounded-xl border border-white/12 bg-white/[0.03] p-3">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-[13px] font-semibold text-white">What it usually sells for</h3>
-            <span className="rounded-full border border-white/25 bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-200">
+            <h3 className="t-small font-semibold text-white">What it usually sells for</h3>
+            <span className="rounded-full border border-white/25 bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-200">
               Estimate
             </span>
           </div>
@@ -466,7 +466,7 @@ export default function ProductRefiner({
             type="button"
             onClick={() => onChange({ variant: "", brand: "" })}
             disabled={disabled}
-            className="min-h-[2.75rem] shrink-0 px-1 text-[12px] font-semibold uppercase tracking-wider text-zinc-400 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-h-[2.75rem] shrink-0 px-1 text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-400 transition-colors hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
           >
             Clear both
           </button>

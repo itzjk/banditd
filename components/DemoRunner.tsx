@@ -307,7 +307,7 @@ function RoundTrack({ rounds }: { rounds: Round[] }) {
   return (
     <div className="border-t border-white/10 px-3 py-3 sm:px-4">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
           Anytime valid frontier
         </span>
         <span className="text-[12px] tabular-nums text-zinc-400">
@@ -333,7 +333,7 @@ function RoundTrack({ rounds }: { rounds: Round[] }) {
             </div>
           </div>
           <span
-            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] ${
+            className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${
               climbing
                 ? "border-white/25 bg-white/10 text-zinc-100"
                 : "border-white/15 bg-white/5 text-zinc-400"
@@ -359,7 +359,7 @@ function RoundTrack({ rounds }: { rounds: Round[] }) {
       </div>
 
       <div className="mt-2 overflow-hidden rounded-xl border border-white/10">
-        <div className="grid grid-cols-[1.6rem_1fr_3rem_3.4rem] gap-1 border-b border-white/10 bg-white/[0.03] px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-zinc-400">
+        <div className="grid grid-cols-[1.6rem_1fr_3rem_3.4rem] gap-1 border-b border-white/10 bg-white/[0.03] px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
           <span>Rd</span>
           <span>Impressions</span>
           <span className="text-right">Best</span>
@@ -1102,10 +1102,10 @@ export default function DemoRunner({
     <section className="overflow-hidden rounded-2xl border border-white/15 bg-white/[0.04]">
       <div className="p-3 sm:p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-md bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-950">
+          <span className="rounded-md bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-950">
             One click
           </span>
-          <h2 className="text-[15px] font-semibold tracking-tight text-white sm:text-base">
+          <h2 className="t-title text-white">
             Run the whole demo
           </h2>
         </div>
@@ -1164,7 +1164,7 @@ export default function DemoRunner({
       {entries.length > 0 ? (
         <>
           <div className="flex items-center justify-between gap-2 border-t border-white/10 px-3 pt-3 sm:px-4">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
               What the agent did
             </span>
             <span className="text-[12px] tabular-nums text-zinc-400">

@@ -606,7 +606,7 @@ export default function Home() {
                 <Surface level="feature" id="start" className="scroll-mt-20 p-5 sm:p-6">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <Title as="h2">Start with a product</Title>
+                      <Headline as="h2">Start with a product</Headline>
                       <Small className="mt-1">Name, price, one line about it.</Small>
                     </div>
                     <button
@@ -696,7 +696,7 @@ export default function Home() {
                           Price
                         </label>
                         {estimated ? (
-                          <span className="rounded-full border border-border-strong bg-surface-2 px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted">
+                          <span className="rounded-full border border-border-strong bg-surface-2 px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-muted">
                             Estimate
                           </span>
                         ) : null}
@@ -745,7 +745,7 @@ export default function Home() {
                         <label htmlFor="marketContext" className="block text-sm font-medium">
                           Anything the agent should know about your market
                         </label>
-                        <span className="rounded-full border border-border-strong bg-surface-2 px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted">
+                        <span className="rounded-full border border-border-strong bg-surface-2 px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-muted">
                           Optional
                         </span>
                       </div>
@@ -867,7 +867,7 @@ export default function Home() {
                         {item.label}
                       </Eyebrow>
                     </div>
-                    <Title as="h3" className="mt-4 text-[clamp(1.25rem,2.6vw,1.625rem)]">
+                    <Title as="h3" className="mt-4">
                       {item.title}
                     </Title>
                     <Small className="mt-3 text-muted">{item.body}</Small>
@@ -906,7 +906,7 @@ export default function Home() {
                     className="flex h-full flex-col p-5 sm:p-6"
                   >
                     <Mono className="font-medium text-accent">{angle.n}</Mono>
-                    <Title as="h3" className="mt-4 text-[1.5rem] tracking-[-0.02em]">
+                    <Title as="h3" className="mt-4">
                       {angle.name}
                     </Title>
                     <Small className="mt-3 flex-1">{angle.body}</Small>
@@ -946,12 +946,7 @@ export default function Home() {
                       </div>
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
-                          <Title
-                            as="h3"
-                            className="text-[clamp(1.25rem,2.6vw,1.75rem)] tracking-[-0.02em]"
-                          >
-                            {step.title}
-                          </Title>
+                          <Title as="h3">{step.title}</Title>
                           <span className="rounded-full border border-border bg-surface-2 px-2 py-0.5 font-mono text-[0.6875rem] text-muted">
                             {step.aside}
                           </span>

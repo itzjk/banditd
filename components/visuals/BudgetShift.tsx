@@ -224,7 +224,7 @@ export default function BudgetShift({
           style={{ borderColor: LINE }}
         >
           <p
-            className="flex min-w-0 items-center gap-2 font-mono text-[0.625rem] uppercase tracking-[0.16em]"
+            className="flex min-w-0 items-center gap-2 font-mono text-[0.625rem] uppercase tracking-[0.14em]"
             style={{ color: MUT }}
           >
             <span
@@ -238,7 +238,7 @@ export default function BudgetShift({
             Live allocation
           </p>
           <p
-            className="min-w-0 truncate font-mono text-[0.625rem] uppercase tracking-[0.16em]"
+            className="min-w-0 truncate font-mono text-[0.625rem] uppercase tracking-[0.14em]"
             style={{ color: MUT }}
           >
             {reduced ? "Settled" : paused ? "Paused" : "Running"}
@@ -302,7 +302,7 @@ export default function BudgetShift({
                       }}
                     />
                     <span
-                      className="min-w-0 truncate font-mono text-[0.625rem] uppercase tracking-[0.12em]"
+                      className="min-w-0 truncate font-mono text-[0.625rem] uppercase tracking-[0.14em]"
                       style={{ color: MUT }}
                     >
                       {label}
@@ -436,7 +436,7 @@ export default function BudgetShift({
           >
             <div className="min-w-0">
               <p
-                className="font-mono text-[0.625rem] uppercase tracking-[0.16em]"
+                className="font-mono text-[0.625rem] uppercase tracking-[0.14em]"
                 style={{ color: MUT }}
               >
                 Winner share
@@ -464,7 +464,7 @@ export default function BudgetShift({
             </div>
             <div className="min-w-0 text-right">
               <p
-                className="font-mono text-[0.625rem] uppercase tracking-[0.16em]"
+                className="font-mono text-[0.625rem] uppercase tracking-[0.14em]"
                 style={{ color: MUT }}
               >
                 {budgetLabel}

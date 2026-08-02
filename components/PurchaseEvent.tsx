@@ -76,7 +76,7 @@ const DECLINES: Record<string, { title: string; plain: string }> = {
 
 function SimTag() {
   return (
-    <span className="rounded border border-white/12 px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+    <span className="rounded border border-white/12 px-1 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
       Sim
     </span>
   );
@@ -156,7 +156,7 @@ function Fact({
 }) {
   return (
     <div className="min-w-0 rounded-lg bg-white/[0.04] px-2.5 py-2">
-      <div className="flex flex-wrap items-center gap-1 text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-400">
+      <div className="flex flex-wrap items-center gap-1 text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-400">
         {label}
         {sim ? <SimTag /> : null}
       </div>
@@ -172,7 +172,7 @@ function Total({ label, value, dot }: { label: string; value: string; dot?: stri
     <div className="min-w-0 px-1.5 py-2.5 sm:px-4">
       <div className="flex min-w-0 items-center gap-1">
         {dot ? <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} /> : null}
-        <span className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-400 sm:tracking-[0.14em]">
+        <span className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
           {label}
         </span>
       </div>
@@ -206,7 +206,7 @@ export default function PurchaseEventItem({ event, winnerHeadline, latest }: Pro
       <summary className="focus-ring block cursor-pointer list-none px-3 py-3 transition-colors hover:bg-white/[0.03] sm:px-4 [&::-webkit-details-marker]:hidden">
         <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
           <span
-            className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] ${
+            className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] ${
               ok
                 ? "bg-emerald-400/20 text-emerald-300"
                 : refused
@@ -263,7 +263,7 @@ export default function PurchaseEventItem({ event, winnerHeadline, latest }: Pro
                 {"•••• "}
                 {event.cardLast4}
               </span>
-              <span className="rounded border border-white/12 px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+              <span className="rounded border border-white/12 px-1 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                 Single use
               </span>
             </span>

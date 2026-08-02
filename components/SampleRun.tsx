@@ -10,7 +10,7 @@ import {
 
 function Sim() {
   return (
-    <span className="shrink-0 rounded border border-white/12 px-1 py-px text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+    <span className="shrink-0 rounded border border-white/12 px-1 py-px text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
       Sim
     </span>
   );
@@ -33,7 +33,7 @@ function Ad({ ad }: { ad: SampleAd }) {
           {ad.angle}
         </span>
         {ad.winner ? (
-          <span className="rounded bg-white px-1 py-px text-[10px] font-bold uppercase tracking-wider text-zinc-950">
+          <span className="rounded bg-white px-1 py-px text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-950">
             Winner
           </span>
         ) : null}
@@ -54,7 +54,7 @@ function Stat({ label, value, sim }: { label: string; value: string; sim?: boole
   return (
     <div className="min-w-0 bg-zinc-950 px-3 py-2.5">
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-400">
+        <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-400">
           {label}
         </span>
         {sim ? <Sim /> : null}
@@ -73,7 +73,7 @@ function Total({ label, value, dot }: { label: string; value: string; dot?: stri
         {dot ? (
           <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
         ) : null}
-        <span className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-400">
+        <span className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
           {label}
         </span>
       </div>
@@ -96,7 +96,7 @@ function Charge({ charge }: { charge: SampleCharge }) {
     >
       <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
         <span
-          className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] ${
+          className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] ${
             ok ? "bg-emerald-400/20 text-emerald-300" : "bg-rose-400/20 text-rose-300"
           }`}
         >
@@ -143,7 +143,7 @@ function Charge({ charge }: { charge: SampleCharge }) {
       <dl className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-3">
         {charge.facts.map((fact) => (
           <div key={fact.label} className="min-w-0 rounded-lg bg-white/[0.04] px-2.5 py-2">
-            <dt className="text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-400">
+            <dt className="text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-400">
               {fact.label}
             </dt>
             <dd
@@ -168,10 +168,10 @@ export default function SampleRun() {
       <div className="overflow-hidden rounded-2xl border border-amber-400/30 bg-white/[0.02]">
         <div className="border-b border-white/[0.07] bg-amber-400/[0.06] px-3 py-3 sm:px-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-md border border-amber-400/40 bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-200">
+            <span className="rounded-md border border-amber-400/40 bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200">
               Frozen example
             </span>
-            <h2 className="min-w-0 break-words text-[14px] font-semibold text-white">
+            <h2 className="t-title min-w-0 break-words text-white">
               A run that already happened, kept here so nothing has to be taken on faith
             </h2>
           </div>
@@ -187,7 +187,7 @@ export default function SampleRun() {
           <div>
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <h3 className="text-[13px] font-semibold text-white">The four ads it wrote</h3>
+                <h3 className="t-small font-semibold text-white">The four ads it wrote</h3>
                 <Sim />
               </div>
               <span className="min-w-0 break-words text-[11px] text-zinc-400">
@@ -203,10 +203,10 @@ export default function SampleRun() {
 
           <div className="rounded-xl border border-white/20 bg-white/[0.04] px-3 py-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-md bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-zinc-950">
+              <span className="rounded-md bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-950">
                 Spending
               </span>
-              <h3 className="min-w-0 break-words text-[13px] font-semibold text-white">
+              <h3 className="t-small min-w-0 break-words font-semibold text-white">
                 It called the {SAMPLE_CALL.winnerAngle} angle and spent ${SAMPLE_CALL.amount}
               </h3>
             </div>
@@ -223,7 +223,7 @@ export default function SampleRun() {
 
           <div>
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-              <h3 className="text-[13px] font-semibold text-white">Money it moved</h3>
+              <h3 className="t-small font-semibold text-white">Money it moved</h3>
               <span className="min-w-0 break-words text-[11px] text-zinc-400">
                 Real charges against the Prava sandbox
               </span>

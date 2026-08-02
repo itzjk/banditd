@@ -208,7 +208,7 @@ export default function MandateBar({
                     : "Mandate armed"}
             </span>
 
-            <span className="shrink-0 rounded border border-white/15 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-300">
+            <span className="shrink-0 rounded border border-white/15 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-300">
               <span className="sm:hidden">Sandbox</span>
               <span className="hidden sm:inline">Sandbox payments</span>
             </span>
@@ -231,7 +231,7 @@ export default function MandateBar({
                   tone={cycleTone}
                   badge={
                     armed && read ? (
-                      <span className="shrink-0 rounded border border-white/15 px-1 py-px text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
+                      <span className="shrink-0 rounded border border-white/15 px-1 py-px text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                         {live ? "Live" : "Unread"}
                       </span>
                     ) : null
@@ -259,7 +259,7 @@ export default function MandateBar({
               tone={cycleTone}
               badge={
                 armed && read ? (
-                  <span className="shrink-0 rounded border border-white/15 px-1 py-px text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-400">
+                  <span className="shrink-0 rounded border border-white/15 px-1 py-px text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                     {live ? "Live" : "Unread"}
                   </span>
                 ) : null

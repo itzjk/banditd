@@ -90,7 +90,7 @@ function ratio(current: number, target: number): number {
 
 function SimTag() {
   return (
-    <span className="rounded-full border border-white/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+    <span className="rounded-full border border-white/12 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
       Simulated traffic
     </span>
   );
@@ -162,11 +162,11 @@ function GateRow({
         className={`h-full border-l-2 px-3 py-3 transition-colors duration-200 sm:px-4 ${edge} ${tint}`}
       >
         <div className="flex items-start justify-between gap-2">
-          <h4 className="min-w-0 break-words text-[14px] font-semibold leading-snug text-zinc-100">
+          <h4 className="t-caption min-w-0 break-words font-semibold leading-snug text-zinc-100">
             {gate.name}
           </h4>
           <span
-            className={`flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] transition-opacity duration-200 ${badge} ${veil}`}
+            className={`flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] transition-opacity duration-200 ${badge} ${veil}`}
           >
             {gate.met ? <CheckIcon /> : <WaitIcon />}
             {gate.met ? "Cleared" : "Pending"}
@@ -184,7 +184,7 @@ function GateRow({
             >
               {gate.current}
             </span>
-            <span className="truncate text-[10px] font-medium uppercase tracking-[0.1em] text-zinc-400">
+            <span className="truncate text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-400">
               {gate.unit}
             </span>
           </span>
@@ -270,9 +270,7 @@ export default function GatesPanel({
         <div className="border-b border-white/10 px-3 py-3 sm:px-4 sm:py-3.5">
           <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
             <div className="min-w-0">
-              <h3 className="text-[14px] font-semibold tracking-tight text-white">
-                Decision gates
-              </h3>
+              <h3 className="t-small font-semibold text-white">Decision gates</h3>
               <p className="mt-0.5 break-words text-[12px] leading-snug text-zinc-400">
                 Four conditions. All four clear before a cent moves.
               </p>
@@ -288,10 +286,10 @@ export default function GatesPanel({
             <li key={gate.id} className="bg-zinc-950">
               <div className="h-full border-l-2 border-white/10 px-3 py-3 sm:px-4">
                 <div className="flex items-start justify-between gap-2">
-                  <h4 className="min-w-0 break-words text-[14px] font-semibold leading-snug text-zinc-400">
+                  <h4 className="t-caption min-w-0 break-words font-semibold leading-snug text-zinc-400">
                     {gate.name}
                   </h4>
-                  <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-300">
+                  <span className="shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-300">
                     Not run
                   </span>
                 </div>
@@ -379,7 +377,7 @@ export default function GatesPanel({
       <div className="border-b border-white/10 px-3 py-3 sm:px-4 sm:py-3.5">
         <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
           <div className="min-w-0">
-            <h3 className="text-[14px] font-semibold tracking-tight text-white">Decision gates</h3>
+            <h3 className="t-small font-semibold text-white">Decision gates</h3>
             <p className="mt-0.5 break-words text-[12px] leading-snug text-zinc-400">
               Four conditions. All four clear before a cent moves.
             </p>

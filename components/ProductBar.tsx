@@ -91,7 +91,7 @@ export default function ProductBar({
       }}
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <h1 className="min-w-0 text-[19px] font-semibold leading-tight tracking-tight text-white sm:text-xl">
+        <h1 className="t-headline min-w-0 text-white">
           <button
             ref={triggerRef}
             type="button"

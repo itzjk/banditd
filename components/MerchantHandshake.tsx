@@ -36,7 +36,7 @@ function capabilityLabel(name: string): string {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-0.5 border-t border-border pt-2 sm:flex-row sm:gap-3">
-      <span className="shrink-0 text-[11px] uppercase tracking-wide text-subtle sm:w-28">{label}</span>
+      <span className="shrink-0 text-[11px] uppercase tracking-[0.14em] text-subtle sm:w-28">{label}</span>
       <span className="min-w-0 break-all text-xs text-foreground">{children}</span>
     </div>
   );
@@ -121,9 +121,9 @@ export default function MerchantHandshake({
       className={`w-full min-w-0 overflow-hidden rounded-2xl border border-border bg-surface p-3 sm:p-5 ${className}`}
     >
       <p className="eyebrow">Live protocol check</p>
-      <h2 className="mt-1 text-lg font-semibold leading-tight sm:text-xl">
+      <h1 className="t-headline mt-1">
         The agent introduces itself to a real store
-      </h2>
+      </h1>
       <p className="mt-2 text-xs leading-relaxed text-muted sm:text-sm">
         banditd reads the store profile at <span className="break-all">/.well-known/ucp</span>, sends its own
         published agent profile so the store can identify who is calling, and asks the catalog for a price. Every
@@ -190,7 +190,7 @@ export default function MerchantHandshake({
           </Verdict>
 
           <div className="space-y-2 rounded-xl border border-border bg-surface-2 p-3">
-            <p className="text-[11px] uppercase tracking-wide text-subtle">What the store answered</p>
+            <p className="text-[11px] uppercase tracking-[0.14em] text-subtle">What the store answered</p>
             <Row label="Profile read">
               {shortUrl(profile ? profile.resolvedUrl : `https://${data.domain}/.well-known/ucp`)}
             </Row>
@@ -230,7 +230,7 @@ export default function MerchantHandshake({
           </div>
 
           <div className="space-y-2 rounded-xl border border-border bg-surface-2 p-3">
-            <p className="text-[11px] uppercase tracking-wide text-subtle">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-subtle">
               Who the store thinks is calling
             </p>
             <Row label="Agent profile">{shortUrl(data.profileUrl, 52)}</Row>
@@ -242,7 +242,7 @@ export default function MerchantHandshake({
 
           {catalog ? (
             <div className="space-y-2 rounded-xl border border-border bg-surface-2 p-3">
-              <p className="text-[11px] uppercase tracking-wide text-subtle">
+              <p className="text-[11px] uppercase tracking-[0.14em] text-subtle">
                 Catalog search for {catalog.query}
               </p>
               {catalog.ok ? (

@@ -586,7 +586,7 @@ function useWide(): boolean {
 
 function Chip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="shrink-0 rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-400">
+    <span className="shrink-0 rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
       {children}
     </span>
   );
@@ -606,11 +606,11 @@ function Stat({
   return (
     <div className="min-w-0 bg-zinc-950 px-3 py-2.5">
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-zinc-400">
+        <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-zinc-400">
           {label}
         </span>
         {sim ? (
-          <span className="shrink-0 rounded border border-white/12 px-1 py-px text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+          <span className="shrink-0 rounded border border-white/12 px-1 py-px text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
             Sim
           </span>
         ) : null}
@@ -658,11 +658,11 @@ function Band({
         <div className="border-b border-white/[0.07] px-1 pb-4 sm:pb-5">
           <div className="flex items-center gap-2">
             <span aria-hidden="true" className="h-px w-5 shrink-0 bg-white/25" />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
               {eyebrow}
             </span>
           </div>
-          <h2 className="mt-2 break-words text-lg font-semibold tracking-tight text-white sm:text-xl">
+          <h2 className="t-title mt-2 break-words text-white">
             {title}
           </h2>
           <p className="mt-1.5 max-w-2xl break-words text-[13px] leading-relaxed text-zinc-400">
@@ -683,7 +683,7 @@ interface Upcoming {
 function Preview({ items }: { items: Upcoming[] }) {
   return (
     <div>
-      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
         What this run fills in
       </div>
       <ul className="mt-2 flex flex-wrap gap-1.5">
@@ -841,6 +841,7 @@ export default function Dashboard() {
   const [rendering, setRendering] = useState<Set<string>>(() => new Set());
   const requested = useRef<Set<string>>(new Set());
   const [busy, setBusy] = useState<Task | null>("load");
+  const [booted, setBooted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [decision, setDecision] = useState<Decision | null>(null);
@@ -940,6 +941,7 @@ export default function Dashboard() {
           take(stored);
           revRef.current = Math.max(readRev(), revRef.current);
           setBusy(null);
+          setBooted(true);
         }
         return;
       }
@@ -949,7 +951,10 @@ export default function Dashboard() {
       } catch (e) {
         if (alive) setError(e instanceof Error ? e.message : "Could not reach the agent");
       } finally {
-        if (alive) setBusy(null);
+        if (alive) {
+          setBusy(null);
+          setBooted(true);
+        }
       }
     };
     void boot();
@@ -1434,7 +1439,7 @@ export default function Dashboard() {
             <button
               type="button"
               onClick={() => setNotice(null)}
-              className="-mr-2 flex min-h-[2.75rem] shrink-0 items-center px-2 text-[12px] uppercase tracking-wider text-zinc-400 hover:text-white"
+              className="-mr-2 flex min-h-[2.75rem] shrink-0 items-center px-2 text-[12px] uppercase tracking-[0.14em] text-zinc-400 hover:text-white"
             >
               Dismiss
             </button>
@@ -1483,7 +1488,7 @@ export default function Dashboard() {
             />
           ) : (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-              <h1 className="min-w-0 break-words text-[19px] font-semibold tracking-tight text-white sm:text-xl">
+              <h1 className="t-headline min-w-0 break-words text-white">
                 {busy === "load" ? "Loading the agent state" : "No product yet"}
               </h1>
               <Link
@@ -1538,7 +1543,7 @@ export default function Dashboard() {
             <button
               type="button"
               onClick={() => setReceipt(null)}
-              className="-mr-2 flex min-h-[2.75rem] shrink-0 items-center px-2 text-[12px] uppercase tracking-wider text-zinc-400 hover:text-zinc-200"
+              className="-mr-2 flex min-h-[2.75rem] shrink-0 items-center px-2 text-[12px] uppercase tracking-[0.14em] text-zinc-400 hover:text-zinc-200"
             >
               Dismiss
             </button>
@@ -1562,18 +1567,18 @@ export default function Dashboard() {
           >
             <div className="flex flex-wrap items-center gap-2">
               <span
-                className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em] ${
+                className={`rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] ${
                   decision.shouldBuy ? "bg-white text-zinc-950" : "bg-white/10 text-zinc-300"
                 }`}
               >
                 {decision.shouldBuy ? "Spending" : "Holding"}
               </span>
-              <h2 className="min-w-0 break-words text-[15px] font-semibold text-white sm:text-base">
+              <h2 className="t-title min-w-0 break-words text-white">
                 {decision.shouldBuy
                   ? `The agent wants to spend $${money(decision.amount)}`
                   : "The agent kept the money in its pocket"}
               </h2>
-              <span className="rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+              <span className="rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                 Decided on simulated traffic
               </span>
             </div>
@@ -1637,7 +1642,7 @@ export default function Dashboard() {
             <section ref={adsRef} className="scroll-mt-20 space-y-4 pt-3">
               <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <h2 className="text-base font-semibold tracking-tight text-white sm:text-lg">
+                  <h2 className="t-title text-white">
                     The four ads it wrote
                   </h2>
                   <Chip>Simulated traffic</Chip>
@@ -1728,6 +1733,8 @@ export default function Dashboard() {
 
         </div>
 
+        {booted ? (
+          <>
         <Band
           eyebrow="Evidence"
           title={hasTraffic ? "Why it decided that" : "Check the rule before you trust the run"}
@@ -1841,9 +1848,7 @@ export default function Dashboard() {
               <section ref={ledgerRef} className="scroll-mt-20 space-y-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <h3 className="text-[14px] font-semibold tracking-tight text-white">
-                      Money it moved
-                    </h3>
+                    <h3 className="t-small font-semibold text-white">Money it moved</h3>
                     <Chip>Sandbox payments</Chip>
                   </div>
                   <span className="max-w-md break-words text-[11px] leading-snug text-zinc-400">
@@ -1912,8 +1917,8 @@ export default function Dashboard() {
                       <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-white/10 text-[10px] font-bold text-zinc-300">
                         3
                       </span>
-                      <h4 className="text-[14px] font-semibold text-white">Simulate traffic</h4>
-                      <span className="rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+                      <h4 className="t-caption font-semibold text-white">Simulate traffic</h4>
+                      <span className="rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                         Simulated
                       </span>
                     </div>
@@ -2031,6 +2036,8 @@ export default function Dashboard() {
           Impressions, clicks and click through rates on this page are simulated for the demo.
           Payments run against the Prava sandbox.
         </p>
+          </>
+        ) : null}
       </main>
 
       <AgentChat state={state} />

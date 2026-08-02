@@ -34,10 +34,10 @@ export default function RunExport({ state, images, evaluation }: Props) {
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <h3 className="text-[14px] font-semibold tracking-tight text-white">
+          <h3 className="t-small font-semibold text-white">
             Take the run with you
           </h3>
-          <span className="shrink-0 rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-400">
+          <span className="shrink-0 rounded-full border border-white/12 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
             One file
           </span>
         </div>

@@ -27,7 +27,7 @@ function points(a: number, b: number): string {
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
         {label}
       </div>
       <div className="mt-0.5 break-words text-[14px] font-semibold tabular-nums text-white">
@@ -45,33 +45,33 @@ function AdCard({ ad, isWinner }: { ad: ArchivedAd; isWinner: boolean }) {
       }`}
     >
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="rounded-full border border-white/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-zinc-300">
+        <span className="rounded-full border border-white/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-300">
           {ad.angle}
         </span>
         {isWinner ? (
-          <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-950">
+          <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-950">
             Winner
           </span>
         ) : null}
       </div>
-      <h4 className="mt-2 break-words text-[14px] font-semibold leading-snug text-white">
+      <h4 className="t-caption mt-2 break-words font-semibold leading-snug text-white">
         {ad.headline || "Untitled ad"}
       </h4>
       <dl className="mt-3 grid grid-cols-3 gap-1.5 text-center">
         <div className="rounded-lg bg-white/[0.04] px-1.5 py-1.5">
-          <dt className="text-[10px] uppercase tracking-[0.1em] text-zinc-400">Impr.</dt>
+          <dt className="text-[10px] uppercase tracking-[0.14em] text-zinc-400">Impr.</dt>
           <dd className="mt-0.5 text-[13px] font-semibold tabular-nums text-zinc-100">
             {ad.impressions.toLocaleString()}
           </dd>
         </div>
         <div className="rounded-lg bg-white/[0.04] px-1.5 py-1.5">
-          <dt className="text-[10px] uppercase tracking-[0.1em] text-zinc-400">Clicks</dt>
+          <dt className="text-[10px] uppercase tracking-[0.14em] text-zinc-400">Clicks</dt>
           <dd className="mt-0.5 text-[13px] font-semibold tabular-nums text-zinc-100">
             {ad.clicks.toLocaleString()}
           </dd>
         </div>
         <div className="rounded-lg bg-white/[0.04] px-1.5 py-1.5">
-          <dt className="text-[10px] uppercase tracking-[0.1em] text-zinc-400">CTR</dt>
+          <dt className="text-[10px] uppercase tracking-[0.14em] text-zinc-400">CTR</dt>
           <dd className="mt-0.5 text-[13px] font-semibold tabular-nums text-zinc-100">
             {pct(adCtr(ad), 2)}
           </dd>
@@ -90,7 +90,7 @@ function Comparison({ left, right }: { left: ArchivedRun; right: ArchivedRun }) 
 
   return (
     <div className="rounded-2xl border border-white/15 bg-white/[0.03] p-3 sm:p-4">
-      <h4 className="break-words text-[14px] font-semibold text-white">
+      <h4 className="t-caption break-words font-semibold text-white">
         Which angle won on each product
       </h4>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -105,7 +105,7 @@ function Comparison({ left, right }: { left: ArchivedRun; right: ArchivedRun }) 
               <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                 {i === 0 ? "First pick" : "Second pick"}
               </div>
-              <h5 className="mt-1 break-words text-[14px] font-semibold text-white [overflow-wrap:anywhere]">
+              <h5 className="t-caption mt-1 break-words font-semibold text-white [overflow-wrap:anywhere]">
                 {run.product.name}
               </h5>
               <div className="mt-2 text-[22px] font-semibold capitalize leading-none text-white">
@@ -151,7 +151,7 @@ function Row({
   return (
     <li className="min-w-0 rounded-xl border border-white/10 bg-white/[0.02] p-3">
       <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h4 className="min-w-0 break-words text-[14px] font-semibold text-white [overflow-wrap:anywhere]">
+        <h4 className="t-caption min-w-0 break-words font-semibold text-white [overflow-wrap:anywhere]">
           {run.product.name}
         </h4>
         <span className="shrink-0 text-[11px] tabular-nums text-zinc-400">{when(run.at)}</span>
@@ -215,10 +215,10 @@ export default function RunHistory({ runs }: Props) {
         </button>
 
         <div className="min-w-0">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
             Archived run, {when(open.at)}
           </div>
-          <h3 className="mt-1 break-words text-lg font-semibold tracking-tight text-white [overflow-wrap:anywhere]">
+          <h3 className="t-small mt-1 break-words font-semibold text-white [overflow-wrap:anywhere]">
             {open.product.name}
           </h3>
           <p className="mt-1 break-words text-[13px] leading-relaxed text-zinc-400 [overflow-wrap:anywhere]">

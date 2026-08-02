@@ -563,13 +563,13 @@ function RuleCard({
     <div className={`min-w-0 rounded-xl border bg-surface-2 p-3 ${tone}`}>
       <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
         <div className="min-w-0">
-          <h4 className="min-w-0 break-words text-[0.9375rem] font-semibold leading-tight">
+          <h4 className="t-caption min-w-0 break-words font-semibold leading-tight text-foreground">
             {title}
           </h4>
           <p className="mt-0.5 break-words text-[0.75rem] leading-snug text-subtle">{rule}</p>
         </div>
         <span
-          className={`shrink-0 rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.1em] ${badge.css}`}
+          className={`shrink-0 rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.14em] ${badge.css}`}
         >
           {badge.text}
         </span>
@@ -891,7 +891,7 @@ export default function ProofLab({
       {folded ? null : (
         <>
           <p className="eyebrow">Proof lab, running in your browser</p>
-          <h3 className="mt-2 text-balance text-[1.125rem] font-semibold leading-tight tracking-tight sm:text-[1.375rem]">
+          <h3 className="t-small mt-2 text-balance font-semibold text-foreground">
             Same ads, same traffic, two ways to call a winner.
           </h3>
         </>
@@ -1153,7 +1153,7 @@ export default function ProofLab({
           <span className="eyebrow">What the caution costs</span>
           {board.runs > 0 ? (
             <span
-              className={`shrink-0 rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.1em] ${
+              className={`shrink-0 rounded-full border px-2 py-0.5 text-[0.625rem] font-semibold uppercase tracking-[0.14em] ${
                 truth === "identical"
                   ? "border-border bg-surface text-muted"
                   : cheaper === "naive"

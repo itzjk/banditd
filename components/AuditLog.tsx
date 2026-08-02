@@ -45,7 +45,7 @@ export default function AuditLog({ entries, initial = 8 }: Props) {
               <span className="shrink-0 text-[12px] tabular-nums text-zinc-400 sm:text-right">
                 {clock(entry.at)}
               </span>
-              <span className="w-fit shrink-0 rounded border border-white/12 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-300">
+              <span className="w-fit shrink-0 rounded border border-white/12 bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-300">
                 {KIND[entry.kind] ?? entry.kind}
               </span>
               <span className="text-[12px] tabular-nums text-zinc-400 sm:hidden">
