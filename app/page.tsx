@@ -371,10 +371,17 @@ const BUYER: { label: string; detail: string }[] = [
   },
 ];
 
-const PRICING: { price: string; ceiling: string }[] = [
-  { price: "$149", ceiling: "3 creative tests at once, 12 variants under watch" },
-  { price: "$399", ceiling: "15 tests at once, 60 variants" },
-  { price: "$999", ceiling: "60 tests at once, 240 variants" },
+const REFUSALS: { code: string; attempt: string; said: string }[] = [
+  {
+    code: "THRESHOLD_EXCEEDED",
+    attempt: "The agent asked for $50.00 against a mandate the seller signed at $5.00.",
+    said: "Visa did not return COMPLETED (status DECLINED): Total amount 50.00 exceeds threshold 5.00 in current payment cycle",
+  },
+  {
+    code: "MANDATE_MERCHANT_NOT_ALLOWED",
+    attempt: "The agent tried to buy render credits on a mandate the seller signed for Allbirds.",
+    said: "Merchant not allowed for this mandate: Banditd Render Credits",
+  },
 ];
 
 const LIMITS: { label: string; detail: string }[] = [
@@ -1192,6 +1199,38 @@ export default function Home() {
                 </div>
               </Surface>
             </Rise>
+
+            <Rise delay={180}>
+              <Surface level="raised" className="mt-4 overflow-hidden">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-5 py-3.5 sm:px-7">
+                  <Eyebrow as="span" className="min-w-0 text-muted">
+                    What the network said when the agent pushed
+                  </Eyebrow>
+                  <Mono className="min-w-0 text-muted">not our copy</Mono>
+                </div>
+
+                <div className="grid gap-3 px-5 py-6 sm:grid-cols-2 sm:px-7 sm:py-8">
+                  {REFUSALS.map((r) => (
+                    <Surface key={r.code} level="quiet" className="h-full p-5">
+                      <Mono className="block text-[0.8125rem] text-foreground">{r.code}</Mono>
+                      <Caption className="mt-3 block text-muted">{r.attempt}</Caption>
+                      <p className="mt-3 border-l-2 border-border-strong pl-3 text-[0.8125rem] leading-relaxed text-muted">
+                        {r.said}
+                      </p>
+                    </Surface>
+                  ))}
+                </div>
+
+                <div className="border-t border-border px-5 py-5 sm:px-7">
+                  <Small className="text-muted">
+                    Both of those came back from the Visa network through Prava on this account, and
+                    both are reproducible in the dashboard right now. Neither is a message this
+                    project writes. The agent sends the charge, the network refuses it, and there is
+                    no argument the agent can make that gets past either one.
+                  </Small>
+                </div>
+              </Surface>
+            </Rise>
           </div>
         </section>
 
@@ -1224,67 +1263,6 @@ export default function Home() {
                 </Rise>
               ))}
             </div>
-
-            <Rise delay={80}>
-              <Surface level="feature" className="mt-4 overflow-hidden">
-                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-5 py-3.5 sm:px-7">
-                  <Eyebrow as="span" className="min-w-0 text-muted">
-                    Proposed pricing
-                  </Eyebrow>
-                  <Mono className="min-w-0 text-muted">nothing is on sale yet</Mono>
-                </div>
-
-                <div className="px-5 py-6 sm:px-7 sm:py-8">
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    {PRICING.map((tier) => (
-                      <Surface key={tier.price} level="quiet" className="h-full p-5">
-                        <p className="t-num text-[clamp(1.75rem,4vw,2.375rem)] font-semibold leading-none tracking-[-0.03em]">
-                          {tier.price}
-                          <span className="ml-1.5 align-baseline text-sm font-normal text-muted">
-                            a month
-                          </span>
-                        </p>
-                        <Caption className="mt-3 text-muted">{tier.ceiling}</Caption>
-                      </Surface>
-                    ))}
-                  </div>
-
-                  <Body className="mt-6 max-w-2xl text-muted">
-                    Every tier is the same product. The only thing that moves is how many tests it
-                    watches at once. One test is one cohort of four ads judged together. We do not
-                    charge by your ad spend, because the agent does not spend it. Above the top
-                    tier it stops being a price list.
-                  </Body>
-
-                  <Caption className="mt-5 max-w-2xl text-muted">
-                    This is a proposal. banditd has no customers, no revenue and nothing for sale
-                    today. The tiers sit next to what the market charges a month for a decision
-                    tool, and those tools bill by managed ad spend, which is a unit we deliberately
-                    do not use:{" "}
-                    <a
-                      href="https://adalysis.com/pricing/"
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="focus-ring underline decoration-border-strong underline-offset-2 hover:text-foreground"
-                    >
-                      Adalysis
-                    </a>{" "}
-                    is $149 a month up to $50,000 of managed spend and $950 up to $1 million,{" "}
-                    <a
-                      href="https://www.optmyzr.com/pricing/"
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      className="focus-ring underline decoration-border-strong underline-offset-2 hover:text-foreground"
-                    >
-                      Optmyzr
-                    </a>{" "}
-                    starts at $299 up to $25,000. Both are Google and Microsoft Ads tools sold
-                    mostly to agencies, so they anchor the monthly price of a neighbouring
-                    category, not ours. Neither of them buys anything.
-                  </Caption>
-                </div>
-              </Surface>
-            </Rise>
 
             <Rise delay={140}>
               <Surface level="raised" className="mt-4 overflow-hidden">
