@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { Creative, PurchaseEvent } from "@/lib/store";
 import { ctr, money, pct, toNumber } from "./format";
 
@@ -91,6 +91,11 @@ export default function CampaignMetrics({
   generation,
 }: Props) {
   const [allTiles, setAllTiles] = useState(false);
+  const [projecting, setProjecting] = useState(false);
+  const [conversion, setConversion] = useState("");
+  const [order, setOrder] = useState("");
+  const [cpm, setCpm] = useState("");
+  const fields = useId();
 
   if (creatives.length === 0) return null;
 
@@ -120,6 +125,15 @@ export default function CampaignMetrics({
   const twin = winner
     ? cohort.filter((c, i) => i < winnerIndex && c.angle === winner.angle).length
     : 0;
+
+  const rate = Math.min(1, Math.max(0, toNumber(conversion) / 100));
+  const perOrder = Math.max(0, toNumber(order));
+  const perThousand = Math.max(0, toNumber(cpm));
+  const orders = clicks * rate;
+  const revenue = rate > 0 && perOrder > 0 ? orders * perOrder : null;
+  const media = perThousand > 0 && impressions > 0 ? (impressions / 1000) * perThousand : null;
+  const evenCpm = revenue !== null && impressions > 0 ? revenue / (impressions / 1000) : null;
+  const roas = revenue !== null && media !== null && media > 0 ? revenue / media : null;
 
   return (
     <section className="rounded-2xl border border-white/12 bg-white/[0.03] p-3 sm:p-4">
@@ -238,6 +252,139 @@ export default function CampaignMetrics({
       >
         {allTiles ? "Show fewer numbers" : "Show 4 more numbers"}
       </button>
+
+      <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
+            ROAS
+          </span>
+          <span className="shrink-0 rounded border border-white/15 px-1 py-px text-[10px] font-semibold uppercase tracking-wider text-zinc-300">
+            {roas !== null ? "Your projection" : "Not measured"}
+          </span>
+        </div>
+        <div
+          className={`mt-1.5 break-words text-[19px] font-semibold leading-tight tabular-nums [overflow-wrap:anywhere] sm:text-[18px] ${
+            roas !== null ? "text-white" : "text-zinc-400"
+          }`}
+        >
+          {roas !== null ? `${roas.toFixed(2)}x` : "Nothing to divide"}
+        </div>
+        <p className="mt-1.5 break-words text-[12px] leading-relaxed text-zinc-400">
+          ROAS is revenue divided by media spend, and this run has neither. It never sells anything,
+          so there is no revenue, and its traffic is simulated, so no impression was ever paid for.
+          The budget above is sandbox money for render credits, not media. Nothing here invents a
+          conversion rate to fill the gap.
+        </p>
+
+        <button
+          type="button"
+          aria-expanded={projecting}
+          onClick={() => setProjecting((v) => !v)}
+          className="mt-2 flex min-h-[2.75rem] w-full items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[13px] font-semibold text-zinc-200 transition-colors hover:bg-white/[0.07]"
+        >
+          {projecting ? "Hide the projection" : "Project it with my own numbers"}
+        </button>
+
+        {projecting ? (
+          <div className="mt-2 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="min-w-0">
+                <label
+                  htmlFor={`${fields}-conversion`}
+                  className="block text-[12px] font-semibold text-zinc-200"
+                >
+                  Your conversion rate
+                </label>
+                <div className="mt-1 flex items-center gap-2">
+                  <input
+                    id={`${fields}-conversion`}
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value={conversion}
+                    onChange={(e) => setConversion(e.target.value)}
+                    className="min-h-[2.75rem] w-full min-w-0 rounded-lg border border-white/15 bg-white/[0.06] px-3 text-[14px] tabular-nums text-white outline-none focus:border-white/40"
+                  />
+                  <span className="shrink-0 text-[13px] text-zinc-300">%</span>
+                </div>
+                <p className="mt-1 break-words text-[11px] leading-snug text-zinc-400">
+                  Clicks that turn into orders on your own store.
+                </p>
+              </div>
+
+              <div className="min-w-0">
+                <label
+                  htmlFor={`${fields}-order`}
+                  className="block text-[12px] font-semibold text-zinc-200"
+                >
+                  Your revenue per order
+                </label>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="shrink-0 text-[13px] text-zinc-300">$</span>
+                  <input
+                    id={`${fields}-order`}
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.01"
+                    value={order}
+                    onChange={(e) => setOrder(e.target.value)}
+                    className="min-h-[2.75rem] w-full min-w-0 rounded-lg border border-white/15 bg-white/[0.06] px-3 text-[14px] tabular-nums text-white outline-none focus:border-white/40"
+                  />
+                </div>
+                <p className="mt-1 break-words text-[11px] leading-snug text-zinc-400">
+                  What you collect on one order, before your costs.
+                </p>
+              </div>
+
+              <div className="min-w-0">
+                <label
+                  htmlFor={`${fields}-cpm`}
+                  className="block text-[12px] font-semibold text-zinc-200"
+                >
+                  What you pay per 1,000 impressions
+                </label>
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="shrink-0 text-[13px] text-zinc-300">$</span>
+                  <input
+                    id={`${fields}-cpm`}
+                    type="number"
+                    inputMode="decimal"
+                    min="0"
+                    step="0.01"
+                    value={cpm}
+                    onChange={(e) => setCpm(e.target.value)}
+                    className="min-h-[2.75rem] w-full min-w-0 rounded-lg border border-white/15 bg-white/[0.06] px-3 text-[14px] tabular-nums text-white outline-none focus:border-white/40"
+                  />
+                </div>
+                <p className="mt-1 break-words text-[11px] leading-snug text-zinc-400">
+                  Your real media rate. This run pays nothing for traffic.
+                </p>
+              </div>
+            </div>
+
+            <p className="mt-3 break-words text-[12px] leading-relaxed text-zinc-300">
+              {roas !== null && revenue !== null && media !== null
+                ? `${pct(rate, 1)} of ${clicks.toLocaleString()} simulated clicks is ${Math.round(
+                    orders,
+                  ).toLocaleString()} orders at $${money(perOrder)}, so $${money(
+                    revenue,
+                  )} of revenue against $${money(media)} of media at your $${money(
+                    perThousand,
+                  )} rate over ${impressions.toLocaleString()} impressions. All three numbers are yours, so this is your projection and not a number this run measured.`
+                : revenue !== null && evenCpm !== null
+                  ? `Your two numbers turn this run's ${impressions.toLocaleString()} simulated impressions into $${money(
+                      revenue,
+                    )} of revenue, so you break even at $${money(
+                      evenCpm,
+                    )} per 1,000 impressions. Add what you actually pay and the ratio appears.`
+                  : "Fill these in and the projection lands here. Nothing is filled in for you, and the numbers stay in this browser."}
+            </p>
+          </div>
+        ) : null}
+      </div>
 
       {winner ? (
         <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
