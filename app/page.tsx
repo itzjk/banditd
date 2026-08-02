@@ -410,7 +410,6 @@ export default function Home() {
   const [marketContext, setMarketContext] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [confirmArchive, setConfirmArchive] = useState(false);
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [activeSuggestion, setActiveSuggestion] = useState(-1);
   const [estimated, setEstimated] = useState(false);
@@ -492,11 +491,6 @@ export default function Home() {
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (busy) return;
-    if (saved && !confirmArchive) {
-      setConfirmArchive(true);
-      return;
-    }
-    setConfirmArchive(false);
     setError(null);
     setBusy(true);
     try {
@@ -797,28 +791,10 @@ export default function Home() {
                     <button
                       type="submit"
                       disabled={busy}
-                      className={`focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground min-h-[3.25rem] w-full rounded-lg px-4 text-[0.9375rem] font-semibold transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60 ${
-                        confirmArchive
-                          ? "bg-accent text-accent-foreground"
-                          : "bg-foreground text-background"
-                      }`}
+                      className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground min-h-[3.25rem] w-full rounded-lg bg-foreground px-4 text-[0.9375rem] font-semibold text-background transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      {busy
-                        ? "Handing it to the agent"
-                        : confirmArchive
-                          ? "Click again to file the saved run and start fresh"
-                          : "Hand it to the agent"}
+                      {busy ? "Handing it to the agent" : "Hand it to the agent"}
                     </button>
-
-                    {confirmArchive && !busy ? (
-                      <button
-                        type="button"
-                        onClick={() => setConfirmArchive(false)}
-                        className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground -mt-1 block min-h-11 w-full rounded-lg text-[0.8125rem] font-medium text-muted hover:text-foreground"
-                      >
-                        Stay on the saved run
-                      </button>
-                    ) : null}
 
                     <Caption className="text-muted">
                       Performance numbers in the demo are simulated and labeled in the dashboard.

@@ -355,6 +355,156 @@ export const CATALOG: CatalogProduct[] = [
     price: "$32.00",
     description: "A twelve pack of date and nut bars with five ingredients each.",
   },
+  {
+    name: "Water Bottle",
+    price: "$34.00",
+    description: "A 24oz insulated bottle that holds cold for a full day.",
+  },
+  {
+    name: "Travel Mug",
+    price: "$29.00",
+    description: "A 16oz tumbler with a leakproof lid that fits a car holder.",
+  },
+  {
+    name: "Water Filter Pitcher",
+    price: "$44.00",
+    description: "A 10 cup pitcher that filters a jug in under two minutes.",
+  },
+  {
+    name: "Desk Lamp",
+    price: "$79.00",
+    description: "A dimmable lamp with three colour temperatures and a USB port.",
+  },
+  {
+    name: "Wall Clock",
+    price: "$52.00",
+    description: "A 12 inch silent clock with a walnut rim and clean numerals.",
+  },
+  {
+    name: "Scented Candle",
+    price: "$32.00",
+    description: "A soy candle in a reusable glass that burns for fifty hours.",
+  },
+  {
+    name: "Snow Globe",
+    price: "$24.00",
+    description: "A hand-poured glass globe on a wooden base with a winter scene.",
+  },
+  {
+    name: "Phone Case",
+    price: "$39.00",
+    description: "A slim case rated for a ten foot drop with raised camera edges.",
+  },
+  {
+    name: "Laptop Sleeve",
+    price: "$45.00",
+    description: "A padded felt sleeve that fits a 14 inch laptop and a charger.",
+  },
+  {
+    name: "Duffel Bag",
+    price: "$95.00",
+    description: "A 40L weekender in coated canvas with a separate shoe pocket.",
+  },
+  {
+    name: "Packing Cubes",
+    price: "$38.00",
+    description: "A set of four compression cubes that halve the space clothes take.",
+  },
+  {
+    name: "Memory Foam Pillow",
+    price: "$69.00",
+    description: "A contoured pillow with a cooling cover for side sleepers.",
+  },
+  {
+    name: "Linen Sheet Set",
+    price: "$149.00",
+    description: "A stonewashed set that softens with every wash, queen size.",
+  },
+  {
+    name: "Bath Towel Set",
+    price: "$72.00",
+    description: "Four combed cotton towels that stay soft past a hundred washes.",
+  },
+  {
+    name: "Shower Head",
+    price: "$88.00",
+    description: "A filtered head with six spray settings and a tool-free fit.",
+  },
+  {
+    name: "Facial Cleanser",
+    price: "$26.00",
+    description: "A gel cleanser that lifts sunscreen without stripping the skin.",
+  },
+  {
+    name: "Shampoo Bar",
+    price: "$18.00",
+    description: "A sulfate free bar that replaces two plastic bottles.",
+  },
+  {
+    name: "Lip Balm Set",
+    price: "$16.00",
+    description: "Three tinted balms with shea butter and no fragrance.",
+  },
+  {
+    name: "Cutting Board",
+    price: "$68.00",
+    description: "An end grain walnut board with a juice groove and finger holds.",
+  },
+  {
+    name: "Food Storage Containers",
+    price: "$56.00",
+    description: "A ten piece glass set with lids that lock and stack flat.",
+  },
+  {
+    name: "Non-Stick Pan",
+    price: "$85.00",
+    description: "A 10 inch ceramic pan that releases eggs without oil.",
+  },
+  {
+    name: "Cocktail Shaker Set",
+    price: "$62.00",
+    description: "A weighted shaker with a jigger, strainer and bar spoon.",
+  },
+  {
+    name: "Wine Glasses",
+    price: "$58.00",
+    description: "A set of four crystal glasses thin enough to read through.",
+  },
+  {
+    name: "Camping Tent",
+    price: "$219.00",
+    description: "A two person tent that pitches in four minutes and packs to 18 inches.",
+  },
+  {
+    name: "Sleeping Bag",
+    price: "$139.00",
+    description: "A mummy bag rated to 20F that stuffs to the size of a melon.",
+  },
+  {
+    name: "Cooler Box",
+    price: "$189.00",
+    description: "A 25 quart rotomolded cooler that holds ice for three days.",
+  },
+  {
+    name: "Jump Rope",
+    price: "$28.00",
+    description: "A weighted rope with bearings that stay smooth at speed.",
+  },
+  {
+    name: "Foam Roller",
+    price: "$42.00",
+    description: "A high density roller with a textured surface for deep pressure.",
+  },
+  {
+    name: "Sunglasses Case",
+    price: "$22.00",
+    description: "A hard shell case with a microfibre lining and a belt loop.",
+  },
+  {
+    name: "Umbrella",
+    price: "$46.00",
+    description: "A vented canopy that holds up in wind and folds to ten inches.",
+  },
 ];
 
 const SEPARATORS = /[^a-z0-9]+/g;
