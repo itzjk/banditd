@@ -272,12 +272,20 @@ function list(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
+export function priceLabel(value: string): string {
+  const raw = value.trim();
+  if (!raw || /[^0-9.,\s]/.test(raw)) return raw;
+  const n = Number(raw.replace(/,/g, ""));
+  if (!Number.isFinite(n)) return raw;
+  return `$${n.toFixed(2)}`;
+}
+
 function coerceProduct(value: unknown): Product | null {
   const p = record(value);
   if (!p || typeof p.name !== "string") return null;
   return {
     name: p.name,
-    price: text(p.price),
+    price: priceLabel(text(p.price)),
     description: text(p.description),
     marketContext: sanitizeMarketContext(p.marketContext),
     variant: sanitizeRefinement(p.variant),

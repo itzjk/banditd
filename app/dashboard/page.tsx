@@ -42,6 +42,7 @@ import GatesPanel from "@/components/GatesPanel";
 import LineageTree from "@/components/LineageTree";
 import MarketPanel from "@/components/MarketPanel";
 import ProductBar from "@/components/ProductBar";
+import { priceLabel } from "@/lib/state-schema";
 import Insights from "@/components/Insights";
 import ProofLab from "@/components/ProofLab";
 import AgentChat from "@/components/AgentChat";
@@ -105,7 +106,7 @@ function safeProduct(value: unknown): Product | null {
   if (!p || typeof p.name !== "string") return null;
   return {
     name: p.name,
-    price: text(p.price),
+    price: priceLabel(text(p.price)),
     description: text(p.description),
     marketContext: text(p.marketContext).slice(0, MAX_MARKET_CONTEXT),
     variant: safeRefinement(p.variant),
