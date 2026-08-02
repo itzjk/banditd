@@ -1,45 +1,45 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f7f6;
-  --surface: #ffffff;
-  --surface-2: #f1f1ef;
-  --foreground: #0b0c0d;
-  --muted: #55595f;
-  --subtle: #696e74;
-  --border: #e4e4e1;
-  --border-strong: #cdcdc9;
-  --accent: #0d7a92;
-  --accent-foreground: #ffffff;
-  --accent-soft: rgba(13, 122, 146, 0.1);
-  --danger: #b3242b;
-  --danger-soft: rgba(179, 36, 43, 0.1);
-  --warn: #8a5a00;
-  --warn-soft: rgba(138, 90, 0, 0.12);
-  --grid-line: rgba(11, 12, 13, 0.055);
-  --grid-fine: rgba(11, 12, 13, 0.026);
-  --ring: rgba(11, 12, 13, 0.5);
-  --card-shadow: 0 1px 2px rgba(11, 12, 13, 0.05), 0 16px 40px -28px rgba(11, 12, 13, 0.35);
+  --background: #06080b;
+  --surface: #0c1015;
+  --surface-2: #12171d;
+  --foreground: #f2f6f9;
+  --muted: #9fb0bd;
+  --subtle: #7b8c99;
+  --border: #1b222a;
+  --border-strong: #2a333d;
+  --accent: #22e3ff;
+  --accent-foreground: #04121a;
+  --accent-soft: rgba(34, 227, 255, 0.14);
+  --danger: #ff6b6b;
+  --danger-soft: rgba(255, 107, 107, 0.12);
+  --warn: #f4b942;
+  --warn-soft: rgba(244, 185, 66, 0.12);
+  --grid-line: rgba(255, 255, 255, 0.045);
+  --grid-fine: rgba(255, 255, 255, 0.021);
+  --ring: rgba(242, 246, 249, 0.6);
+  --card-shadow: 0 1px 0 rgba(255, 255, 255, 0.03), 0 24px 48px -32px rgba(0, 0, 0, 0.9);
 
-  --surface-raised: #ffffff;
-  --surface-feature-a: #ffffff;
-  --surface-feature-b: #f2f2f0;
-  --edge-hi: rgba(255, 255, 255, 0.95);
-  --edge-lo: rgba(11, 12, 13, 0.1);
-  --shadow-base: 0 1px 1px rgba(11, 12, 13, 0.03);
-  --shadow-raised: 0 1px 2px rgba(11, 12, 13, 0.05), 0 10px 26px -18px rgba(11, 12, 13, 0.32);
-  --shadow-feature: 0 2px 4px rgba(11, 12, 13, 0.05), 0 28px 64px -34px rgba(11, 12, 13, 0.45);
-  --shadow-lift: 0 6px 14px rgba(11, 12, 13, 0.07), 0 36px 76px -36px rgba(11, 12, 13, 0.5);
+  --surface-raised: #10151b;
+  --surface-feature-a: #141a21;
+  --surface-feature-b: #0a0e13;
+  --edge-hi: rgba(255, 255, 255, 0.14);
+  --edge-lo: rgba(255, 255, 255, 0.015);
+  --shadow-base: 0 1px 0 rgba(255, 255, 255, 0.02);
+  --shadow-raised: 0 1px 0 rgba(255, 255, 255, 0.035), 0 18px 40px -28px rgba(0, 0, 0, 0.9);
+  --shadow-feature: 0 1px 0 rgba(255, 255, 255, 0.05), 0 30px 70px -34px rgba(0, 0, 0, 1);
+  --shadow-lift: 0 1px 0 rgba(255, 255, 255, 0.07), 0 40px 84px -36px rgba(0, 0, 0, 1);
 
-  --arm-1: #0369a1;
-  --arm-2: #7c3aed;
-  --arm-3: #db2777;
-  --arm-4: #b45309;
+  --arm-1: #38bdf8;
+  --arm-2: #a78bfa;
+  --arm-3: #f472b6;
+  --arm-4: #fbbf24;
 
-  --curve-1: #5c8af0;
-  --curve-2: #18a7a1;
-  --curve-3: #ad5ab5;
-  --curve-4: #bf7101;
+  --curve-1: #7aa8ff;
+  --curve-2: #2fd8d0;
+  --curve-3: #c98af0;
+  --curve-4: #ffb340;
 
   --display-size: 1.875rem;
   --gutter: 1.25rem;
@@ -48,17 +48,17 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #08090a;
-    --surface: #0f1113;
-    --surface-2: #16191c;
-    --foreground: #f1f3f4;
-    --muted: #9ba1a8;
-    --subtle: #7b828a;
-    --border: #1e2226;
-    --border-strong: #2d3338;
-    --accent: #7ad3f0;
-    --accent-foreground: #041018;
-    --accent-soft: rgba(122, 211, 240, 0.12);
+    --background: #06080b;
+    --surface: #0c1015;
+    --surface-2: #12171d;
+    --foreground: #f2f6f9;
+    --muted: #9fb0bd;
+    --subtle: #7b8c99;
+    --border: #1b222a;
+    --border-strong: #2a333d;
+    --accent: #22e3ff;
+    --accent-foreground: #04121a;
+    --accent-soft: rgba(34, 227, 255, 0.14);
     --danger: #ff6b6b;
     --danger-soft: rgba(255, 107, 107, 0.12);
     --warn: #f4b942;
@@ -991,21 +991,20 @@
 .bd-stage-hero {
   position: absolute;
   z-index: -1;
-  right: -6%;
-  top: 50%;
-  width: 640px;
-  max-width: 52vw;
-  transform: translateY(-50%);
+  right: 1%;
+  top: 3rem;
+  width: 430px;
+  max-width: 34vw;
   mix-blend-mode: screen;
   pointer-events: none;
-  opacity: 0.92;
+  opacity: 0.95;
 }
 
 .bd-stage :where(.t-display, .t-headline, .t-title) { color: #f4f7f9; }
 .bd-stage :where(.t-lead, .t-body, .t-small, .t-caption) { color: #a9bbc7; }
 .bd-stage .text-muted { color: #8fa0ad; }
 
-@media (max-width: 1023px) {
+@media (max-width: 1279px) {
   .bd-stage-hero { display: none; }
   .bd-stage-bg { background-position: center 60%; }
 }
@@ -1018,13 +1017,13 @@
 }
 
 @keyframes bd-float {
-  0%, 100% { transform: translateY(-50%) translate3d(0, 0, 0) rotate(0deg); }
-  50% { transform: translateY(-50%) translate3d(0, -18px, 0) rotate(-1.4deg); }
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(0, -16px, 0) rotate(-1.6deg); }
 }
 
 @keyframes bd-breathe {
-  0%, 100% { opacity: 0.55; transform: translate(-50%, -50%) scale(1); }
-  50% { opacity: 0.85; transform: translate(-50%, -50%) scale(1.06); }
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.82; transform: scale(1.07); }
 }
 
 .bd-stage-hero {
@@ -1035,14 +1034,11 @@
 .bd-stage-halo {
   position: absolute;
   z-index: -2;
-  right: -6%;
-  top: 50%;
-  width: 640px;
-  max-width: 52vw;
+  right: 1%;
+  top: 3rem;
+  width: 430px;
+  max-width: 34vw;
   aspect-ratio: 1 / 1;
-  margin-right: calc(-320px + 320px);
-  transform: translate(-50%, -50%);
-  left: auto;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(122, 211, 240, 0.16), rgba(122, 211, 240, 0.04) 46%, transparent 68%);
   animation: bd-breathe 9s ease-in-out infinite;
@@ -1054,6 +1050,40 @@
   .bd-stage-halo { animation: none; }
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1279px) {
   .bd-stage-halo { display: none; }
+}
+
+.bd-type {
+  pointer-events: none;
+  color: var(--subtle);
+}
+
+.bd-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: -0.16em;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  animation: bd-blink 1.05s step-end infinite;
+}
+
+@keyframes bd-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.bd-ghost {
+  position: absolute;
+  inset: 0;
+  padding: inherit;
+  pointer-events: none;
+  white-space: pre-wrap;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bd-caret { animation: none; }
 }
