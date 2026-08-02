@@ -848,6 +848,7 @@ export default function Dashboard() {
   const [receipt, setReceipt] = useState<LastPurchase | null>(null);
   const [impressions, setImpressions] = useState(1000);
   const [autoRunning, setAutoRunning] = useState(false);
+  const [touched, setTouched] = useState(false);
   const [revoked, setRevoked] = useState(false);
   const [stale, setStale] = useState(false);
   const [manual, setManual] = useState<ManualNote | null>(null);
@@ -914,6 +915,7 @@ export default function Dashboard() {
   }, []);
 
   const run = useCallback(async (task: Task, fn: () => Promise<void>) => {
+    if (task !== "load") setTouched(true);
     setBusy(task);
     setError(null);
     try {
@@ -935,7 +937,8 @@ export default function Dashboard() {
       if (alive && warning) setNotice(warning);
       if (stored) {
         if (alive) {
-          absorb(stored);
+          take(stored);
+          revRef.current = Math.max(readRev(), revRef.current);
           setBusy(null);
         }
         return;
@@ -953,7 +956,7 @@ export default function Dashboard() {
     return () => {
       alive = false;
     };
-  }, [absorb]);
+  }, [absorb, take]);
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
@@ -1217,6 +1220,7 @@ export default function Dashboard() {
 
   const focused = upcoming.length > 0;
   const untouched =
+    !touched &&
     !hasCreatives &&
     !hasTraffic &&
     !hasPurchases &&
@@ -1227,6 +1231,7 @@ export default function Dashboard() {
 
   const advise = async () => {
     if (locked) return;
+    setTouched(true);
     setAdvising(true);
     setError(null);
     try {
@@ -1239,6 +1244,7 @@ export default function Dashboard() {
   };
 
   const runManual = async (task: Task, slot: ManualSlot, fn: () => Promise<ManualNote>) => {
+    setTouched(true);
     setBusy(task);
     setError(null);
     setManual(null);
@@ -1496,9 +1502,12 @@ export default function Dashboard() {
             state={state}
             absorb={absorb}
             impressions={impressions}
-            disabled={busy !== null || stale}
+            disabled={busy !== null || stale || advising}
             running={autoRunning}
-            onRunningChange={setAutoRunning}
+            onRunningChange={(next) => {
+              if (next) setTouched(true);
+              setAutoRunning(next);
+            }}
             onDecision={carryDecision}
             onReceipt={setReceipt}
             footer={focused && !untouched ? <Preview items={upcoming} /> : null}

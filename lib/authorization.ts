@@ -71,6 +71,20 @@ function usable(m: Mandate): boolean {
   return m.status === "active" && m.state !== "consumed" && m.state !== "expired";
 }
 
+const SECRET_SHAPES = [
+  /\b(?:sk|pk|rk)_[A-Za-z0-9_-]{6,}/g,
+  /\bBearer\s+[A-Za-z0-9._-]{8,}/gi,
+  /\b[\w.+-]+@[\w-]+\.[\w.-]+\b/g,
+];
+
+export function safeError(value: unknown): string {
+  const raw = value instanceof Error ? value.message : String(value);
+  return SECRET_SHAPES.reduce((text, shape) => text.replace(shape, "[redacted]"), raw)
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 240);
+}
+
 function toSigned(m: Mandate): SignedMandate {
   const ceiling = amount(m.approvedAmount);
   const remaining = amount(m.remaining) ?? ceiling;
@@ -96,34 +110,37 @@ function newestFirst(a: SignedMandate, b: SignedMandate): number {
 }
 
 export async function readAuthorization(): Promise<Authorization> {
-  let listed: Mandate[];
   try {
-    listed = await listMandates(process.env.PRAVA_USER_ID);
+    const listed = await listMandates(process.env.PRAVA_USER_ID);
+
+    const active = listed
+      .filter((m) => typeof m?.id === "string")
+      .filter(usable)
+      .filter((m) => !isReserved(m))
+      .map(toSigned);
+    const ours = active.filter((m) => isRenderMerchant(m.merchant) || m.merchant === null);
+    const elsewhere = active.filter((m) => m.merchant !== null && !isRenderMerchant(m.merchant));
+    const ready = ours.filter((m) => !m.chargeUsedThisCycle).sort(newestFirst);
+    const spent = ours.filter((m) => m.chargeUsedThisCycle).sort(newestFirst);
+
+    return {
+      live: true,
+      error: null,
+      inForce: ready[0] ?? spent[0] ?? null,
+      queued: ready.slice(1),
+      spent,
+      elsewhere: elsewhere.sort(newestFirst),
+    };
   } catch (e) {
     return {
       live: false,
-      error: e instanceof Error ? e.message : String(e),
+      error: safeError(e),
       inForce: null,
       queued: [],
       spent: [],
       elsewhere: [],
     };
   }
-
-  const active = listed.filter(usable).filter((m) => !isReserved(m)).map(toSigned);
-  const ours = active.filter((m) => isRenderMerchant(m.merchant) || m.merchant === null);
-  const elsewhere = active.filter((m) => m.merchant !== null && !isRenderMerchant(m.merchant));
-  const ready = ours.filter((m) => !m.chargeUsedThisCycle).sort(newestFirst);
-  const spent = ours.filter((m) => m.chargeUsedThisCycle).sort(newestFirst);
-
-  return {
-    live: true,
-    error: null,
-    inForce: ready[0] ?? spent[0] ?? null,
-    queued: ready.slice(1),
-    spent,
-    elsewhere: elsewhere.sort(newestFirst),
-  };
 }
 
 export async function readMandateFacts(id: string | null): Promise<MandateFactsRead> {

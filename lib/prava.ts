@@ -24,16 +24,37 @@ export class PravaError extends Error {
 
 type Json = Record<string, unknown>;
 
-async function call<T>(path: string, method: "GET" | "POST", body?: Json): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${secretKey()}`,
-      "Content-Type": "application/json",
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    cache: "no-store",
-  });
+const READ_TIMEOUT_MS = Number(process.env.PRAVA_READ_TIMEOUT_MS ?? 8000);
+
+async function call<T>(
+  path: string,
+  method: "GET" | "POST",
+  body?: Json,
+  timeoutMs?: number,
+): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${secretKey()}`,
+        "Content-Type": "application/json",
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      cache: "no-store",
+      signal: timeoutMs && timeoutMs > 0 ? AbortSignal.timeout(timeoutMs) : undefined,
+    });
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "TimeoutError") {
+      throw new PravaError(
+        `Prava did not answer ${path} within ${Math.round((timeoutMs ?? 0) / 1000)} seconds`,
+        "PRAVA_TIMEOUT",
+        504,
+        null,
+      );
+    }
+    throw e;
+  }
 
   const text = await res.text();
   let parsed: unknown = null;
@@ -126,18 +147,33 @@ export interface Mandate {
   maxCharges?: number;
 }
 
+function mandateList(value: unknown): Mandate[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (m): m is Mandate => Boolean(m) && typeof m === "object" && !Array.isArray(m),
+  );
+}
+
 export async function listMandates(customerId?: string): Promise<Mandate[]> {
   const query = customerId ? `?customer_id=${encodeURIComponent(customerId)}` : "";
   const res = await call<Mandate[] | { data?: Mandate[]; mandates?: Mandate[] }>(
     `/v1/mandates${query}`,
     "GET",
+    undefined,
+    READ_TIMEOUT_MS,
   );
-  if (Array.isArray(res)) return res;
-  return res.data ?? res.mandates ?? [];
+  if (Array.isArray(res)) return mandateList(res);
+  const wrapped = (res ?? {}) as { data?: unknown; mandates?: unknown };
+  return mandateList(wrapped.data ?? wrapped.mandates ?? []);
 }
 
 export async function getMandate(id: string): Promise<Mandate> {
-  const res = await call<Mandate | { data?: Mandate; mandate?: Mandate }>(`/v1/mandates/${id}`, "GET");
+  const res = await call<Mandate | { data?: Mandate; mandate?: Mandate }>(
+    `/v1/mandates/${id}`,
+    "GET",
+    undefined,
+    READ_TIMEOUT_MS,
+  );
   const obj = res as { data?: Mandate; mandate?: Mandate };
   return obj.data ?? obj.mandate ?? (res as Mandate);
 }
