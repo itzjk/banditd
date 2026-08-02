@@ -48,34 +48,14 @@ function leadSentence(mandate: SignedMandate): string {
   return `${parts.join(", ")}.`;
 }
 
-function Ledger({ title, note, rows }: { title: string; note: string; rows: SignedMandate[] }) {
-  if (!rows.length) return null;
-  return (
-    <section className="mt-10">
-      <h2 className="text-[0.9375rem] font-semibold text-foreground">{title}</h2>
-      <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted">{note}</p>
-      <ul className="mt-3">
-        {rows.map((m) => (
-          <li
-            key={m.id}
-            className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 border-t border-border py-2 text-[0.8125rem]"
-          >
-            <span className="font-medium text-foreground">{m.merchant ?? "Unnamed merchant"}</span>
-            <span className="tabular-nums text-muted">{dollars(m.ceiling) ?? "amount unknown"}</span>
-            <span className="text-muted">{m.expiry ? `until ${m.expiry}` : "no expiry reported"}</span>
-            <span className="font-mono text-[0.75rem] text-subtle [overflow-wrap:anywhere]">
-              {m.id}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
+function plural(count: number, one: string, many: string): string {
+  return count === 1 ? one : many;
 }
 
 export default async function AuthorizationPage() {
   const read = await readAuthorization();
   const mandate = read.inForce;
+  const used = read.spent.filter((m) => m.id !== mandate?.id);
 
   return (
     <div className="flex min-h-full flex-1 flex-col [overflow-wrap:anywhere]">
@@ -220,24 +200,38 @@ export default async function AuthorizationPage() {
           </p>
         </section>
 
-        {read.live ? (
-          <>
-            <Ledger
-              title="Signed and waiting"
-              note="Mandates for the same merchant with their charge still unused. The agent falls through to these in order."
-              rows={read.queued}
-            />
-            <Ledger
-              title="Signed and already charged this cycle"
-              note="The ceiling on these is intact. The cycle charge is spent, so nothing can be taken from them until they renew."
-              rows={read.spent.filter((m) => m.id !== mandate?.id)}
-            />
-            <Ledger
-              title="Signed for another merchant"
-              note="These are outside the render credits merchant, so the agent never charges them for credits."
-              rows={read.elsewhere}
-            />
-          </>
+        {read.live && (read.queued.length || used.length || read.elsewhere.length) ? (
+          <section className="mt-10 border-t border-border pt-6">
+            <h2 className="text-[0.9375rem] font-semibold text-foreground">
+              Everything else you signed
+            </h2>
+            <ul className="mt-2 space-y-1.5 text-[0.9375rem] leading-relaxed text-muted">
+              {read.queued.length ? (
+                <li>
+                  {read.queued.length} {plural(read.queued.length, "mandate", "mandates")} for the
+                  same merchant with the cycle charge unused. The agent falls through to{" "}
+                  {plural(read.queued.length, "it", "them")} when this one is spent.
+                </li>
+              ) : null}
+              {used.length ? (
+                <li>
+                  {used.length} {plural(used.length, "mandate", "mandates")} already charged in this
+                  cycle. The ceilings are intact and nothing can be taken from them until they renew.
+                </li>
+              ) : null}
+              {read.elsewhere.length ? (
+                <li>
+                  {read.elsewhere.length}{" "}
+                  {plural(read.elsewhere.length, "mandate", "mandates")} signed for another merchant
+                  (
+                  {read.elsewhere
+                    .map((m) => `${m.merchant} ${dollars(m.ceiling) ?? "amount unknown"}`)
+                    .join(", ")}
+                  ), which this agent never charges for render credits.
+                </li>
+              ) : null}
+            </ul>
+          </section>
         ) : null}
 
         <p className="mt-10 border-t border-border pt-6 text-[0.8125rem] leading-relaxed text-muted">

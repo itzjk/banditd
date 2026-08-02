@@ -165,7 +165,9 @@ export default function MandateBar({
       ? "bg-rose-400"
       : cycleUsed
         ? "bg-amber-400"
-        : "bg-emerald-400";
+        : live
+          ? "bg-emerald-400"
+          : "bg-zinc-600";
 
   return (
     <>
@@ -174,13 +176,13 @@ export default function MandateBar({
           <div className="flex items-center gap-2 sm:gap-3">
             <span
               className={`relative flex h-2 w-2 shrink-0 rounded-full ${
-                !armed ? "bg-zinc-600" : dry ? "bg-amber-400" : "bg-emerald-400"
+                !armed ? "bg-zinc-600" : revoked ? "bg-rose-400" : cycleUsed ? "bg-amber-400" : "bg-emerald-400"
               }`}
             >
               {working ? (
                 <span
                   className={`absolute inset-0 animate-ping rounded-full ${
-                    !armed ? "bg-zinc-500" : dry ? "bg-amber-400" : "bg-emerald-400"
+                    !armed ? "bg-zinc-500" : cycleUsed ? "bg-amber-400" : "bg-emerald-400"
                   }`}
                 />
               ) : null}
