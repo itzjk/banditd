@@ -1,4 +1,5 @@
 import { listMandates, chargeMandate } from "./prava.ts";
+import { declineFamily } from "./declines.ts";
 import type { ChargeContext, ChargeResult, Mandate } from "./prava.ts";
 
 export const NO_MANDATE_AVAILABLE = "NO_MANDATE_AVAILABLE";
@@ -229,6 +230,12 @@ export interface RotationResult {
   rotated: RotationAttempt[];
 }
 
+const MAX_ATTEMPTS = 4;
+
+function worthRetrying(code: string): boolean {
+  return code === "CYCLE_ALREADY_CHARGED" || declineFamily(code) === "provider";
+}
+
 export async function chargeWithRotation(
   candidates: MandateCandidate[],
   amount: string,
@@ -236,13 +243,20 @@ export async function chargeWithRotation(
   context?: ChargeContext,
 ): Promise<RotationResult> {
   const rotated: RotationAttempt[] = [];
+  const queue = candidates.slice(0, MAX_ATTEMPTS);
+  let last: ChargeResult | null = null;
+  let lastId: string | null = null;
+  let lastReference: string | null = null;
 
-  for (const candidate of candidates) {
+  for (const candidate of queue) {
     const attemptReference =
-      candidates.length > 1 ? `${reference}_${candidate.id.slice(-6)}` : reference;
+      queue.length > 1 ? `${reference}_${candidate.id.slice(-6)}` : reference;
     const charge = await chargeMandate(candidate.id, amount, attemptReference, context);
+    last = charge;
+    lastId = candidate.id;
+    lastReference = attemptReference;
 
-    if (charge.ok || charge.code !== "CYCLE_ALREADY_CHARGED") {
+    if (charge.ok || !worthRetrying(charge.code)) {
       return { charge, mandateId: candidate.id, reference: attemptReference, rotated };
     }
 
@@ -252,6 +266,11 @@ export async function chargeWithRotation(
       message: charge.message,
       reference: attemptReference,
     });
+  }
+
+  if (last && last.ok === false && declineFamily(last.code) === "provider") {
+    rotated.pop();
+    return { charge: last, mandateId: lastId, reference: lastReference, rotated };
   }
 
   return { charge: null, mandateId: null, reference: null, rotated };
