@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { State } from "@/lib/store";
+import { searchCatalog, type CatalogProduct } from "@/lib/catalog";
 import Glossary from "@/components/Glossary";
 import ProofLab from "@/components/ProofLab";
 import {
@@ -34,6 +35,8 @@ import {
 } from "@/components/visuals";
 
 const STORAGE_KEY = "banditd_state";
+const MARKET_CONTEXT_MAX = 500;
+const MARKET_LINKS_MAX = 4;
 
 interface SavedRun {
   creatives: number;
@@ -394,16 +397,85 @@ export default function Home() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
+  const [marketContext, setMarketContext] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmWipe, setConfirmWipe] = useState(false);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [activeSuggestion, setActiveSuggestion] = useState(-1);
+  const [estimated, setEstimated] = useState(false);
+  const comboRef = useRef<HTMLDivElement | null>(null);
   const storedRun = useSyncExternalStore(subscribeSaved, readSaved, () => null);
   const saved = useMemo(() => savedRun(storedRun), [storedRun]);
+  const matches = useMemo(() => (suggestOpen ? searchCatalog(name) : []), [suggestOpen, name]);
+  const listOpen = suggestOpen && matches.length > 0;
+
+  useEffect(() => {
+    if (!listOpen) return;
+    function onPointerDown(event: PointerEvent) {
+      const node = comboRef.current;
+      if (node && event.target instanceof Node && !node.contains(event.target)) {
+        setSuggestOpen(false);
+        setActiveSuggestion(-1);
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [listOpen]);
+
+  useEffect(() => {
+    if (!listOpen || activeSuggestion < 0) return;
+    const option = document.getElementById(`product-suggestion-${activeSuggestion}`);
+    option?.scrollIntoView({ block: "nearest" });
+  }, [listOpen, activeSuggestion]);
+
+  function pickSuggestion(item: CatalogProduct) {
+    setName(item.name);
+    setPrice(item.price);
+    setDescription(item.description);
+    setEstimated(true);
+    setSuggestOpen(false);
+    setActiveSuggestion(-1);
+    setError(null);
+  }
+
+  function onNameKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Escape") {
+      if (!listOpen) return;
+      e.preventDefault();
+      setSuggestOpen(false);
+      setActiveSuggestion(-1);
+      return;
+    }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      if (!listOpen) return;
+      e.preventDefault();
+      const step = e.key === "ArrowDown" ? 1 : -1;
+      const count = matches.length;
+      setActiveSuggestion((current) => {
+        if (current < 0) return step === 1 ? 0 : count - 1;
+        return (current + step + count) % count;
+      });
+      return;
+    }
+    if (e.key === "Enter" && listOpen && activeSuggestion >= 0) {
+      e.preventDefault();
+      pickSuggestion(matches[activeSuggestion]);
+      return;
+    }
+    if (e.key === "Tab" && listOpen) {
+      setSuggestOpen(false);
+      setActiveSuggestion(-1);
+    }
+  }
 
   function fillExample() {
     setName(EXAMPLE.name);
     setPrice(EXAMPLE.price);
     setDescription(EXAMPLE.description);
+    setEstimated(false);
+    setSuggestOpen(false);
+    setActiveSuggestion(-1);
     setError(null);
   }
 
@@ -421,7 +493,7 @@ export default function Home() {
       const res = await fetch("/api/product", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, price, description }),
+        body: JSON.stringify({ name, price, description, marketContext }),
       });
       const data = (await res.json().catch(() => null)) as (State & { error?: string }) | null;
       if (!res.ok) {
@@ -526,7 +598,7 @@ export default function Home() {
                   </div>
 
                   <form onSubmit={onSubmit} className="mt-5 space-y-4">
-                    <div>
+                    <div ref={comboRef} className="relative">
                       <label htmlFor="name" className="mb-1.5 block text-sm font-medium">
                         Product name
                       </label>
@@ -535,28 +607,100 @@ export default function Home() {
                         name="name"
                         className="field"
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Cold-Pressed Coffee Concentrate"
+                        onChange={(e) => {
+                          setName(e.target.value);
+                          setSuggestOpen(true);
+                          setActiveSuggestion(-1);
+                          setEstimated(false);
+                        }}
+                        onKeyDown={onNameKeyDown}
+                        onFocus={() => setSuggestOpen(true)}
+                        placeholder="Start typing, try air"
                         autoComplete="off"
+                        role="combobox"
+                        aria-expanded={listOpen}
+                        aria-controls="product-suggestions"
+                        aria-autocomplete="list"
+                        aria-activedescendant={
+                          listOpen && activeSuggestion >= 0
+                            ? `product-suggestion-${activeSuggestion}`
+                            : undefined
+                        }
                         required
                       />
+                      <ul
+                        id="product-suggestions"
+                        role="listbox"
+                        aria-label="Product suggestions"
+                        hidden={!listOpen}
+                        className="absolute inset-x-0 top-full z-30 mt-1.5 max-h-[13.5rem] overflow-y-auto overscroll-contain rounded-lg border border-border-strong bg-surface py-1 shadow-panel sm:max-h-[21rem]"
+                      >
+                        {matches.map((item, index) => (
+                          <li
+                            key={item.name}
+                            id={`product-suggestion-${index}`}
+                            role="option"
+                            aria-selected={index === activeSuggestion}
+                            onPointerDown={(e) => e.preventDefault()}
+                            onClick={() => pickSuggestion(item)}
+                            onMouseMove={() => setActiveSuggestion(index)}
+                            className={`cursor-pointer px-3 py-2.5 ${
+                              index === activeSuggestion ? "bg-surface-2" : ""
+                            }`}
+                          >
+                            <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                              <span className="min-w-0 text-sm font-medium text-foreground">
+                                {item.name}
+                              </span>
+                              <span className="t-num shrink-0 text-[0.8125rem] text-muted">
+                                {item.price}
+                              </span>
+                            </span>
+                            <span className="mt-0.5 block truncate text-[0.8125rem] leading-snug text-muted">
+                              {item.description}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      <p aria-live="polite" className="sr-only">
+                        {listOpen
+                          ? `${matches.length} ${matches.length === 1 ? "suggestion" : "suggestions"} available`
+                          : ""}
+                      </p>
                     </div>
 
                     <div>
-                      <label htmlFor="price" className="mb-1.5 block text-sm font-medium">
-                        Price
-                      </label>
+                      <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <label htmlFor="price" className="block text-sm font-medium">
+                          Price
+                        </label>
+                        {estimated ? (
+                          <span className="rounded-full border border-border-strong bg-surface-2 px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted">
+                            Estimate
+                          </span>
+                        ) : null}
+                      </div>
                       <input
                         id="price"
                         name="price"
                         className="field"
                         value={price}
-                        onChange={(e) => setPrice(e.target.value)}
+                        onChange={(e) => {
+                          setPrice(e.target.value);
+                          setEstimated(false);
+                        }}
                         placeholder="$28.00"
                         inputMode="decimal"
                         autoComplete="off"
+                        aria-describedby={estimated ? "price-estimate-note" : undefined}
                         required
                       />
+                      {estimated ? (
+                        <Small id="price-estimate-note" className="mt-1.5 block">
+                          Estimated from a typical listing, not a live quote. Edit it to your real
+                          price.
+                        </Small>
+                      ) : null}
                     </div>
 
                     <div>
@@ -573,6 +717,39 @@ export default function Home() {
                         placeholder="A 32oz bottle of slow-steeped concentrate that makes 16 cups."
                         required
                       />
+                    </div>
+
+                    <div>
+                      <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <label htmlFor="marketContext" className="block text-sm font-medium">
+                          Anything the agent should know about your market
+                        </label>
+                        <span className="rounded-full border border-border-strong bg-surface-2 px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-muted">
+                          Optional
+                        </span>
+                      </div>
+                      <textarea
+                        id="marketContext"
+                        name="marketContext"
+                        className="field resize-none"
+                        rows={3}
+                        value={marketContext}
+                        maxLength={MARKET_CONTEXT_MAX}
+                        onChange={(e) => setMarketContext(e.target.value)}
+                        placeholder="I sell on Facebook Marketplace in Colombia and buyers message me before they buy. Look at https://example.com/rival-listing"
+                        aria-describedby="market-context-help"
+                      />
+                      <Small id="market-context-help" className="mt-1.5 block">
+                        Where you sell, who buys, who you compete against. Paste links and the
+                        research reads them, your own store, a rival listing, a study you trust. Up
+                        to {MARKET_LINKS_MAX} links, {MARKET_CONTEXT_MAX} characters. The agent
+                        treats it as context about your market, never as orders it follows.
+                      </Small>
+                      {marketContext.length >= MARKET_CONTEXT_MAX - 100 ? (
+                        <Small aria-live="polite" className="mt-1 block t-num">
+                          {marketContext.length} of {MARKET_CONTEXT_MAX} characters
+                        </Small>
+                      ) : null}
                     </div>
 
                     {error ? (

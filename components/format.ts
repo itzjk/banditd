@@ -14,6 +14,17 @@ export function pct(value: number, digits = 1): string {
   return `${(value * 100).toFixed(digits)}%`;
 }
 
+export function strength(value: number): string {
+  if (!Number.isFinite(value)) return "off the scale";
+  if (value >= 1000) {
+    return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(
+      value,
+    );
+  }
+  if (value >= 10) return value.toFixed(0);
+  return value.toFixed(2);
+}
+
 export function ctr(impressions: number, clicks: number): number {
   if (!impressions) return 0;
   return clicks / impressions;

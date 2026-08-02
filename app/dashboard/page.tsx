@@ -18,6 +18,7 @@ import type {
   CreditEntry,
   CreditKind,
   Credits,
+  Insights as InsightsData,
   Product,
   PurchaseEvent,
   Research,
@@ -36,18 +37,15 @@ import PerformanceChart from "@/components/PerformanceChart";
 import GatesPanel from "@/components/GatesPanel";
 import LineageTree from "@/components/LineageTree";
 import MarketPanel from "@/components/MarketPanel";
+import Insights from "@/components/Insights";
 import ProofLab from "@/components/ProofLab";
-import DemoRunner, { AGENT_STEPS } from "@/components/DemoRunner";
+import Reveal from "@/components/visuals/Reveal";
+import DemoRunner, { AGENT_STEPS, EVIDENCE_TARGET } from "@/components/DemoRunner";
 import type { Decision, Evaluation, LastPurchase, Task } from "@/components/DemoRunner";
-import { ctr, money, pct, plain } from "@/components/format";
+import { ctr, money, pct, plain, strength } from "@/components/format";
+import { declineFamily } from "@/lib/declines";
 
 const MANDATE_CAP = 50;
-const MANDATE_BLOCKS = new Set([
-  "NO_MANDATE_AVAILABLE",
-  "CYCLE_ALREADY_CHARGED",
-  "TRIES_EXHAUSTED",
-  "MANDATE_NOT_ACTIVE",
-]);
 const STORAGE_KEY = "banditd_state";
 const IMAGES_KEY = "banditd_images";
 const REV_KEY = "banditd_rev";
@@ -55,6 +53,7 @@ const ANGLES: CreativeAngle[] = ["price", "ritual", "gift", "quality"];
 const CREDIT_KINDS: CreditKind[] = ["purchase", "render", "grant"];
 const MAX_AUDIT = 200;
 const MAX_ROUNDS = 200;
+const MAX_MARKET_CONTEXT = 500;
 const STARTER_CREDITS = 4;
 
 const UNREADABLE =
@@ -88,7 +87,12 @@ function list(value: unknown): unknown[] {
 function safeProduct(value: unknown): Product | null {
   const p = record(value);
   if (!p || typeof p.name !== "string") return null;
-  return { name: p.name, price: text(p.price), description: text(p.description) };
+  return {
+    name: p.name,
+    price: text(p.price),
+    description: text(p.description),
+    marketContext: text(p.marketContext).slice(0, MAX_MARKET_CONTEXT),
+  };
 }
 
 function safeResearch(value: unknown): Research | null {
@@ -102,6 +106,34 @@ function safeResearch(value: unknown): Research | null {
       .map((s) => record(s))
       .filter((s): s is Record<string, unknown> => s !== null)
       .map((s) => ({ title: text(s.title), url: text(s.url) })),
+  };
+}
+
+function pairs(value: unknown): Record<string, unknown>[] {
+  return list(value)
+    .map((item) => record(item))
+    .filter((item): item is Record<string, unknown> => item !== null);
+}
+
+function safeInsights(value: unknown): InsightsData | null {
+  const i = record(value);
+  if (!i) return null;
+  return {
+    at: text(i.at),
+    generation: Math.max(0, Math.floor(count(i.generation))),
+    impressions: Math.max(0, Math.floor(count(i.impressions))),
+    winnerAngle: text(i.winnerAngle),
+    winnerHeadline: text(i.winnerHeadline),
+    buyerLesson: text(i.buyerLesson),
+    competitorPlays: pairs(i.competitorPlays)
+      .map((p) => ({ play: text(p.play), why: text(p.why) }))
+      .filter((p) => p.play.length > 0),
+    nextTests: pairs(i.nextTests)
+      .map((t) => ({ idea: text(t.idea), why: text(t.why) }))
+      .filter((t) => t.idea.length > 0),
+    estimates: pairs(i.estimates)
+      .map((e) => ({ label: text(e.label), call: text(e.call), basis: text(e.basis) }))
+      .filter((e) => e.label.length > 0),
   };
 }
 
@@ -251,6 +283,7 @@ function sanitize(value: unknown): State | null {
   return {
     product: safeProduct(raw.product),
     research: safeResearch(raw.research),
+    insights: safeInsights(raw.insights),
     creatives: list(raw.creatives)
       .map(safeCreative)
       .filter((c): c is Creative => c !== null),
@@ -280,6 +313,7 @@ function split(input: State): { clean: State; images: Images } {
   const clean: State = {
     product: input.product,
     research: input.research,
+    insights: input.insights,
     creatives,
     purchases: input.purchases,
     audit: input.audit,
@@ -568,6 +602,88 @@ function Band({
   );
 }
 
+interface Upcoming {
+  title: string;
+  text: string;
+}
+
+function Preview({ items }: { items: Upcoming[] }) {
+  return (
+    <Reveal
+      as="section"
+      className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-4 sm:p-5"
+    >
+      <div className="flex items-center gap-2">
+        <span aria-hidden="true" className="h-px w-5 shrink-0 bg-white/25" />
+        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
+          Waiting on numbers
+        </span>
+      </div>
+      <h2 className="mt-2 break-words text-base font-semibold tracking-tight text-white sm:text-lg">
+        What fills the rest of this page
+      </h2>
+      <p className="mt-1.5 max-w-2xl break-words text-[13px] leading-relaxed text-zinc-400">
+        Each panel below opens itself the moment the run produces the data behind it, so nothing on
+        screen is an empty box. A saved run loads with all of it already open.
+      </p>
+      <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+        {items.map((item) => (
+          <li
+            key={item.title}
+            className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5"
+          >
+            <span className="block break-words text-[13px] font-semibold text-white">
+              {item.title}
+            </span>
+            <span className="mt-0.5 block break-words text-[12px] leading-snug text-zinc-400">
+              {item.text}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 break-words text-[12px] leading-relaxed text-zinc-400">
+        The proof lab further down needs no run at all. It replays thousands of tests in your own
+        browser and scores the four gates against the obvious rule.
+      </p>
+    </Reveal>
+  );
+}
+
+function evidence(evaluation: Evaluation): string {
+  const value = evaluation.eValue;
+  if (typeof value !== "number") return "not measured";
+  if (!Number.isFinite(value)) return `past ${EVIDENCE_TARGET}`;
+  return `${strength(value)} of ${EVIDENCE_TARGET}`;
+}
+
+function outcome(
+  amount: string | number | null | undefined,
+  code: string | null | undefined,
+): { guardrail: boolean; text: string } {
+  const family = declineFamily(code);
+  const shown = code ?? "no reason code";
+  const at = `$${money(amount)}`;
+  if (family === "guardrail") {
+    return { guardrail: true, text: `Blocked at ${at}: ${shown}. Nothing was spent.` };
+  }
+  if (family === "provider") {
+    return {
+      guardrail: false,
+      text: `Not processed at ${at}: ${shown} is a payment provider fault, not the mandate. Nothing was spent and no mandate rule refused it.`,
+    };
+  }
+  if (family === "request") {
+    return {
+      guardrail: false,
+      text: `Not processed at ${at}: ${shown} rejected the request itself, not the mandate. Nothing was spent and no mandate rule refused it.`,
+    };
+  }
+  return {
+    guardrail: false,
+    text: `Not processed at ${at}: ${shown} came back without saying whether a mandate rule stopped it. Nothing was spent.`,
+  };
+}
+
 function Note({
   note,
   onJump,
@@ -582,7 +698,9 @@ function Note({
       className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-[13px] leading-snug ${
         note.ok
           ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-100"
-          : "border-rose-400/40 bg-rose-500/10 text-rose-100"
+          : note.warn
+            ? "border-amber-400/40 bg-amber-400/10 text-amber-100"
+            : "border-rose-400/40 bg-rose-500/10 text-rose-100"
       }`}
     >
       <span className="min-w-0 break-words">{note.text}</span>
@@ -654,6 +772,7 @@ type ManualSlot = "steps" | "traffic" | "charge";
 
 interface ManualNote {
   ok: boolean;
+  warn?: boolean;
   text: string;
   slot: ManualSlot;
   target?: "ledger" | "ads";
@@ -676,6 +795,7 @@ export default function Dashboard() {
   const [revoked, setRevoked] = useState(false);
   const [stale, setStale] = useState(false);
   const [manual, setManual] = useState<ManualNote | null>(null);
+  const [advising, setAdvising] = useState(false);
   const staleRef = useRef(false);
   const revRef = useRef(0);
   const ledgerRef = useRef<HTMLElement | null>(null);
@@ -880,14 +1000,79 @@ export default function Dashboard() {
     decision && !decision.shouldBuy && freshEvaluation?.sufficientEvidence,
   );
   const declinedOnMandate = Boolean(
-    latestPurchase && !latestPurchase.ok && MANDATE_BLOCKS.has(latestPurchase.errorCode ?? ""),
+    latestPurchase && !latestPurchase.ok && declineFamily(latestPurchase.errorCode) === "guardrail",
   );
   const mandateBlocked = heldOnMandate || declinedOnMandate;
+  const receiptRead = receipt && !receipt.ok ? outcome(receipt.amount, receipt.errorCode) : null;
   const hasProduct = Boolean(state?.product);
   const hasResearch = Boolean(state?.research);
   const hasCreatives = cohort.length > 0;
   const hasTraffic = cohortImpressions > 0;
-  const locked = busy !== null || autoRunning || stale;
+  const hasPurchases = purchases.length > 0;
+  const hasAudit = (state?.audit ?? []).length > 0;
+  const locked = busy !== null || autoRunning || stale || advising;
+
+  const upcoming = useMemo(() => {
+    const items: Upcoming[] = [];
+    if (!hasCreatives) {
+      items.push({
+        title: "The four ads it wrote",
+        text: "Four angles with generated images, each one an arm the bandit can bet traffic on.",
+      });
+    }
+    if (!hasTraffic) {
+      items.push({
+        title: "Campaign numbers",
+        text: "Impressions, click through rate, cost per click and the budget against the mandate cap.",
+      });
+    }
+    if (!hasTraffic) {
+      items.push({
+        title: "Belief curves and the four gates",
+        text: "How sure it is about every ad, and each condition the evidence had to clear before spending.",
+      });
+    }
+    if (!hasTraffic) {
+      items.push({
+        title: "What it recommends next",
+        text: "The read on the winning angle and the competitor plays nobody has tested yet.",
+      });
+    }
+    if (!hasCreatives) {
+      items.push({
+        title: "Lineage of the winners",
+        text: "Which ad bred which across generations, and what each step cost.",
+      });
+    }
+    if (!hasPurchases) {
+      items.push({
+        title: "The payment ledger",
+        text: "Every single use card the mandate approved or refused, newest first.",
+      });
+    }
+    if (!hasAudit) {
+      items.push({
+        title: "Audit log",
+        text: "Every call, every decision and every charge, in the order they happened.",
+      });
+    }
+    return items;
+  }, [hasCreatives, hasTraffic, hasPurchases, hasAudit]);
+
+  const focused = upcoming.length > 0;
+
+  const advise = async () => {
+    if (locked) return;
+    setAdvising(true);
+    setError(null);
+    try {
+      absorb(await api<State>("/api/insights", { state }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something broke on the way to the server");
+    } finally {
+      setAdvising(false);
+    }
+  };
 
   const runManual = async (task: Task, slot: ManualSlot, fn: () => Promise<ManualNote>) => {
     setBusy(task);
@@ -923,12 +1108,12 @@ export default function Dashboard() {
         target: "ledger",
       };
     }
+    const read = outcome(p.amount, p.errorCode);
     return {
       ok: false,
+      warn: !read.guardrail,
       slot: "charge",
-      text: `Refused at $${money(p.amount)} with ${p.errorCode ?? "a decline"}. Nothing was spent.${
-        p.message ? ` ${p.message}` : ""
-      }`,
+      text: `${read.text}${p.message ? ` ${p.message}` : ""}`,
       target: "ledger",
     };
   };
@@ -1155,17 +1340,18 @@ export default function Dashboard() {
           )}
         </section>
 
-        <DemoRunner
-          state={state}
-          absorb={absorb}
-          impressions={impressions}
-          disabled={busy !== null || stale}
-          running={autoRunning}
-          onRunningChange={setAutoRunning}
-          onDecision={carryDecision}
-          onReceipt={setReceipt}
-        />
-
+        <div className={focused ? "py-2 sm:py-4" : ""}>
+          <DemoRunner
+            state={state}
+            absorb={absorb}
+            impressions={impressions}
+            disabled={busy !== null || stale}
+            running={autoRunning}
+            onRunningChange={setAutoRunning}
+            onDecision={carryDecision}
+            onReceipt={setReceipt}
+          />
+        </div>
 
         {busy && busy !== "load" ? (
           <AgentStatus title={AGENT_STEPS[busy].title} steps={AGENT_STEPS[busy].steps} />
@@ -1176,13 +1362,15 @@ export default function Dashboard() {
             className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-1.5 text-[14px] ${
               receipt.ok
                 ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
-                : "border-rose-400/40 bg-rose-500/10 text-rose-200"
+                : receiptRead?.guardrail
+                  ? "border-rose-400/40 bg-rose-500/10 text-rose-200"
+                  : "border-amber-400/40 bg-amber-400/10 text-amber-200"
             }`}
           >
-            <span className="min-w-0 py-1.5">
+            <span className="min-w-0 break-words py-1.5">
               {receipt.ok
                 ? `Charged $${money(receipt.amount)} on a single use card ending ${receipt.cardLast4 ?? "????"}.`
-                : `Blocked at $${money(receipt.amount)}: ${receipt.errorCode ?? "declined"}. Nothing was spent.`}
+                : (receiptRead?.text ?? "")}
             </span>
             <button
               type="button"
@@ -1239,8 +1427,8 @@ export default function Dashboard() {
             <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/[0.08] sm:grid-cols-4">
               <Stat label="Probability best" value={pct(freshEvaluation.probabilityBest)} sim />
               <Stat
-                label="Evidence"
-                value={freshEvaluation.sufficientEvidence ? "Enough" : "Not yet"}
+                label="Evidence strength"
+                value={evidence(freshEvaluation)}
                 dim={!freshEvaluation.sufficientEvidence}
               />
               <Stat
@@ -1266,42 +1454,22 @@ export default function Dashboard() {
           </section>
         ) : null}
 
-        <CampaignMetrics
-          cohort={cohort}
-          creatives={creatives}
-          purchases={purchases}
-          cap={MANDATE_CAP}
-          credits={state?.credits.balance ?? 0}
-          evaluation={freshEvaluation}
-          winnerId={winnerId}
-          generation={generation}
-        />
-
         {hasCreatives ? (
-          <PerformanceChart
-            cohort={cohort}
-            winnerId={winnerId}
-            generation={generation}
-            rounds={state?.rounds ?? []}
-          />
-        ) : null}
+          <Reveal>
+            <section ref={adsRef} className="scroll-mt-20 space-y-4 pt-3">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <h2 className="text-base font-semibold tracking-tight text-white sm:text-lg">
+                    The four ads it wrote
+                  </h2>
+                  <Chip>Simulated traffic</Chip>
+                </div>
+                <span className="text-[12px] tabular-nums text-zinc-400">
+                  {cohort.length} live in generation {generation},{" "}
+                  {cohortImpressions.toLocaleString()} simulated impressions
+                </span>
+              </div>
 
-        <section ref={adsRef} className="scroll-mt-20 space-y-4 pt-3">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <h2 className="text-base font-semibold tracking-tight text-white sm:text-lg">
-                The four ads it wrote
-              </h2>
-              <Chip>Simulated traffic</Chip>
-            </div>
-            <span className="text-[12px] tabular-nums text-zinc-400">
-              {cohort.length} live in generation {generation}, {cohortImpressions.toLocaleString()}{" "}
-              simulated impressions
-            </span>
-          </div>
-
-          {hasCreatives ? (
-            <>
               <div className="-mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
                 {cohort.map((c, i) => (
                   <div key={c.id} className="w-[86%] shrink-0 snap-start sm:w-auto">
@@ -1323,119 +1491,196 @@ export default function Dashboard() {
               <p className="text-[12px] leading-snug text-zinc-400 sm:hidden">
                 Swipe sideways to put the {cohort.length} ads next to each other.
               </p>
-            </>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-white/12 bg-white/[0.02] p-6 text-center">
-              <p className="text-[14px] text-zinc-400">
-                No creatives yet. Run the research, then let the agent write four.
-              </p>
-            </div>
-          )}
 
-          {creatives.length > cohort.length ? (
-            <Fold
-              title="Retired variants"
-              hint={`The ${creatives.length - cohort.length} ads from earlier generations, kept so you can see what the winner beat.`}
-            >
-              <div className="-mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
-                {creatives
-                  .filter((c) => c.generation !== generation)
-                  .map((c) => (
-                    <div key={c.id} className="w-[86%] shrink-0 snap-start sm:w-auto">
-                      <CreativeCard
-                        creative={dressed(c)}
-                        rendering={rendering.has(c.id)}
-                        retired
-                        bestCtr={bestCtr}
-                        parentHeadline={c.parentId ? (byId.get(c.parentId)?.headline ?? null) : null}
-                      />
-                    </div>
-                  ))}
-              </div>
-            </Fold>
-          ) : null}
-        </section>
+              {creatives.length > cohort.length ? (
+                <Fold
+                  title="Retired variants"
+                  hint={`The ${creatives.length - cohort.length} ads from earlier generations, kept so you can see what the winner beat.`}
+                >
+                  <div className="-mx-4 flex snap-x snap-mandatory scroll-pl-4 gap-3 overflow-x-auto overscroll-x-contain px-4 pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-3 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 [&::-webkit-scrollbar]:hidden">
+                    {creatives
+                      .filter((c) => c.generation !== generation)
+                      .map((c) => (
+                        <div key={c.id} className="w-[86%] shrink-0 snap-start sm:w-auto">
+                          <CreativeCard
+                            creative={dressed(c)}
+                            rendering={rendering.has(c.id)}
+                            retired
+                            bestCtr={bestCtr}
+                            parentHeadline={
+                              c.parentId ? (byId.get(c.parentId)?.headline ?? null) : null
+                            }
+                          />
+                        </div>
+                      ))}
+                  </div>
+                </Fold>
+              ) : null}
+            </section>
+          </Reveal>
+        ) : null}
+
+        {hasTraffic ? (
+          <Reveal delay={60}>
+            <CampaignMetrics
+              cohort={cohort}
+              creatives={creatives}
+              purchases={purchases}
+              cap={MANDATE_CAP}
+              credits={state?.credits.balance ?? 0}
+              evaluation={freshEvaluation}
+              winnerId={winnerId}
+              generation={generation}
+            />
+          </Reveal>
+        ) : null}
+
+        {hasTraffic ? (
+          <Reveal delay={120}>
+            <PerformanceChart
+              cohort={cohort}
+              winnerId={winnerId}
+              generation={generation}
+              rounds={state?.rounds ?? []}
+            />
+          </Reveal>
+        ) : null}
+
+        {focused ? <Preview items={upcoming} /> : null}
 
         </div>
 
         <Band
           eyebrow="Evidence"
-          title="Why it decided that"
-          summary="Everything the agent read before it was allowed to spend: what it believes about each ad, the four gates it has to clear, the family tree of winners, the market it researched, and a lab that lets you measure the gates against the obvious rule yourself."
+          title={hasTraffic ? "Why it decided that" : "Check the rule before you trust the run"}
+          summary={
+            hasTraffic
+              ? "Everything the agent read before it was allowed to spend: what it recommends you do next off that evidence, what it believes about each ad, the four gates it has to clear, the family tree of winners, the market it researched, and a lab that lets you measure the gates against the obvious rule yourself."
+              : "The proof lab needs no agent and no run behind it. It replays thousands of tests in your own browser and scores the four gates against the rule most teams stop on. What the agent believed about each ad, and the gates it had to clear, land beside it once the run has numbers."
+          }
         >
-          <Fold
-            title="The belief curves"
-            hint="How sure the agent is about each ad's click rate. Wide is uncertainty, narrow is confidence."
-            defaultOpen={wide}
-          >
-            <PosteriorChart
-              creatives={cohort}
-              winnerIndex={winnerId ? cohort.findIndex((c) => c.id === winnerId) : null}
-            />
-          </Fold>
+          {hasTraffic ? (
+            <Reveal>
+              <Fold
+                title="What it recommends you do next"
+                hint="What the winning angle says about the buyers, the competitor plays nobody has tested, and what the numbers can and cannot estimate."
+                defaultOpen={wide || Boolean(state?.insights)}
+              >
+                <Insights
+                  insights={state?.insights ?? null}
+                  generation={generation}
+                  impressions={cohortImpressions}
+                  hasResearch={hasResearch}
+                  hasTraffic={hasTraffic}
+                  running={advising}
+                  disabled={locked}
+                  onRun={advise}
+                />
+              </Fold>
+            </Reveal>
+          ) : null}
 
-          <Fold
-            title="The four gates"
-            hint={
-              freshEvaluation
-                ? "Every condition the evidence had to clear before the agent was allowed to spend."
-                : "Nothing measured yet. Open it to read the four conditions the agent has to clear."
-            }
-            defaultOpen={wide || Boolean(freshEvaluation)}
-          >
-            <GatesPanel
-              evaluation={freshEvaluation}
-              candidateImpressions={candidateImpressions}
-              candidateLabel={cohort.find((c) => c.id === winnerId)?.headline}
-              mandateBlocked={mandateBlocked}
-            />
-          </Fold>
+          {hasTraffic ? (
+            <Reveal delay={60}>
+              <Fold
+                title="The belief curves"
+                hint="How sure the agent is about each ad's click rate. Wide is uncertainty, narrow is confidence."
+                defaultOpen={wide}
+              >
+                <PosteriorChart
+                  creatives={cohort}
+                  winnerIndex={winnerId ? cohort.findIndex((c) => c.id === winnerId) : null}
+                />
+              </Fold>
+            </Reveal>
+          ) : null}
 
-          <Fold
-            title="Lineage of the winners"
-            hint="Which ad bred which, and what the agent paid to get from one generation to the next."
-          >
-            <LineageTree
-              creatives={state?.creatives ?? []}
-              winnerId={winnerId}
-              purchases={purchases}
-            />
-          </Fold>
+          {hasTraffic ? (
+            <Reveal delay={120}>
+              <Fold
+                title="The four gates"
+                hint={
+                  freshEvaluation
+                    ? "Every condition the evidence had to clear before the agent was allowed to spend."
+                    : "Nothing measured yet. Open it to read the four conditions the agent has to clear."
+                }
+                defaultOpen={wide || Boolean(freshEvaluation)}
+              >
+                <GatesPanel
+                  evaluation={freshEvaluation}
+                  candidateImpressions={candidateImpressions}
+                  candidateLabel={cohort.find((c) => c.id === winnerId)?.headline}
+                  mandateBlocked={mandateBlocked}
+                />
+              </Fold>
+            </Reveal>
+          ) : null}
 
-          <Fold
-            title="Market research"
-            hint="Who buys this, what competitors say, where the price lands, and every source read."
-          >
-            <MarketPanel research={state?.research ?? null} productName={state?.product?.name} />
-          </Fold>
+          {hasCreatives ? (
+            <Reveal delay={180}>
+              <Fold
+                title="Lineage of the winners"
+                hint="Which ad bred which, and what the agent paid to get from one generation to the next."
+              >
+                <LineageTree
+                  creatives={state?.creatives ?? []}
+                  winnerId={winnerId}
+                  purchases={purchases}
+                />
+              </Fold>
+            </Reveal>
+          ) : null}
 
-          <ProofLab tone="panel" folded batchSize={200} />
+          {hasResearch ? (
+            <Reveal delay={240}>
+              <Fold
+                title="Market research"
+                hint="Who buys this, what competitors say, where the price lands, and every source read."
+              >
+                <MarketPanel research={state?.research ?? null} productName={state?.product?.name} />
+              </Fold>
+            </Reveal>
+          ) : null}
+
+          {hasTraffic ? (
+            <ProofLab tone="panel" folded batchSize={200} />
+          ) : (
+            <ProofLab tone="panel" batchSize={200} />
+          )}
         </Band>
 
         <Band
           eyebrow="Trail"
           title="What it left behind"
-          summary="The money it actually moved, the log of every move, and the manual controls for anyone who wants to drive it by hand."
+          summary={
+            hasPurchases
+              ? "The money it actually moved, the log of every move, and the manual controls for anyone who wants to drive it by hand."
+              : "The manual controls for anyone who wants to drive it by hand. The money it moved and the log of every move join them the first time the agent reaches for the card."
+          }
         >
-          <section ref={ledgerRef} className="scroll-mt-20 space-y-3">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <h3 className="text-[14px] font-semibold tracking-tight text-white">
-                  Money it moved
-                </h3>
-                <Chip>Sandbox payments</Chip>
-              </div>
-              <span className="max-w-md break-words text-[11px] leading-snug text-zinc-400">
-                Single use cards, newest first. The impressions and confidence on each charge come
-                from simulated traffic.
-              </span>
-            </div>
+          {hasPurchases ? (
+            <Reveal>
+              <section ref={ledgerRef} className="scroll-mt-20 space-y-3">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <h3 className="text-[14px] font-semibold tracking-tight text-white">
+                      Money it moved
+                    </h3>
+                    <Chip>Sandbox payments</Chip>
+                  </div>
+                  <span className="max-w-md break-words text-[11px] leading-snug text-zinc-400">
+                    Single use cards, newest first. The impressions and confidence on each charge
+                    come from simulated traffic.
+                  </span>
+                </div>
 
-            <PurchaseLedger
-              events={purchases}
-              headlineFor={(id) => byId.get(id)?.headline ?? null}
-            />
-          </section>
+                <PurchaseLedger
+                  events={purchases}
+                  headlineFor={(id) => byId.get(id)?.headline ?? null}
+                />
+              </section>
+            </Reveal>
+          ) : null}
 
           <Fold
             title="Run it step by step"
@@ -1570,14 +1815,18 @@ export default function Dashboard() {
             </div>
           </Fold>
 
-          <Fold
-            title="Audit log"
-            hint={`Every call, every decision and every charge, newest first. ${
-              (state?.audit ?? []).length
-            } ${(state?.audit ?? []).length === 1 ? "entry" : "entries"}.`}
-          >
-            <AuditLog entries={state?.audit ?? []} />
-          </Fold>
+          {hasAudit ? (
+            <Reveal delay={60}>
+              <Fold
+                title="Audit log"
+                hint={`Every call, every decision and every charge, newest first. ${
+                  (state?.audit ?? []).length
+                } ${(state?.audit ?? []).length === 1 ? "entry" : "entries"}.`}
+              >
+                <AuditLog entries={state?.audit ?? []} />
+              </Fold>
+            </Reveal>
+          ) : null}
         </Band>
 
         <p className="mx-auto mt-10 max-w-3xl break-words text-center text-[13px] leading-relaxed text-zinc-400 sm:mt-14">

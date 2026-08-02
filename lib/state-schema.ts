@@ -4,6 +4,40 @@ export interface Product {
   name: string;
   price: string;
   description: string;
+  marketContext?: string;
+}
+
+export const MAX_MARKET_CONTEXT = 500;
+export const MAX_MARKET_LINKS = 4;
+
+export function sanitizeMarketContext(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return value
+    .replace(/[\p{Cc}\p{Cf}]/gu, " ")
+    .replace(/[<>]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, MAX_MARKET_CONTEXT);
+}
+
+export function marketLinks(context: string): string[] {
+  const found: string[] = [];
+  for (const match of context.matchAll(/https?:\/\/[^\s"'`)\]]+/gi)) {
+    const raw = match[0].replace(/[.,;:!?)\]]+$/, "");
+    let parsed: URL;
+    try {
+      parsed = new URL(raw);
+    } catch {
+      continue;
+    }
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") continue;
+    if (!parsed.hostname.includes(".")) continue;
+    const href = parsed.toString();
+    if (found.includes(href)) continue;
+    found.push(href);
+    if (found.length >= MAX_MARKET_LINKS) break;
+  }
+  return found;
 }
 
 export interface Research {
@@ -11,6 +45,34 @@ export interface Research {
   competitorAngles: string[];
   pricePositioning: string;
   sources: { title: string; url: string }[];
+}
+
+export interface CompetitorPlay {
+  play: string;
+  why: string;
+}
+
+export interface NextTest {
+  idea: string;
+  why: string;
+}
+
+export interface ProductEstimate {
+  label: string;
+  call: string;
+  basis: string;
+}
+
+export interface Insights {
+  at: string;
+  generation: number;
+  impressions: number;
+  winnerAngle: string;
+  winnerHeadline: string;
+  buyerLesson: string;
+  competitorPlays: CompetitorPlay[];
+  nextTests: NextTest[];
+  estimates: ProductEstimate[];
 }
 
 export type CreativeAngle = "price" | "ritual" | "gift" | "quality";
@@ -79,6 +141,7 @@ export interface Round {
 export interface State {
   product: Product | null;
   research: Research | null;
+  insights: Insights | null;
   creatives: Creative[];
   purchases: PurchaseEvent[];
   audit: AuditEntry[];
@@ -117,6 +180,7 @@ export function emptyState(): State {
   return {
     product: null,
     research: null,
+    insights: null,
     creatives: [],
     purchases: [],
     audit: [],
@@ -150,7 +214,12 @@ function list(value: unknown): unknown[] {
 function coerceProduct(value: unknown): Product | null {
   const p = record(value);
   if (!p || typeof p.name !== "string") return null;
-  return { name: p.name, price: text(p.price), description: text(p.description) };
+  return {
+    name: p.name,
+    price: text(p.price),
+    description: text(p.description),
+    marketContext: sanitizeMarketContext(p.marketContext),
+  };
 }
 
 function coerceResearch(value: unknown): Research | null {
@@ -164,6 +233,34 @@ function coerceResearch(value: unknown): Research | null {
       .map((s) => record(s))
       .filter((s): s is Record<string, unknown> => s !== null)
       .map((s) => ({ title: text(s.title), url: text(s.url) })),
+  };
+}
+
+function pairs(value: unknown): Record<string, unknown>[] {
+  return list(value)
+    .map((item) => record(item))
+    .filter((item): item is Record<string, unknown> => item !== null);
+}
+
+function coerceInsights(value: unknown): Insights | null {
+  const i = record(value);
+  if (!i) return null;
+  return {
+    at: text(i.at),
+    generation: Math.max(0, Math.floor(count(i.generation))),
+    impressions: Math.max(0, Math.floor(count(i.impressions))),
+    winnerAngle: text(i.winnerAngle),
+    winnerHeadline: text(i.winnerHeadline),
+    buyerLesson: text(i.buyerLesson),
+    competitorPlays: pairs(i.competitorPlays)
+      .map((p) => ({ play: text(p.play), why: text(p.why) }))
+      .filter((p) => p.play.length > 0),
+    nextTests: pairs(i.nextTests)
+      .map((t) => ({ idea: text(t.idea), why: text(t.why) }))
+      .filter((t) => t.idea.length > 0),
+    estimates: pairs(i.estimates)
+      .map((e) => ({ label: text(e.label), call: text(e.call), basis: text(e.basis) }))
+      .filter((e) => e.label.length > 0),
   };
 }
 
@@ -269,6 +366,7 @@ export function coerceState(value: unknown): State | null {
   return {
     product: coerceProduct(raw.product),
     research: coerceResearch(raw.research),
+    insights: coerceInsights(raw.insights),
     creatives: list(raw.creatives)
       .map(coerceCreative)
       .filter((c): c is Creative => c !== null),

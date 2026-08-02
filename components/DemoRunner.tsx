@@ -5,7 +5,7 @@ import type { Creative, State } from "@/lib/store";
 import { evaluate } from "@/lib/bandit";
 import { declineFamily, type DeclineFamily } from "@/lib/declines";
 import AgentStatus from "@/components/AgentStatus";
-import { ctr, money, pct, plain } from "@/components/format";
+import { ctr, money, pct, plain, strength } from "@/components/format";
 
 export type Task =
   | "load"
@@ -160,7 +160,7 @@ const MAX_DECISIONS = 2;
 const ROUND_GROWTH = 1.8;
 const ROUND_CEILING = 400000;
 const ROUND_SAMPLES = 20000;
-const EVIDENCE_TARGET = 20;
+export const EVIDENCE_TARGET = 20;
 const ROUND_PAUSE = 180;
 
 const CYCLE_BLOCKS = new Set(["NO_MANDATE_AVAILABLE", "CYCLE_ALREADY_CHARGED"]);
@@ -231,17 +231,6 @@ function leaderOf(cohort: Creative[]): Creative | null {
 
 function roundSize(base: number, round: number): number {
   return Math.min(ROUND_CEILING, Math.round(base * Math.pow(ROUND_GROWTH, round - 1)));
-}
-
-function strength(value: number): string {
-  if (!Number.isFinite(value)) return "off the scale";
-  if (value >= 1000) {
-    return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(
-      value,
-    );
-  }
-  if (value >= 10) return value.toFixed(0);
-  return value.toFixed(2);
 }
 
 function times(value: number): string {
