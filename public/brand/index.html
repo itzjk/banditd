@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>banditd, submission assets</title>
+<style>
+  :root{
+    --ink:#f4f7f9; --dim:#94a7b5; --faint:#5f7382;
+    --bg:#04060a; --card:#0a0e14; --line:rgba(244,247,249,0.11); --cy:#7ad3f0;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px;margin:0 auto;padding:56px 22px 88px;display:flex;flex-direction:column;gap:52px}
+  .eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+    letter-spacing:.22em;text-transform:uppercase;color:var(--faint);margin:0}
+  h1{margin:14px 0 0;font-size:clamp(30px,5vw,46px);line-height:1.05;
+    letter-spacing:-.035em;font-weight:650;text-wrap:balance}
+  h1 .cy{color:var(--cy)}
+  .sub{margin:16px 0 0;font-size:17px;line-height:1.6;color:var(--dim);max-width:62ch}
+  section{display:flex;flex-direction:column;gap:14px}
+  .hd{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  h2{margin:0;font-size:19px;font-weight:600;letter-spacing:-.01em}
+  .where{margin-left:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-size:12px;color:var(--cy);border:1px solid var(--line);border-radius:999px;padding:5px 13px}
+  .note{margin:0;font-size:14.5px;line-height:1.6;color:var(--dim);max-width:70ch}
+  figure{margin:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--card)}
+  figure img{display:block;width:100%;height:auto}
+  .duo{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}
+  .duo figure img{aspect-ratio:1/1;object-fit:contain;padding:22px}
+  .dl{display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
+  .dl a{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;
+    color:var(--cy);text-decoration:none;border:1px solid var(--line);
+    border-radius:999px;padding:7px 15px}
+  .dl a:hover{border-color:var(--cy)}
+  a:focus-visible{outline:2px solid var(--cy);outline-offset:3px}
+  footer{border-top:1px solid var(--line);padding-top:22px;font-size:14px;
+    color:var(--faint);line-height:1.7}
+  footer a{color:var(--cy)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">banditd &nbsp;·&nbsp; assets for the Devfolio submission</p>
+    <h1>Cover, mark and hero.<br><span class="cy">Ready to upload.</span></h1>
+    <p class="sub">Everything here was made by the same models the product runs on. The background and the floating bottle are renders from gpt-image-1, and the mark is the app's own bar chart rendered in three dimensions. Nothing is stock.</p>
+  </header>
+
+  <section>
+    <div class="hd">
+      <h2>The cover</h2>
+      <span class="where">Devfolio &rarr; Project media &nbsp;·&nbsp; 1920 &times; 1080</span>
+    </div>
+    <p class="note">Left side carries the pitch, right side the product. Along the bottom, the three things a judge can check for themselves: the error rate against known truth, the refusal in Visa's own words, and the order id of a real sandbox charge.</p>
+    <figure><img src="cover-small.jpg" alt="banditd cover"></figure>
+    <div class="dl"><a href="cover.png" download>Download the full size PNG</a></div>
+  </section>
+
+  <section>
+    <div class="hd"><h2>The pieces</h2></div>
+    <div class="duo">
+      <figure><img src="hero-small.jpg" alt="Floating bottle render"></figure>
+      <figure><img src="mark-small.jpg" alt="banditd mark in three dimensions"></figure>
+    </div>
+    <p class="note">The bottle pours into a glass that floats with it, droplets held in the air. The mark keeps the app's four bars with the winning one in gold, and that is the file for the small square next to the project name.</p>
+    <div class="dl">
+      <a href="hero.png" download>Hero render, PNG</a>
+      <a href="mark.png" download>Mark, PNG</a>
+    </div>
+  </section>
+
+  <footer>
+    Live at <a href="https://banditd.vercel.app">banditd.vercel.app</a> &nbsp;·&nbsp; code at <a href="https://github.com/itzjk/banditd">github.com/itzjk/banditd</a><br>
+    Payments run against the Prava sandbox. No real money moves.
+  </footer>
+</div>
+</body>
+</html>
