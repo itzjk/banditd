@@ -46,3 +46,7 @@ next-env.d.ts
 
 # clon accidental dentro del repo
 /banditd
+
+.claude/
+AGENTS.md
+CLAUDE.md
