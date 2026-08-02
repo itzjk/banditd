@@ -355,7 +355,11 @@ The merchant on the other side of the render credits charge is us. Banditd Rende
 
 That first party limit is the reason we ran the loop once against a merchant that is not us, and wrote down what came back.
 
-A human signed a mandate with a passkey for 60.00 USD, scoped to Allbirds and to nothing else. The agent charged 25.00 against it with no approval step, Prava issued a single use card for that one purchase, and that card was carried to allbirds.com, a store we do not run and have no relationship with, for an Anytime Ankle Sock at 16.00. Allbirds refused it: "Your payment details couldn't be verified." The agent then reported the real outcome back to Prava as DECLINED, and because the merchant never took the money the mandate came back whole.
+Say what this was before saying what it showed. It was run once, by hand, from a terminal, and a person typed the card into the checkout. No deployed code path did any of it, and calling it something the agent did would be a lie in the one place this project cannot afford one.
+
+A human signed a mandate with a passkey for 60.00 USD, scoped to Allbirds and to nothing else, then charged 25.00 against it with `npm run prava charge`. Prava issued a single use card for that one purchase, and a person carried that card to allbirds.com, a store we do not run and have no relationship with, for an Anytime Ankle Sock at 16.00. Allbirds refused it: "Your payment details couldn't be verified." The real outcome went back to Prava as DECLINED through `npm run prava report`, and because the merchant never took the money the mandate came back whole.
+
+What that buys is narrow and worth stating narrowly: the mandate, the merchant scope, the single use card and the refusal behave the way this file claims when they meet a store that is not ours. What it does not buy is a claim about autonomy on that path. The agent cannot reach a third party checkout on its own, and until it can, this is a lab note, not a feature.
 
 ```
 mandate      mdt_01KZ0KP8EEDFRP425E74Y6HSJ0

@@ -405,20 +405,6 @@ export async function POST(req: Request) {
   const cardLast4 = token.length >= 4 ? token.slice(-4) : null;
   const transactionId = result.transactionId || null;
 
-  let reported = false;
-  let reportError: string | null = null;
-
-  if (transactionId) {
-    try {
-      await reportCharge(usedMandateId, transactionId, true, amount);
-      reported = true;
-    } catch (e) {
-      reportError = e instanceof Error ? e.message : String(e);
-    }
-  } else {
-    reportError = "the charge came back without a transaction id, so there was nothing to report";
-  }
-
   const event: PurchaseEvent = {
     id: `pu_${Date.now()}`,
     at: new Date().toISOString(),
@@ -444,6 +430,7 @@ export async function POST(req: Request) {
   );
 
   const creditedRenders = Math.max(0, Math.floor(Number(amount)));
+  const balanceBefore = state.credits.balance;
   if (creditedRenders > 0) {
     logCredit(state, "purchase", creditedRenders, transactionId ?? reference);
     logAudit(
@@ -453,11 +440,35 @@ export async function POST(req: Request) {
     );
   }
 
-  if (reported) {
+  const delivered = creditedRenders > 0 && state.credits.balance - balanceBefore === creditedRenders;
+
+  let reported = false;
+  let reportError: string | null = null;
+
+  if (transactionId) {
+    try {
+      await reportCharge(usedMandateId, transactionId, delivered, amount);
+      reported = true;
+    } catch (e) {
+      reportError = e instanceof Error ? e.message : String(e);
+    }
+  } else {
+    reportError = "the charge came back without a transaction id, so there was nothing to report";
+  }
+
+  if (reported && delivered) {
     logAudit(
       state,
       "purchase",
-      `Reported transaction ${transactionId} on mandate ${usedMandateId} to Prava as APPROVED for ${amount}. ${SELF_DECLARED_OUTCOME}`,
+      `Reported transaction ${transactionId} on mandate ${usedMandateId} to Prava as APPROVED for ${amount}, after the ${creditedRenders} render credits landed in the ledger. ${SELF_DECLARED_OUTCOME}`,
+    );
+  }
+
+  if (reported && !delivered) {
+    logAudit(
+      state,
+      "purchase",
+      `The charge went through but the render credits never landed in the ledger, so transaction ${transactionId} was reported to Prava as DECLINED for ${amount}. Nothing was delivered and the outcome sent to the network says so.`,
     );
   }
 
