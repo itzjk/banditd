@@ -476,14 +476,14 @@ export function isAngle(value: unknown): value is CreativeAngle {
 const AD_LEAD = "Advertising photograph for a paid social ad, not a catalogue product shot.";
 
 const SUBJECT_RULE =
-  "One single unit of the product is the subject, and the picture has to survive being looked at the size of a stamp: a stranger who has never seen this thing must be able to name it from the photograph alone. Show it whole enough for its silhouette to read, in its real proportions and its real colour, sharp, never smaller than a third of the frame, and never repeated or duplicated. If it is worn or carried, it is still the thing the eye lands on first, larger and sharper than the person wearing it. Keep it in the middle band of the frame, because the top and the bottom get cropped away.";
+  "One single unit of the product is the subject, and the picture has to survive being looked at the size of a stamp: a stranger who has never seen this thing must be able to name it from the photograph alone. Show it whole enough for its silhouette to read, in its real proportions and its real colour, sharp, never smaller than a third of the frame, and never repeated or duplicated. If what it holds inside is the point of it, what it holds is visible. If it is worn or carried, it is still the thing the eye lands on first, larger and sharper than the person wearing it. Keep it in the middle band of the frame, because the top and the bottom get cropped away.";
 
 const AD_RULES =
   "Shot on a real camera with believable props and a real environment, deliberate off-centre composition, natural depth cues. Nothing readable and nothing printed anywhere in the frame: no text, no lettering, no numbers, no signage, no labels, no packaging copy, no logos, no brand marks, no watermarks, no price tags, no tickets, no receipts, no forms, no loose printed paper, no banknotes, no coins, no clock faces, no lit screens. No collage, no split frames, no borders, no grid of repeated identical objects, no empty white seamless catalogue backdrop.";
 
 const ART_DIRECTION: Record<CreativeAngle, string> = {
   price:
-    "Make the value countable with real things, never with a mood and never with money. The product sits in the foreground, large and sharp, beside the actual thing its price buys or the everyday thing it replaces, counted out in a number the eye takes in at one glance, three to twelve real objects at their real size on one clean surface, each of them a thing that carries no printing of its own. Never coins, notes, tickets, receipts or abstract tokens, dots and counters, and never copies of the product itself. Dead-on or straight down on a plain matte surface in one calm colour chosen to set off the product's own colour, bright even daylight, soft shadows, everything in focus, and the product still the biggest thing in the frame.",
+    "Make the value countable with real things, never with a mood and never with money. The product sits in the foreground, large and sharp, beside the actual thing its price buys or the everyday thing it replaces, counted out in a number the eye takes in at one glance, three to twelve real objects at their real size on one clean surface. Those objects have to be ones a stranger would tie to this product on sight, so the picture argues on its own, and each has to be a thing that carries no printing. Never coins, notes, tickets or receipts, never abstract tokens, dots and counters, never neutral filler like plain cups or blank boxes standing in for the real thing, and never copies of the product itself. Dead-on or straight down on a plain matte surface, one calm colour picked to set the product's own colour off, changing with the product rather than falling back to pale blue or grey every time. Bright even daylight, soft shadows, everything in focus, and the product still the biggest thing in the frame.",
   ritual:
     "Catch the product mid-use in an ordinary moment, never idle. Human hands in frame doing the actual gesture, a real lived-in room around them, and the daylight that truly belongs to that moment, early sun, flat midday, grey afternoon or one lamp at night, whichever the moment is. Handheld 35mm reportage feel, shallow focus holding the hands and the product, the room falling soft behind.",
   gift:
@@ -512,7 +512,7 @@ const VariantSchema = z.object({
   targetEmotion: z.string(),
 });
 
-const VariantsSchema = z.object({ variants: z.array(VariantSchema) });
+const VariantsSchema = z.object({ productLook: z.string(), variants: z.array(VariantSchema) });
 
 export interface VariantSpec {
   angle: CreativeAngle;
@@ -563,29 +563,33 @@ Copy: headline 56 characters maximum, body 140 characters maximum. Aim at 40 to 
 
 A headline is one concrete, specific claim about this exact product, in words a buyer would say out loud. If it still works with a rival product's name swapped in, it is too generic, start over. The best headlines land a small twist, a fact the reader did not expect stated plainly. The body adds one new concrete fact or consequence, it never restates the headline. Vary sentence shape across the four variants, no two headlines may open with the same word or construction. Read every line as spoken language, if it would sound stiff or tangled said aloud, rewrite it plainer.
 
-Only the seller knows this product, and everything you assert about it has to come from the name, price, description, variant or brand above. If the seller did not give you a material, a size, a capacity, a battery life, a certification, a warranty or what it is safe to wash in, then you do not know it and you may not write it. When you have no physical fact to point at, write about what the buyer does with the thing instead. An ad that invents a fact about the product is worse than a dull one.
+Everything you assert about the product comes from the name, price, description, variant and brand above, and from nothing else. A material, size, capacity, battery life, certification or washing instruction the seller did not give you is a thing you do not know and may not write, and that holds hardest when you recognise the product and could list its real features from memory. With no physical fact to point at, write about what the buyer does with the thing. An invented fact is worse than a dull line.
 
-The seller's price is the only price you have. Divide it if that helps, per cup, per night, per year, and say out loud what you divided by, using a count the seller actually gave you or a plain span of time. Never state a figure nobody gave you: no rival's price, no usual price, no discount, no percentage, no benchmark, no invented lifespan. You may say a cost sits under an everyday spend in words, without pinning a number on that spend.
+The seller's price is the only price you have. Divide it by a count they wrote down, sixteen cups, thirty two ounces, or by a plain stretch of time you name out loud, a year of nights, a winter of mornings. A spec you happen to know, a battery life or a rated lifespan, is not a number you were given and dividing by it invents a fact. Never state a figure nobody gave you: no rival's price, no usual price, no discount, no percentage. A cost may sit under an everyday spend without pinning a number on that spend.
 
-The body is spoken to a reader. It is never a description of the photograph, so no framing, no focus, no macro, no shadow, no what is visible behind what, no camera words at all. The picture is briefed only in imagePrompt.
+The body is spoken to a reader, never a description of the photograph: no framing, no focus, no macro, no shadow, no camera words. The picture is briefed only in imagePrompt.
 
 How each angle earns its claim:
-- price: make the number do work, never just repeat it. If the seller gave you a count or a quantity the buyer really uses up, divide the price by it and put the result in the copy, per cup, per serving, per night. If there is nothing real to divide by, set the one payment against the repeated spending it puts an end to, in words, still without naming a figure nobody gave you. A headline that only states the price is not a price angle.
-- ritual: drop the reader into one exact moment of use, second person, present tense, the gesture and its small payoff. Anchor the moment by trigger, place or time, whichever fits this product, and never open with a clock time unless nothing else is sharper.
-- gift: speak to the giver, not the recipient. Name who it is for, the occasion, and why that person is the right one to hand this to. The occasion has to be one this exact product and this exact buyer make obvious, never a birthday or a Christmas reached for because nothing else came to mind.
-- quality: name one physical, checkable detail that proves the build, a material, a measurement, a construction choice, and let that detail carry the whole claim. Never lean on adjectives like premium, durable or well-made.
+- price: carry the division through to a second figure the buyer can hold, what one cup costs, what one night costs, what one winter costs, and put that figure in the headline. Naming the price is not a price angle, and neither is paying once, one payment or a single purchase.
+- ritual: drop the reader into one exact moment of use, second person, present tense, the gesture and its small payoff. Anchor it by trigger, place or time, whichever fits, and never open with a clock time unless nothing else is sharper.
+- gift: speak to the giver, not the recipient. Name who it is for, the occasion, and why that person is the right one to hand this to. The occasion has to be one this product and this buyer make obvious, never a birthday or a Christmas reached for because nothing else came to mind.
+- quality: name one physical, checkable detail that proves the build, a material, a measurement, a construction choice, and let it carry the claim. State the detail, never talk about the detail: writing that a material is clearly stated, or that a choice gives a distinct build, describes the ad instead of writing it. No premium, durable or well-made.
 
-The four have to argue four different things. If two bodies could be swapped between angles and nobody would notice, both are wrong. No two of the four may lean on the same distinctive verb or turn of phrase either, so once you have used a word to carry a claim, the other three have to find their own.
+The four argue four different things. If two bodies could swap angles unnoticed, both are wrong, and no two may lean on the same distinctive verb or turn of phrase.
 
-Never write the name of a brand that competes with this product. The only brand you may name is the seller's own, and only if the seller gave it to you above.
+Never name a brand that competes with this product. The only brand you may name is the seller's own, and only if it is given above.
 
-Banned anywhere in headline or body: elevate, experience the, unlock, discover, indulge, premium, luxurious, effortless, seamless, game-changer, crafted, elevate your, upgrade your, says you noticed, meet your new, perfect for, the secret to, next level, level up, must-have, revolutionary, transform, no more, designed to, benchmark, say goodbye to.
+Banned anywhere in headline or body: the product, this product, elevate, experience the, unlock, discover, indulge, premium, luxurious, effortless, seamless, game-changer, crafted, upgrade your, says you noticed, meet your new, perfect for, the secret to, next level, level up, must-have, revolutionary, transform, no more, designed to, benchmark, say goodbye to.
 
-Images: the angle has to be legible in the picture alone, with the copy covered up. Never describe the product sitting on a neutral seamless background. Write the imagePrompt as one 30 to 45 word scene that obeys the art direction for its angle:
+Images: the angle has to be legible in the picture alone, with the copy covered up, and the product is never sitting on a neutral seamless background.
+
+Write productLook once for all four pictures. Fifteen to twenty five words pinning down what this object physically is, its colour, material, size, shape and the one feature a stranger recognises it by, built only from what the seller told you and never from a brand or model name. If its contents are the point of it, the contents go in the phrase. It has to name exactly one colour in plain words, and where the seller gave none you pick one ordinary honest colour this product really comes in and commit to it, because leaving the colour open yields four photographs of four different objects. Never call a colour unspecified.
+
+Then write each imagePrompt as one 25 to 40 word scene obeying the art direction for its angle:
 
 ${ANGLE_BRIEF}
 
-Describe the product by shape, material, colour and size only, never by brand or model name, and never put readable text, printed paper, labels or logos in the scene. Name its colour out loud in every one of the four scenes, in the same words, so the four photographs are plainly of one single thing and not four cousins of it.${
+productLook is pasted in front of every scene and is the only place the object is described. So a scene carries the setting, the action, the light and the framing, refers back to the object in two or three bare words, and never describes, renames, recolours or re-materials it. That shorthand belongs to the scenes alone and never reaches a headline or a body, where the thing is called what a buyer would call it. Never put readable text, printed paper, labels or logos in a scene.${
               seller.note ? `\n\n${UNTRUSTED_NOTE_RULE}` : ""
             }`,
           },
@@ -621,9 +625,13 @@ For each variant also write the imagePrompt: the scene for that angle, following
       10,
     );
   }
+  const look = parsed.productLook.trim();
   return parsed.variants.slice(0, 4).map((v) => ({
     ...v,
-    imagePrompt: composeImagePrompt(v.angle, v.imagePrompt),
+    imagePrompt: composeImagePrompt(
+      v.angle,
+      look ? `The product, identical in every shot: ${look} ${v.imagePrompt.trim()}` : v.imagePrompt,
+    ),
   }));
 }
 
