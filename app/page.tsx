@@ -755,7 +755,7 @@ export default function Home() {
           <StageMotion />
           <div aria-hidden className="bd-stage-halo" />
           <img aria-hidden alt="" src="/brand/hero-web.png" className="bd-stage-hero" />
-          <div className="relative mx-auto w-full max-w-5xl px-gutter pb-14 pt-6 sm:pb-20 sm:pt-8">
+          <div className="relative mx-auto w-full max-w-6xl px-gutter pb-14 pt-6 sm:pb-20 sm:pt-8">
             <div className="enter max-w-4xl">
               <Eyebrow className="text-muted">The expensive call is when to stop</Eyebrow>
               <span className="mt-2 flex items-center gap-1.5 text-[0.8125rem] text-muted lg:hidden">

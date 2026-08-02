@@ -349,39 +349,18 @@
     font-feature-settings: "zero" 1;
   }
 
-  .surface-base {
-    position: relative;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 0.75rem;
-    box-shadow: var(--shadow-base);
-  }
-
-  .surface-raised {
-    position: relative;
-    background: var(--surface-raised);
-    border: 1px solid var(--border);
-    border-radius: 0.9375rem;
-    box-shadow: var(--shadow-raised);
-  }
-
-  .surface-feature {
-    position: relative;
-    background: linear-gradient(180deg, var(--surface-feature-a), var(--surface-feature-b));
-    border: 1px solid var(--border-strong);
-    border-radius: 1.25rem;
-    box-shadow: var(--shadow-feature);
-  }
-
+  .surface-base,
+  .surface-raised,
+  .surface-feature,
   .surface-quiet {
     position: relative;
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: 0.75rem;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
   }
 
-  .surface-raised::before,
-  .surface-feature::before {
+  .surface-never-used::before {
     content: "";
     position: absolute;
     inset: 0;
