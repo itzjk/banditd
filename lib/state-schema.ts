@@ -5,10 +5,69 @@ export interface Product {
   price: string;
   description: string;
   marketContext?: string;
+  variant?: string;
+  brand?: string;
+}
+
+export interface PriceRange {
+  low: string;
+  high: string;
+  recommended: string;
+  why: string;
+}
+
+export interface ProductOptions {
+  variants: string[];
+  brands: string[];
+  priceRange: PriceRange | null;
 }
 
 export const MAX_MARKET_CONTEXT = 500;
 export const MAX_MARKET_LINKS = 4;
+export const MAX_REFINEMENT = 60;
+export const MAX_OPTIONS = 6;
+export const MAX_PRICE_LABEL = 16;
+export const MAX_PRICE_REASON = 180;
+
+function scrub(value: unknown, max: number): string {
+  if (typeof value !== "string") return "";
+  return value
+    .replace(/[\p{Cc}\p{Cf}]/gu, " ")
+    .replace(/[<>]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
+}
+
+export function sanitizeRefinement(value: unknown): string {
+  return scrub(value, MAX_REFINEMENT);
+}
+
+export function sanitizePriceRange(value: unknown): PriceRange | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const low = scrub(raw.low, MAX_PRICE_LABEL);
+  const high = scrub(raw.high, MAX_PRICE_LABEL);
+  const recommended = scrub(raw.recommended, MAX_PRICE_LABEL);
+  if (!low || !high || !recommended) return null;
+  return { low, high, recommended, why: scrub(raw.why, MAX_PRICE_REASON) };
+}
+
+export function sanitizeOptionList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  const kept: string[] = [];
+  for (const item of value) {
+    const clean = sanitizeRefinement(item);
+    if (!clean) continue;
+    const key = clean.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    kept.push(clean);
+    if (kept.length >= MAX_OPTIONS) break;
+  }
+  return kept;
+}
 
 export function sanitizeMarketContext(value: unknown): string {
   if (typeof value !== "string") return "";
@@ -140,6 +199,7 @@ export interface Round {
 
 export interface State {
   product: Product | null;
+  productOptions: ProductOptions | null;
   research: Research | null;
   insights: Insights | null;
   creatives: Creative[];
@@ -179,6 +239,7 @@ export function starterCredits(): Credits {
 export function emptyState(): State {
   return {
     product: null,
+    productOptions: null,
     research: null,
     insights: null,
     creatives: [],
@@ -219,6 +280,18 @@ function coerceProduct(value: unknown): Product | null {
     price: text(p.price),
     description: text(p.description),
     marketContext: sanitizeMarketContext(p.marketContext),
+    variant: sanitizeRefinement(p.variant),
+    brand: sanitizeRefinement(p.brand),
+  };
+}
+
+function coerceProductOptions(value: unknown): ProductOptions | null {
+  const o = record(value);
+  if (!o) return null;
+  return {
+    variants: sanitizeOptionList(o.variants),
+    brands: sanitizeOptionList(o.brands),
+    priceRange: sanitizePriceRange(o.priceRange),
   };
 }
 
@@ -365,6 +438,7 @@ export function coerceState(value: unknown): State | null {
 
   return {
     product: coerceProduct(raw.product),
+    productOptions: coerceProductOptions(raw.productOptions),
     research: coerceResearch(raw.research),
     insights: coerceInsights(raw.insights),
     creatives: list(raw.creatives)
