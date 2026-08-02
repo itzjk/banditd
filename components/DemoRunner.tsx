@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Creative, State } from "@/lib/store";
 import { evaluate } from "@/lib/bandit";
 import { declineFamily, type DeclineFamily } from "@/lib/declines";
@@ -209,6 +209,7 @@ interface Props {
   onRunningChange: (running: boolean) => void;
   onDecision: (decision: Decision | null, evaluation: Evaluation | null) => void;
   onReceipt: (receipt: LastPurchase | null) => void;
+  footer?: ReactNode;
 }
 
 function cohortOf(input: State): Creative[] {
@@ -492,6 +493,7 @@ export default function DemoRunner({
   onRunningChange,
   onDecision,
   onReceipt,
+  footer,
 }: Props) {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [rounds, setRounds] = useState<Round[]>([]);
@@ -1162,6 +1164,8 @@ export default function DemoRunner({
             ? "Live run: real web search, real image generation and a real sandbox charge against the signed mandate."
             : "Submit a product on the home page first, then this runs the whole story on its own."}
         </p>
+
+        {footer ? <div className="mt-3 border-t border-white/10 pt-3">{footer}</div> : null}
       </div>
 
       {active ? (

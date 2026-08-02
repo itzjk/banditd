@@ -5,9 +5,11 @@ import type { Creative } from "@/lib/store";
 import { ctr, pct, shortId } from "./format";
 import { useCountUp } from "./motion";
 import { depthLayer, useDeckEntry, useDepth, useTilt } from "./tilt";
+import WinnerExport from "./WinnerExport";
 
 interface Props {
   creative: Creative;
+  productName?: string | null;
   isWinner?: boolean;
   isLeader?: boolean;
   probabilityBest?: number | null;
@@ -37,6 +39,7 @@ function Metric({ label, value, tint }: { label: string; value: string; tint?: s
 
 export default function CreativeCard({
   creative,
+  productName,
   isWinner,
   isLeader,
   probabilityBest,
@@ -196,6 +199,15 @@ export default function CreativeCard({
             >
               {evolving ? "Breeding the next generation" : "Breed 4 variants from this one"}
             </button>
+          ) : null}
+
+          {isWinner && !retired ? (
+            <WinnerExport
+              creative={creative}
+              productName={productName}
+              probabilityBest={probabilityBest}
+              style={depthLayer(22, depth)}
+            />
           ) : null}
         </div>
       </article>

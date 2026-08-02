@@ -169,9 +169,13 @@ export default function MandateBar({
               ) : null}
             </span>
 
-            <span className="shrink-0 text-[14px] font-semibold tracking-tight text-white sm:text-[13px]">
+            <Link
+              href="/"
+              aria-label="banditd, back to the start screen"
+              className="flex min-h-[2.75rem] shrink-0 items-center rounded-md px-1.5 text-[14px] font-semibold tracking-tight text-white underline decoration-white/30 underline-offset-4 transition-colors hover:bg-white/[0.08] hover:decoration-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white sm:text-[13px]"
+            >
               banditd
-            </span>
+            </Link>
 
             <span aria-hidden="true" className="hidden h-3.5 w-px shrink-0 bg-white/12 sm:block" />
 

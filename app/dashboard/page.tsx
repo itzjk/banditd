@@ -19,7 +19,9 @@ import type {
   CreditKind,
   Credits,
   Insights as InsightsData,
+  PriceRange,
   Product,
+  ProductOptions,
   PurchaseEvent,
   Research,
   Round,
@@ -28,22 +30,28 @@ import type {
 } from "@/lib/store";
 import MandateBar from "@/components/MandateBar";
 import CreativeCard from "@/components/CreativeCard";
+import RunExport from "@/components/RunExport";
 import { PurchaseLedger } from "@/components/PurchaseEvent";
 import AuditLog from "@/components/AuditLog";
 import AgentStatus from "@/components/AgentStatus";
 import PosteriorChart from "@/components/PosteriorChart";
 import CampaignMetrics from "@/components/CampaignMetrics";
+import AgentReadout from "@/components/AgentReadout";
 import PerformanceChart from "@/components/PerformanceChart";
 import GatesPanel from "@/components/GatesPanel";
 import LineageTree from "@/components/LineageTree";
 import MarketPanel from "@/components/MarketPanel";
+import ProductBar from "@/components/ProductBar";
 import Insights from "@/components/Insights";
 import ProofLab from "@/components/ProofLab";
+import AgentChat from "@/components/AgentChat";
 import Reveal from "@/components/visuals/Reveal";
 import DemoRunner, { AGENT_STEPS, EVIDENCE_TARGET } from "@/components/DemoRunner";
 import type { Decision, Evaluation, LastPurchase, Task } from "@/components/DemoRunner";
 import { ctr, money, pct, plain, strength } from "@/components/format";
 import { declineFamily } from "@/lib/declines";
+import RunHistory from "@/components/RunHistory";
+import { archiveRun, historySnapshot, serverHistory, subscribeHistory } from "@/lib/history";
 
 const MANDATE_CAP = 50;
 const STORAGE_KEY = "banditd_state";
@@ -54,6 +62,10 @@ const CREDIT_KINDS: CreditKind[] = ["purchase", "render", "grant"];
 const MAX_AUDIT = 200;
 const MAX_ROUNDS = 200;
 const MAX_MARKET_CONTEXT = 500;
+const MAX_REFINEMENT = 60;
+const MAX_OPTIONS = 6;
+const MAX_PRICE_LABEL = 16;
+const MAX_PRICE_REASON = 180;
 const STARTER_CREDITS = 4;
 
 const UNREADABLE =
@@ -84,6 +96,10 @@ function list(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
+function safeRefinement(value: unknown): string {
+  return text(value).trim().slice(0, MAX_REFINEMENT);
+}
+
 function safeProduct(value: unknown): Product | null {
   const p = record(value);
   if (!p || typeof p.name !== "string") return null;
@@ -92,6 +108,43 @@ function safeProduct(value: unknown): Product | null {
     price: text(p.price),
     description: text(p.description),
     marketContext: text(p.marketContext).slice(0, MAX_MARKET_CONTEXT),
+    variant: safeRefinement(p.variant),
+    brand: safeRefinement(p.brand),
+  };
+}
+
+function safeOptionList(value: unknown): string[] {
+  const seen = new Set<string>();
+  const kept: string[] = [];
+  for (const item of list(value)) {
+    const clean = safeRefinement(item);
+    if (!clean) continue;
+    const key = clean.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    kept.push(clean);
+    if (kept.length >= MAX_OPTIONS) break;
+  }
+  return kept;
+}
+
+function safePriceRange(value: unknown): PriceRange | null {
+  const p = record(value);
+  if (!p) return null;
+  const low = text(p.low).trim().slice(0, MAX_PRICE_LABEL);
+  const high = text(p.high).trim().slice(0, MAX_PRICE_LABEL);
+  const recommended = text(p.recommended).trim().slice(0, MAX_PRICE_LABEL);
+  if (!low || !high || !recommended) return null;
+  return { low, high, recommended, why: text(p.why).trim().slice(0, MAX_PRICE_REASON) };
+}
+
+function safeOptions(value: unknown): ProductOptions | null {
+  const o = record(value);
+  if (!o) return null;
+  return {
+    variants: safeOptionList(o.variants),
+    brands: safeOptionList(o.brands),
+    priceRange: safePriceRange(o.priceRange),
   };
 }
 
@@ -282,6 +335,7 @@ function sanitize(value: unknown): State | null {
   if (!raw) return null;
   return {
     product: safeProduct(raw.product),
+    productOptions: safeOptions(raw.productOptions),
     research: safeResearch(raw.research),
     insights: safeInsights(raw.insights),
     creatives: list(raw.creatives)
@@ -312,6 +366,7 @@ function split(input: State): { clean: State; images: Images } {
   });
   const clean: State = {
     product: input.product,
+    productOptions: input.productOptions,
     research: input.research,
     insights: input.insights,
     creatives,
@@ -352,6 +407,22 @@ function saveImages(images: Images) {
     } catch {
       return;
     }
+  }
+}
+
+function storedRaw(): string | null {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function dropImages() {
+  try {
+    window.localStorage.removeItem(IMAGES_KEY);
+  } catch {
+    return;
   }
 }
 
@@ -609,43 +680,26 @@ interface Upcoming {
 
 function Preview({ items }: { items: Upcoming[] }) {
   return (
-    <Reveal
-      as="section"
-      className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] p-4 sm:p-5"
-    >
-      <div className="flex items-center gap-2">
-        <span aria-hidden="true" className="h-px w-5 shrink-0 bg-white/25" />
-        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-400">
-          Waiting on numbers
-        </span>
+    <div>
+      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+        What this run fills in
       </div>
-      <h2 className="mt-2 break-words text-base font-semibold tracking-tight text-white sm:text-lg">
-        What fills the rest of this page
-      </h2>
-      <p className="mt-1.5 max-w-2xl break-words text-[13px] leading-relaxed text-zinc-400">
-        Each panel below opens itself the moment the run produces the data behind it, so nothing on
-        screen is an empty box. A saved run loads with all of it already open.
-      </p>
-      <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+      <ul className="mt-2 flex flex-wrap gap-1.5">
         {items.map((item) => (
           <li
             key={item.title}
-            className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5"
+            className="min-w-0 break-words rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-1 text-[12px] leading-snug text-zinc-200"
           >
-            <span className="block break-words text-[13px] font-semibold text-white">
-              {item.title}
-            </span>
-            <span className="mt-0.5 block break-words text-[12px] leading-snug text-zinc-400">
-              {item.text}
-            </span>
+            {item.title}
           </li>
         ))}
       </ul>
-      <p className="mt-3 break-words text-[12px] leading-relaxed text-zinc-400">
-        The proof lab further down needs no run at all. It replays thousands of tests in your own
-        browser and scores the four gates against the obvious rule.
+      <p className="mt-2 break-words text-[12px] leading-relaxed text-zinc-400">
+        Each panel opens itself the moment the run produces the data behind it, so nothing on screen
+        is an empty box. The proof lab further down needs no run at all: it replays thousands of
+        tests in your own browser and scores the four gates against the obvious rule.
       </p>
-    </Reveal>
+    </div>
   );
 }
 
@@ -796,11 +850,15 @@ export default function Dashboard() {
   const [stale, setStale] = useState(false);
   const [manual, setManual] = useState<ManualNote | null>(null);
   const [advising, setAdvising] = useState(false);
+  const [optionsLoading, setOptionsLoading] = useState(false);
+  const [optionsFailed, setOptionsFailed] = useState(false);
+  const optionsAsked = useRef<string | null>(null);
   const staleRef = useRef(false);
   const revRef = useRef(0);
   const ledgerRef = useRef<HTMLElement | null>(null);
   const adsRef = useRef<HTMLElement | null>(null);
   const wide = useWide();
+  const history = useSyncExternalStore(subscribeHistory, historySnapshot, serverHistory);
 
   const take = useCallback((sane: State) => {
     const { clean, images: found } = split(sane);
@@ -1010,7 +1068,103 @@ export default function Dashboard() {
   const hasTraffic = cohortImpressions > 0;
   const hasPurchases = purchases.length > 0;
   const hasAudit = (state?.audit ?? []).length > 0;
+  const hasHistory = history.length > 0;
   const locked = busy !== null || autoRunning || stale || advising;
+
+  const askOptions = useCallback(async () => {
+    const base = stateRef.current;
+    if (!base?.product) return;
+    setOptionsLoading(true);
+    setOptionsFailed(false);
+    try {
+      const next = await api<State>("/api/refine", { state: base });
+      const current = stateRef.current;
+      if (!current?.product) return;
+      absorb({
+        ...current,
+        productOptions: next.productOptions,
+        audit: mergeAudit(current.audit, next.audit),
+      });
+    } catch {
+      setOptionsFailed(true);
+    } finally {
+      setOptionsLoading(false);
+    }
+  }, [absorb]);
+
+  const productName = state?.product?.name ?? null;
+  const productOptions = state?.productOptions ?? null;
+
+  useEffect(() => {
+    if (!productName || productOptions || hasTraffic) return;
+    if (optionsAsked.current === productName) return;
+    optionsAsked.current = productName;
+    void askOptions();
+  }, [productName, productOptions, hasTraffic, askOptions]);
+
+  const refine = (patch: { variant?: string; brand?: string; price?: string }) => {
+    const base = stateRef.current;
+    if (!base?.product) return;
+    absorb({ ...base, product: { ...base.product, ...patch } });
+  };
+
+  const retryOptions = () => {
+    optionsAsked.current = productName;
+    void askOptions();
+  };
+
+  const switchProduct = (
+    next: { name: string; price: string; description: string },
+    restart: boolean,
+  ) => {
+    const base = stateRef.current;
+    if (!base?.product || locked) return;
+
+    if (!restart) {
+      absorb({
+        ...base,
+        product: { ...base.product, price: next.price, description: next.description },
+        audit: mergeAudit(base.audit, [
+          {
+            at: new Date().toISOString(),
+            kind: "product",
+            detail: `Seller corrected the listing for "${base.product.name}": ${next.price}, ${next.description}`,
+          },
+        ]),
+      });
+      setNotice(
+        `The listing for ${base.product.name} was corrected. The ads, the traffic and the evidence behind them were left alone.`,
+      );
+      return;
+    }
+
+    void run("load", async () => {
+      const previous = base.product?.name ?? "";
+      const res = await api<State>("/api/product", {
+        name: next.name,
+        price: next.price,
+        description: next.description,
+        marketContext: base.product?.marketContext ?? "",
+        state: base,
+      });
+      const filed = archiveRun(storedRaw());
+      dropImages();
+      setImages({});
+      requested.current = new Set();
+      setRendering(new Set());
+      setDecision(null);
+      setEvaluation(null);
+      setReceipt(null);
+      setManual(null);
+      optionsAsked.current = null;
+      absorb(res);
+      setNotice(
+        filed
+          ? `${next.name} is on the board and the run starts clean. The ${previous} run was archived under Earlier runs.`
+          : `${next.name} is on the board and the run starts clean.`,
+      );
+    });
+  };
 
   const upcoming = useMemo(() => {
     const items: Upcoming[] = [];
@@ -1297,44 +1451,30 @@ export default function Dashboard() {
           </div>
         ) : null}
 
-        <section className="rounded-2xl border border-white/12 bg-white/[0.03] p-4 sm:p-6">
+        <section>
           {state?.product ? (
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
-              <div className="min-w-0">
-                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
-                  Product under test
-                </div>
-                <h1 className="mt-1.5 break-words text-2xl font-semibold leading-tight tracking-tight text-white [overflow-wrap:anywhere] sm:text-3xl lg:text-4xl">
-                  {state.product.name}
-                </h1>
-                <p className="mt-2 max-w-2xl break-words text-[14px] leading-relaxed text-zinc-400 [overflow-wrap:anywhere]">
-                  {state.product.description}
-                </p>
-              </div>
-              <div className="shrink-0 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3">
-                <div className="text-[10px] uppercase tracking-[0.12em] text-zinc-400">Price</div>
-                <div className="break-all text-xl font-semibold tabular-nums text-white">
-                  {state.product.price}
-                </div>
-              </div>
-            </div>
+            <ProductBar
+              product={state.product}
+              options={productOptions}
+              optionsLoading={optionsLoading}
+              optionsFailed={optionsFailed}
+              refinable={!hasTraffic}
+              hasRun={hasCreatives || hasTraffic}
+              disabled={locked}
+              onRefine={refine}
+              onRetryOptions={retryOptions}
+              onApply={switchProduct}
+            />
           ) : (
-            <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
-                Product under test
-              </div>
-              <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <h1 className="min-w-0 break-words text-[19px] font-semibold tracking-tight text-white sm:text-xl">
                 {busy === "load" ? "Loading the agent state" : "No product yet"}
               </h1>
-              <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-zinc-400">
-                Submit a product on the home page and the agent takes it from there: research,
-                creatives, traffic, and the spend decision.
-              </p>
               <Link
                 href="/"
-                className="mt-4 inline-flex min-h-[2.75rem] items-center rounded-xl bg-white px-5 text-[14px] font-semibold text-zinc-950 transition-colors hover:bg-zinc-200"
+                className="inline-flex min-h-[2.75rem] items-center rounded-xl bg-white px-4 text-[13px] font-semibold text-zinc-950 transition-colors hover:bg-zinc-200"
               >
-                Go submit a product
+                Submit one
               </Link>
             </div>
           )}
@@ -1342,6 +1482,7 @@ export default function Dashboard() {
 
         <div className={focused ? "py-2 sm:py-4" : ""}>
           <DemoRunner
+            key={productName ?? "no-product"}
             state={state}
             absorb={absorb}
             impressions={impressions}
@@ -1350,6 +1491,7 @@ export default function Dashboard() {
             onRunningChange={setAutoRunning}
             onDecision={carryDecision}
             onReceipt={setReceipt}
+            footer={focused ? <Preview items={upcoming} /> : null}
           />
         </div>
 
@@ -1380,6 +1522,15 @@ export default function Dashboard() {
               Dismiss
             </button>
           </div>
+        ) : null}
+
+        {hasTraffic ? (
+          <AgentReadout
+            cohort={cohort}
+            generation={generation}
+            evaluation={freshEvaluation}
+            winnerId={winnerId}
+          />
         ) : null}
 
         {decision && freshEvaluation ? (
@@ -1476,6 +1627,7 @@ export default function Dashboard() {
                     <CreativeCard
                       index={i}
                       creative={dressed(c)}
+                      productName={state?.product?.name ?? null}
                       rendering={rendering.has(c.id)}
                       isWinner={c.id === winnerId}
                       isLeader={c.id !== winnerId && c.id === leaderId}
@@ -1545,8 +1697,6 @@ export default function Dashboard() {
             />
           </Reveal>
         ) : null}
-
-        {focused ? <Preview items={upcoming} /> : null}
 
         </div>
 
@@ -1679,6 +1829,12 @@ export default function Dashboard() {
                   headlineFor={(id) => byId.get(id)?.headline ?? null}
                 />
               </section>
+            </Reveal>
+          ) : null}
+
+          {hasCreatives ? (
+            <Reveal delay={60}>
+              <RunExport state={state} images={images} evaluation={freshEvaluation} />
             </Reveal>
           ) : null}
 
@@ -1827,6 +1983,19 @@ export default function Dashboard() {
               </Fold>
             </Reveal>
           ) : null}
+
+          {hasHistory ? (
+            <Reveal delay={120}>
+              <Fold
+                title="Earlier runs"
+                hint={`${history.length} ${
+                  history.length === 1 ? "run" : "runs"
+                } archived in this browser when a new product took the board. Open one, or pick two and compare the winning angles.`}
+              >
+                <RunHistory runs={history} />
+              </Fold>
+            </Reveal>
+          ) : null}
         </Band>
 
         <p className="mx-auto mt-10 max-w-3xl break-words text-center text-[13px] leading-relaxed text-zinc-400 sm:mt-14">
@@ -1834,6 +2003,8 @@ export default function Dashboard() {
           Payments run against the Prava sandbox.
         </p>
       </main>
+
+      <AgentChat state={state} />
     </div>
   );
 }
