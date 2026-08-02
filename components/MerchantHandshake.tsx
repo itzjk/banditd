@@ -140,7 +140,7 @@ export default function MerchantHandshake({
               setDomain(item);
               void greet(item);
             }}
-            className={`rounded-full border px-2.5 py-1 text-[11px] transition disabled:opacity-50 ${
+            className={`inline-flex min-h-[2.75rem] items-center rounded-full border px-3 text-[11px] transition disabled:opacity-50 ${
               domain === item ? "border-border-strong bg-surface-2 font-medium" : "border-border text-muted"
             }`}
           >
@@ -175,7 +175,7 @@ export default function MerchantHandshake({
         <button
           type="submit"
           disabled={busy || !domain.trim()}
-          className="rounded-lg border border-border-strong bg-surface-2 px-3 py-2 text-sm font-medium disabled:opacity-50"
+          className="min-h-[2.75rem] shrink-0 rounded-lg border border-border-strong bg-surface-2 px-4 text-sm font-medium disabled:opacity-50"
         >
           {busy ? "Saying hello" : "Say hello"}
         </button>

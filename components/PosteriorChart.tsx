@@ -263,7 +263,7 @@ export default function PosteriorChart({ creatives, winnerIndex }: Props) {
             <span className="font-semibold capitalize text-zinc-200">{c.label}</span>
             <span className="tabular-nums text-zinc-400">{pct(c.rate, 2)}</span>
             {winner === i ? (
-              <span className="rounded-full bg-white px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-zinc-950">
+              <span className="rounded-full bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-950">
                 Candidate
               </span>
             ) : null}

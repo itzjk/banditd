@@ -886,7 +886,7 @@ export default function ProofLab({
   const panel = (
     <section
       aria-label="Proof lab"
-      className={`card overflow-hidden p-4 sm:p-6 ${folded ? "mt-3 rounded-2xl" : className}`.trim()}
+      className={`card overflow-hidden p-3 sm:p-6 ${folded ? "mt-3 rounded-2xl" : className}`.trim()}
       style={folded ? undefined : tokens}
     >
       {folded ? null : (

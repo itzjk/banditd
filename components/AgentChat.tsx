@@ -143,7 +143,7 @@ export default function AgentChat({ state }: Props) {
           type="button"
           onClick={() => setOpen(false)}
           aria-label="Close the chat"
-          className="-mr-1 -mt-1 rounded-lg px-2 py-1 text-[12px] uppercase tracking-wider text-zinc-400 transition-colors hover:text-white"
+          className="-mr-2 -my-1 flex min-h-[2.75rem] shrink-0 items-center rounded-lg px-2 text-[12px] uppercase tracking-wider text-zinc-400 transition-colors hover:text-white"
         >
           Close
         </button>
@@ -166,7 +166,7 @@ export default function AgentChat({ state }: Props) {
                   key={s}
                   type="button"
                   onClick={() => void send(s)}
-                  className="rounded-full border border-white/15 bg-white/[0.04] px-3 py-1.5 text-left text-[12px] text-zinc-200 transition-colors hover:bg-white/[0.12]"
+                  className="inline-flex min-h-[2.75rem] items-center rounded-full border border-white/15 bg-white/[0.04] px-3 text-left text-[12px] text-zinc-200 transition-colors hover:bg-white/[0.12]"
                 >
                   {s}
                 </button>
