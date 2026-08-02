@@ -29,7 +29,6 @@ import {
   MeshField,
   Mono,
   prefersReducedMotion,
-  Shelf,
   Small,
   Surface,
   Title,
@@ -248,25 +247,39 @@ function GlyphSpend() {
   );
 }
 
-const ANGLES: { n: string; name: string; body: string }[] = [
+const ANGLES: {
+  n: string;
+  name: string;
+  appeal: "logos" | "pathos" | "ethos";
+  appealNote: string;
+  body: string;
+}[] = [
   {
     n: "01",
     name: "Price",
+    appeal: "logos",
+    appealNote: "argues from numbers",
     body: "Cost per cup against the café you were going to walk into anyway. The argument is arithmetic, and the buyer can check it.",
   },
   {
     n: "02",
     name: "Ritual",
+    appeal: "pathos",
+    appealNote: "argues from feeling",
     body: "The morning it belongs to. Sold as a habit the buyer already has, not as a bottle they do not.",
   },
   {
     n: "03",
     name: "Gift",
+    appeal: "pathos",
+    appealNote: "argues from feeling",
     body: "Who you would hand it to, and why it still reads as considered once it has been wrapped.",
   },
   {
     n: "04",
     name: "Quality",
+    appeal: "ethos",
+    appealNote: "argues from credibility",
     body: "What eighteen hours of cold steeping does to a bean that hot water never gets near.",
   },
 ];
@@ -275,20 +288,35 @@ const STEPS: {
   n: string;
   title: string;
   body: ReactNode;
+  note?: ReactNode;
   aside: string;
   glyph: ReactNode;
 }[] = [
   {
     n: "01",
-    title: "Researches the market",
-    body: "Web search on who buys this, what competitors claim, and where your price lands. The dashboard lists the pages it actually read, not a claim that it read something.",
+    title: "Reads your market",
+    body: "It searches the web to find out who buys this, what rival sellers promise, and whether your price is high or low for what it is. The dashboard lists every page it opened, so you can check what it read.",
+    note: (
+      <>
+        You can also name the market you actually sell in. Write it in the{" "}
+        <Glossary term="market-note" /> when you hand the product over, Facebook Marketplace or
+        TikTok Shop for example, and paste the listings you sell against. The research aims there
+        instead of at a market you are not in.
+      </>
+    ),
     aside: "Live web search",
     glyph: <GlyphResearch />,
   },
   {
     n: "02",
     title: "Writes four ads",
-    body: "Four angles, four images, four sets of copy. The angle is an enum in the schema, so what comes back is four different arguments and not four rewordings of one.",
+    body: "Four angles, four images, four sets of copy. The angle is a fixed choice the model has to fill in, so what comes back is four different arguments and not the same argument written four ways.",
+    note: (
+      <>
+        One ad argues from numbers, two argue from feeling, one argues from craft. They are named
+        under the chart at the end of this section.
+      </>
+    ),
     aside: "Structured outputs",
     glyph: <GlyphWrite />,
   },
@@ -396,10 +424,16 @@ const LIMITS: { label: string; detail: string }[] = [
   },
 ];
 
-const HERO_STATS: { value: string; label: string }[] = [
-  { value: "44.5%", label: "false winners, naive rule" },
-  { value: "2.5%", label: "false winners, four gates" },
-  { value: "99.9%", label: "correct pick when it fires" },
+const CARD_FACTS: { label: string; detail: string }[] = [
+  { label: "One shop", detail: "It cannot be used anywhere else." },
+  { label: "One amount", detail: "Over the ceiling, the network refuses it." },
+  { label: "One use", detail: "The card dies with the charge it was minted for." },
+];
+
+const PRICING: { price: string; ceiling: string }[] = [
+  { price: "$29", ceiling: "3 tests at once, 12 ads under watch" },
+  { price: "$79", ceiling: "15 tests at once, 60 ads" },
+  { price: "$199", ceiling: "60 tests at once, 240 ads" },
 ];
 
 const METHOD: { value: string; label: string }[] = [
@@ -570,39 +604,51 @@ export default function Home() {
               <Lead className="mt-5 max-w-2xl">
                 Hand it a product. It writes four different ads, puts them in front of traffic, and
                 holds the call until the evidence is good enough to act on. Plenty of tools write
-                ads and hand you the file. This one carries a payment credential and spends on its
-                own, inside limits you signed with a passkey, so the part worth building is not the
-                writing. It is when it is allowed to act.
+                ads and hand you the file. This one spends on its own, so the part worth building is
+                not the writing. It is when it is allowed to act.
               </Lead>
-              <Small className="mt-5 max-w-xl">
-                The rule most agents use calls a false winner{" "}
-                <strong className="font-semibold tabular-nums text-foreground">44.5%</strong> of the
-                time. This one calls a false winner{" "}
-                <strong className="font-semibold tabular-nums text-foreground">2.5%</strong> of the
-                time, on the same runs against known truth, and the script that proves it runs on
-                your laptop in about eighteen minutes with no keys.
-              </Small>
             </div>
 
             <div className="mt-8 grid items-start gap-6 sm:mt-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,23rem)] lg:gap-10">
-              <div className="enter order-2 min-w-0 lg:order-1" style={{ animationDelay: "200ms" }}>
-                <Surface level="raised" className="overflow-hidden">
-                  <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-4 py-3 sm:px-5">
-                    <Eyebrow as="span" className="min-w-0 text-muted">
-                      What the decision looks like
-                    </Eyebrow>
-                    <Mono className="min-w-0 text-muted">illustration</Mono>
-                  </div>
-                  <div className="px-4 py-5 sm:px-5 sm:py-6">
-                    <BudgetShift
-                      title="A hundred dollar test budget starts split evenly across four ads. Traffic arrives, one ad draws clicks ahead of the rest, and once the gates agree the three that lost are held back to a tenth of the test each."
-                      startNote="Started at an even 25 / 25 / 25 / 25 split. Traffic put one ad ahead, the gates agreed, and the other three were held back to a tenth of the test each."
-                    />
-                  </div>
+              <div className="enter order-1 min-w-0" style={{ animationDelay: "200ms" }}>
+                <Surface level="feature" className="p-5 sm:p-7">
+                  <Eyebrow className="text-muted">The first question everyone asks</Eyebrow>
+                  <Headline as="h2" className="mt-3">
+                    Could it run off with the money? It never holds any.
+                  </Headline>
+                  <Body className="mt-4 max-w-xl text-muted">
+                    You never hand the agent a card, and it never sees a card number. You sign one
+                    permission with your passkey, the same fingerprint or face you unlock your phone
+                    with, and that permission carries three things: the most it can charge, the one
+                    shop it is allowed to charge at, and the day it expires.
+                  </Body>
+                  <Body className="mt-4 max-w-xl text-muted">
+                    Then, every time it buys, Visa mints a card on the spot that works once, for
+                    that one amount, at that one shop. If the agent asks for more than you signed
+                    for, the network refuses the charge and nothing moves. Further down this page
+                    you can read that refusal in Visa&apos;s own words. One tap revokes the
+                    permission and the agent has nothing left to charge.
+                  </Body>
+
+                  <dl className="mt-6 grid gap-3 border-t border-border pt-5 sm:grid-cols-3">
+                    {CARD_FACTS.map((fact) => (
+                      <div key={fact.label} className="min-w-0">
+                        <dt className="flex items-center gap-2">
+                          <span className="size-1.5 shrink-0 rounded-full bg-accent" />
+                          <span className="min-w-0 text-[0.9375rem] font-semibold tracking-tight">
+                            {fact.label}
+                          </span>
+                        </dt>
+                        <Caption as="dd" className="mt-1.5 text-muted">
+                          {fact.detail}
+                        </Caption>
+                      </div>
+                    ))}
+                  </dl>
                 </Surface>
               </div>
 
-              <div className="enter order-1 min-w-0 lg:order-2" style={{ animationDelay: "120ms" }}>
+              <div className="enter order-2 min-w-0" style={{ animationDelay: "120ms" }}>
                 <Surface level="feature" id="start" className="scroll-mt-20 p-5 sm:p-6">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -820,21 +866,6 @@ export default function Home() {
               </div>
             </div>
 
-            <dl
-              className="enter mt-10 flex flex-wrap gap-x-10 gap-y-5 border-t border-border pt-6 sm:mt-12"
-              style={{ animationDelay: "260ms" }}
-            >
-              {HERO_STATS.map((stat) => (
-                <div key={stat.label} className="min-w-0">
-                  <dd className="t-num text-[clamp(1.5rem,3vw,2.125rem)] font-semibold leading-none tracking-[-0.03em]">
-                    {stat.value}
-                  </dd>
-                  <Eyebrow as="dt" className="mt-2 text-muted">
-                    {stat.label}
-                  </Eyebrow>
-                </div>
-              ))}
-            </dl>
           </div>
         </section>
 
@@ -881,42 +912,187 @@ export default function Home() {
         <section className={`border-b border-border ${SECTION_PAD}`}>
           <div className="mx-auto w-full max-w-5xl px-gutter">
             <Rise>
-              <Eyebrow className="text-muted">What it makes</Eyebrow>
-              <Headline className="mt-4 max-w-2xl">
-                Four arguments, not four rewordings of one.
+              <Eyebrow className="text-muted">Why you can trust it with money</Eyebrow>
+              <Headline className="mt-4 max-w-3xl">
+                Four limits it cannot cross, and a card number it never sees.
               </Headline>
-              <Body className="mt-4 max-w-xl text-muted">
-                The creative schema names the angle, so the four ads have to disagree with each
-                other. Each one becomes an arm, and the traffic decides which argument your buyers
-                were actually waiting for.
+              <Body className="mt-5 max-w-xl text-muted">
+                A <Glossary term="mandate" /> is a signed permission, not a stored card. You sign it
+                once with a passkey and it carries your ceiling, your merchant, and your expiry.
+                Every charge after that is agent initiated, and none of them can leave those limits.
               </Body>
             </Rise>
 
-            <Rise delay={80} className="mt-10">
-              <Shelf
-                ariaLabel="The four ad angles"
-                itemClassName="w-[74%] sm:w-[48%] lg:w-[31.5%]"
-                gap="md"
-              >
-                {ANGLES.map((angle) => (
-                  <Surface
-                    key={angle.n}
-                    level="raised"
-                    as="article"
-                    className="flex h-full flex-col p-5 sm:p-6"
-                  >
-                    <Mono className="font-medium text-accent">{angle.n}</Mono>
-                    <Title as="h3" className="mt-4">
-                      {angle.name}
-                    </Title>
-                    <Small className="mt-3 flex-1">{angle.body}</Small>
-                    <div className="mt-6 flex items-center gap-2 border-t border-border pt-4">
+            <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {GUARDRAILS.map((g, i) => (
+                <Rise key={g.label} delay={i * 60}>
+                  <Surface level="quiet" className="h-full p-5">
+                    <div className="flex items-center gap-2">
                       <span className="size-1.5 shrink-0 rounded-full bg-accent" />
-                      <Mono className="min-w-0 text-muted">one arm on the bandit</Mono>
+                      <p className="min-w-0 text-[0.9375rem] font-semibold tracking-tight">
+                        {g.label}
+                      </p>
                     </div>
+                    <Caption className="mt-2.5 text-muted">{g.detail}</Caption>
                   </Surface>
-                ))}
-              </Shelf>
+                </Rise>
+              ))}
+            </div>
+
+            <Rise delay={140}>
+              <Surface level="base" className="mt-4 grid gap-6 p-6 sm:grid-cols-2 sm:gap-10 sm:p-8">
+                <div className="min-w-0">
+                  <Eyebrow className="text-muted">The card number</Eyebrow>
+                  <Small className="mt-3">
+                    Never touches the agent. Every charge mints a single use credential that dies
+                    with that charge, and the dashboard shows which one was burned on what. There is
+                    no stored card for an agent to leak or reuse.
+                  </Small>
+                </div>
+                <div className="min-w-0">
+                  <Eyebrow className="text-muted">Over the ceiling</Eyebrow>
+                  <Small className="mt-3">
+                    The over cap charge is not blocked by our code. It is sent, the card network
+                    refuses it, and the decline comes back with a reason a seller can act on.
+                    Nothing is spent and the mandate stays live.
+                  </Small>
+                </div>
+              </Surface>
+            </Rise>
+
+            <Rise delay={180}>
+              <Surface level="raised" className="mt-4 overflow-hidden">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-5 py-3.5 sm:px-7">
+                  <Eyebrow as="span" className="min-w-0 text-muted">
+                    What the network said when the agent pushed
+                  </Eyebrow>
+                  <Mono className="min-w-0 text-muted">not our copy</Mono>
+                </div>
+
+                <div className="grid gap-3 px-5 py-6 sm:grid-cols-2 sm:px-7 sm:py-8">
+                  {REFUSALS.map((r) => (
+                    <Surface key={r.code} level="quiet" className="h-full p-5">
+                      <Mono className="block text-[0.8125rem] text-foreground">{r.code}</Mono>
+                      <Caption className="mt-3 block text-muted">{r.attempt}</Caption>
+                      <p className="mt-3 border-l-2 border-border-strong pl-3 text-[0.8125rem] leading-relaxed text-muted">
+                        {r.said}
+                      </p>
+                    </Surface>
+                  ))}
+                </div>
+
+                <div className="border-t border-border px-5 py-5 sm:px-7">
+                  <Small className="text-muted">
+                    Both of those came back from the Visa network through Prava on this account, and
+                    both are reproducible in the dashboard right now. Neither is a message this
+                    project writes. The agent sends the charge, the network refuses it, and there is
+                    no argument the agent can make that gets past either one.
+                  </Small>
+                </div>
+              </Surface>
+            </Rise>
+          </div>
+        </section>
+
+        <section className={`border-b border-border ${SECTION_PAD}`}>
+          <div className="mx-auto w-full max-w-5xl px-gutter">
+            <Rise>
+              <Eyebrow className="text-muted">Who it is for, and what it would cost</Eyebrow>
+              <Headline className="mt-4 max-w-3xl">
+                For the seller who pays for every losing test out of the same budget.
+              </Headline>
+              <Body className="mt-5 max-w-2xl text-muted">
+                Not everyone who runs ads. The one who spends enough that a bad creative is a number
+                they feel, and who has nobody on staff to say when a test has run long enough to act
+                on.
+              </Body>
+            </Rise>
+
+            <div className="mt-10 grid gap-3 sm:grid-cols-2">
+              {BUYER.map((b, i) => (
+                <Rise key={b.label} delay={i * 60}>
+                  <Surface level="quiet" className="h-full p-5">
+                    <div className="flex items-center gap-2">
+                      <span className="size-1.5 shrink-0 rounded-full bg-accent" />
+                      <p className="min-w-0 text-[0.9375rem] font-semibold tracking-tight">
+                        {b.label}
+                      </p>
+                    </div>
+                    <Caption className="mt-2.5 text-muted">{b.detail}</Caption>
+                  </Surface>
+                </Rise>
+              ))}
+            </div>
+
+            <Rise delay={140}>
+              <Surface level="feature" className="mt-4 overflow-hidden">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-5 py-3.5 sm:px-7">
+                  <Eyebrow as="span" className="min-w-0 text-muted">
+                    Proposed pricing
+                  </Eyebrow>
+                  <Mono className="min-w-0 text-muted">nothing is on sale yet</Mono>
+                </div>
+
+                <div className="px-5 py-6 sm:px-7 sm:py-8">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {PRICING.map((tier) => (
+                      <Surface key={tier.price} level="quiet" className="h-full p-5">
+                        <p className="t-num text-[clamp(1.75rem,4vw,2.375rem)] font-semibold leading-none tracking-[-0.03em]">
+                          {tier.price}
+                          <span className="ml-1.5 align-baseline text-sm font-normal text-muted">
+                            a month
+                          </span>
+                        </p>
+                        <Caption className="mt-3 text-muted">{tier.ceiling}</Caption>
+                      </Surface>
+                    ))}
+                  </div>
+
+                  <Body className="mt-6 max-w-2xl text-muted">
+                    Every tier is the same product. The only thing that moves is how many tests it
+                    watches at the same time. One test is one cohort of four ads judged together. We
+                    do not charge on your ad spend, because the agent never touches your ad spend.
+                  </Body>
+
+                  <Caption className="mt-5 max-w-2xl text-muted">
+                    This is a proposal. banditd has no customers, no revenue and nothing for sale
+                    today. Nobody has been charged a cent for it and there is no checkout on this
+                    site.
+                  </Caption>
+                </div>
+              </Surface>
+            </Rise>
+
+            <Rise delay={180}>
+              <Surface level="raised" className="mt-4 overflow-hidden">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-5 py-3.5 sm:px-7">
+                  <Eyebrow as="span" className="min-w-0 text-muted">
+                    Why that is worth paying
+                  </Eyebrow>
+                  <Mono className="min-w-0 text-muted">no recovery figure of our own</Mono>
+                </div>
+
+                <div className="px-5 py-6 sm:px-7 sm:py-8">
+                  <Body className="max-w-2xl">
+                    Price it against one week of your own testing, because you know that number and
+                    we do not. A seller at the bottom of the range this was built for, ten thousand
+                    dollars a month, puts roughly two thousand three hundred into ads in a week.
+                    Every test runs four ads and only one of them is the one you keep, so you are
+                    paying for the other three the whole time the call is still open. The first tier
+                    is about one percent of that week.
+                  </Body>
+                  <Body className="mt-5 max-w-2xl text-muted">
+                    We have never run a paid campaign, so we have no figure for what banditd saves a
+                    seller, and we are not going to build one out of somebody else&apos;s estimate
+                    of how much advertising is wasted. What we can put a number on is the mistake.
+                    The rule most agents use calls a false winner 44.5% of the time. The four gates
+                    call one 2.5% of the time, and the section below shows how that was measured. A
+                    false winner is the expensive kind of error, because the seller believes it and
+                    scales it. What the subscription buys is the ones that do not get made, and you
+                    know better than we do what a scaled loser costs in your account.
+                  </Body>
+                </div>
+              </Surface>
             </Rise>
           </div>
         </section>
@@ -952,6 +1128,9 @@ export default function Home() {
                           </span>
                         </div>
                         <Body className="mt-3 max-w-xl text-muted">{step.body}</Body>
+                        {step.note ? (
+                          <Small className="mt-3 max-w-xl text-muted">{step.note}</Small>
+                        ) : null}
                       </div>
                     </div>
                   </Rise>
@@ -960,15 +1139,47 @@ export default function Home() {
             </ol>
 
             <Rise delay={80}>
-              <Surface level="raised" className="mt-4 overflow-hidden">
+              <Surface level="feature" className="mt-4 overflow-hidden">
                 <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-4 py-3 sm:px-5">
                   <Eyebrow as="span" className="min-w-0 text-muted">
-                    Four beliefs, narrowing
+                    What the decision looks like
                   </Eyebrow>
-                  <Mono className="min-w-0 text-muted">simulated traffic</Mono>
+                  <Mono className="min-w-0 text-muted">illustration</Mono>
                 </div>
-                <div className="px-3 py-4 sm:px-4 sm:py-5">
-                  <BanditLearning caption="belief per ad" allocationLabel="traffic share" />
+                <div className="px-4 py-5 sm:px-5 sm:py-6">
+                  <BudgetShift
+                    title="A hundred dollar test budget starts split evenly across four ads. Traffic arrives, one ad draws clicks ahead of the rest, and once the gates agree the three that lost are held back to a tenth of the test each."
+                    startNote="Started at an even 25 / 25 / 25 / 25 split. Traffic put one ad ahead, the gates agreed, and the other three were held back to a tenth of the test each."
+                  />
+                </div>
+
+                <div className="border-t border-border px-4 py-6 sm:px-5 sm:py-8">
+                  <Eyebrow className="text-muted">The four ads in that chart</Eyebrow>
+                  <Body className="mt-3 max-w-2xl text-muted">
+                    A, B, C and D are not one ad written four ways. Each one makes a different kind
+                    of argument, and the traffic decides which kind your buyers were waiting for.
+                    Press an appeal to see what it means.
+                  </Body>
+
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                    {ANGLES.map((angle) => (
+                      <Surface key={angle.n} level="quiet" as="article" className="h-full p-5">
+                        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
+                          <Mono className="font-medium text-accent">{angle.n}</Mono>
+                          <Title as="h3" className="min-w-0">
+                            {angle.name}
+                          </Title>
+                        </div>
+                        <p className="mt-3 inline-flex flex-wrap items-center gap-x-2 gap-y-1 rounded-full border border-border bg-surface-2 px-2.5 py-1 font-mono text-[0.6875rem] uppercase tracking-[0.14em] text-muted">
+                          <Glossary term={angle.appeal}>
+                            <span className="uppercase">{angle.appeal}</span>
+                          </Glossary>
+                          <span className="min-w-0">{angle.appealNote}</span>
+                        </p>
+                        <Small className="mt-3">{angle.body}</Small>
+                      </Surface>
+                    ))}
+                  </div>
                 </div>
               </Surface>
             </Rise>
@@ -983,14 +1194,30 @@ export default function Home() {
                 You can read the decision before the money moves.
               </Headline>
               <Body className="mt-5 max-w-2xl text-muted">
-                Every charge the agent makes carries one plain sentence naming the winning ad, the
-                probability behind it, and the traffic it was measured on. Your run writes its own.
-                This is the shape of it.
+                The chart above shows the money moving. This is the belief underneath it: four
+                guesses that start wide and tighten as traffic arrives. Every charge the agent makes
+                then carries one plain sentence naming the winning ad, the probability behind it,
+                and the traffic it was measured on. Your run writes its own. This is the shape of
+                it.
               </Body>
             </Rise>
 
+            <Rise delay={60}>
+              <Surface level="raised" className="mt-10 overflow-hidden">
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-4 py-3 sm:px-5">
+                  <Eyebrow as="span" className="min-w-0 text-muted">
+                    Four beliefs, narrowing
+                  </Eyebrow>
+                  <Mono className="min-w-0 text-muted">simulated traffic</Mono>
+                </div>
+                <div className="px-3 py-4 sm:px-4 sm:py-5">
+                  <BanditLearning caption="belief per ad" allocationLabel="traffic share" />
+                </div>
+              </Surface>
+            </Rise>
+
             <Rise delay={80}>
-              <Surface level="feature" className="mt-10 overflow-hidden">
+              <Surface level="feature" className="mt-4 overflow-hidden">
                 <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-5 py-3.5 sm:px-7">
                   <Eyebrow as="span" className="min-w-0 text-muted">
                     Example decision
@@ -1150,149 +1377,6 @@ export default function Home() {
                 </Surface>
               </Rise>
             </div>
-          </div>
-        </section>
-
-        <section className={`border-b border-border ${SECTION_PAD}`}>
-          <div className="mx-auto w-full max-w-5xl px-gutter">
-            <Rise>
-              <Eyebrow className="text-muted">Why you can trust it with money</Eyebrow>
-              <Headline className="mt-4 max-w-3xl">
-                Four limits it cannot cross, and a card number it never sees.
-              </Headline>
-              <Body className="mt-5 max-w-xl text-muted">
-                A <Glossary term="mandate" /> is a signed permission, not a stored card. You sign it
-                once with a passkey and it carries your ceiling, your merchant, and your expiry.
-                Every charge after that is agent initiated, and none of them can leave those limits.
-              </Body>
-            </Rise>
-
-            <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {GUARDRAILS.map((g, i) => (
-                <Rise key={g.label} delay={i * 60}>
-                  <Surface level="quiet" className="h-full p-5">
-                    <div className="flex items-center gap-2">
-                      <span className="size-1.5 shrink-0 rounded-full bg-accent" />
-                      <p className="min-w-0 text-[0.9375rem] font-semibold tracking-tight">
-                        {g.label}
-                      </p>
-                    </div>
-                    <Caption className="mt-2.5 text-muted">{g.detail}</Caption>
-                  </Surface>
-                </Rise>
-              ))}
-            </div>
-
-            <Rise delay={140}>
-              <Surface level="base" className="mt-4 grid gap-6 p-6 sm:grid-cols-2 sm:gap-10 sm:p-8">
-                <div className="min-w-0">
-                  <Eyebrow className="text-muted">The card number</Eyebrow>
-                  <Small className="mt-3">
-                    Never touches the agent. Every charge mints a single use credential that dies
-                    with that charge, and the dashboard shows which one was burned on what. There is
-                    no stored card for an agent to leak or reuse.
-                  </Small>
-                </div>
-                <div className="min-w-0">
-                  <Eyebrow className="text-muted">Over the ceiling</Eyebrow>
-                  <Small className="mt-3">
-                    The over cap charge is not blocked by our code. It is sent, the card network
-                    refuses it, and the decline comes back with a reason a seller can act on.
-                    Nothing is spent and the mandate stays live.
-                  </Small>
-                </div>
-              </Surface>
-            </Rise>
-
-            <Rise delay={180}>
-              <Surface level="raised" className="mt-4 overflow-hidden">
-                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-5 py-3.5 sm:px-7">
-                  <Eyebrow as="span" className="min-w-0 text-muted">
-                    What the network said when the agent pushed
-                  </Eyebrow>
-                  <Mono className="min-w-0 text-muted">not our copy</Mono>
-                </div>
-
-                <div className="grid gap-3 px-5 py-6 sm:grid-cols-2 sm:px-7 sm:py-8">
-                  {REFUSALS.map((r) => (
-                    <Surface key={r.code} level="quiet" className="h-full p-5">
-                      <Mono className="block text-[0.8125rem] text-foreground">{r.code}</Mono>
-                      <Caption className="mt-3 block text-muted">{r.attempt}</Caption>
-                      <p className="mt-3 border-l-2 border-border-strong pl-3 text-[0.8125rem] leading-relaxed text-muted">
-                        {r.said}
-                      </p>
-                    </Surface>
-                  ))}
-                </div>
-
-                <div className="border-t border-border px-5 py-5 sm:px-7">
-                  <Small className="text-muted">
-                    Both of those came back from the Visa network through Prava on this account, and
-                    both are reproducible in the dashboard right now. Neither is a message this
-                    project writes. The agent sends the charge, the network refuses it, and there is
-                    no argument the agent can make that gets past either one.
-                  </Small>
-                </div>
-              </Surface>
-            </Rise>
-          </div>
-        </section>
-
-        <section className={`border-b border-border ${SECTION_PAD}`}>
-          <div className="mx-auto w-full max-w-5xl px-gutter">
-            <Rise>
-              <Eyebrow className="text-muted">Who it is for, and what it would cost</Eyebrow>
-              <Headline className="mt-4 max-w-3xl">
-                For the seller who pays for every losing test out of the same budget.
-              </Headline>
-              <Body className="mt-5 max-w-2xl text-muted">
-                Not everyone who runs ads. The one who spends enough that a bad creative is a number
-                they feel, and who has nobody on staff to say when a test has run long enough to act
-                on.
-              </Body>
-            </Rise>
-
-            <div className="mt-10 grid gap-3 sm:grid-cols-2">
-              {BUYER.map((b, i) => (
-                <Rise key={b.label} delay={i * 60}>
-                  <Surface level="quiet" className="h-full p-5">
-                    <div className="flex items-center gap-2">
-                      <span className="size-1.5 shrink-0 rounded-full bg-accent" />
-                      <p className="min-w-0 text-[0.9375rem] font-semibold tracking-tight">
-                        {b.label}
-                      </p>
-                    </div>
-                    <Caption className="mt-2.5 text-muted">{b.detail}</Caption>
-                  </Surface>
-                </Rise>
-              ))}
-            </div>
-
-            <Rise delay={140}>
-              <Surface level="raised" className="mt-4 overflow-hidden">
-                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-border px-5 py-3.5 sm:px-7">
-                  <Eyebrow as="span" className="min-w-0 text-muted">
-                    What it is worth
-                  </Eyebrow>
-                  <Mono className="min-w-0 text-muted">no recovery figure of our own</Mono>
-                </div>
-
-                <div className="px-5 py-6 sm:px-7 sm:py-8">
-                  <Body className="max-w-2xl">
-                    We have never run a paid campaign, so we have no figure for what banditd saves a
-                    seller, and we are not going to build one out of somebody else&apos;s estimate
-                    of how much advertising is wasted.
-                  </Body>
-                  <Body className="mt-5 max-w-2xl text-muted">
-                    What we can put a number on is the mistake. The rule most agents use calls a
-                    false winner 44.5% of the time. The four gates call one 2.5% of the time. A
-                    false winner is the expensive kind of error, because the seller believes it and
-                    scales it. What the subscription buys is the ones that do not get made, and you
-                    know better than we do what a scaled loser costs in your account.
-                  </Body>
-                </div>
-              </Surface>
-            </Rise>
           </div>
         </section>
 

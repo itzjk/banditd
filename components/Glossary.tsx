@@ -29,6 +29,22 @@ export const GLOSSARY_TERMS = {
     label: "mandate",
     body: "A signed permission, not a stored card. It sets a spending ceiling, one allowed merchant, and an expiry date. The agent never sees a card number: each charge mints a single-use credential. The seller signs it once with a passkey and can revoke it at any time.",
   },
+  "market-note": {
+    label: "market note",
+    body: "An optional line you write when you hand over the product: where you sell, who buys from you, and links to the listings you sell against. Say Facebook Marketplace, or TikTok Shop, or your own store, and the research aims at that market instead of a generic one. Up to four links and 500 characters. The agent reads it as background about your market, never as orders it follows.",
+  },
+  logos: {
+    label: "logos",
+    body: "An argument from numbers. It hands the buyer arithmetic they can check themselves, like the price of one cup against the price of the cup they buy on the way to work.",
+  },
+  pathos: {
+    label: "pathos",
+    body: "An argument from feeling. It puts the buyer inside a moment, a quiet morning, a friend they would hand it to, and lets the moment do the persuading instead of a figure.",
+  },
+  ethos: {
+    label: "ethos",
+    body: "An argument from credibility. It names one checkable detail about how the thing is made, and the detail is what earns the trust, not an adjective.",
+  },
 } as const;
 
 export type GlossaryTermId = keyof typeof GLOSSARY_TERMS;
