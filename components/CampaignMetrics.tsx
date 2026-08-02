@@ -140,7 +140,7 @@ export default function CampaignMetrics({
   const roas = revenue !== null && media !== null && media > 0 ? revenue / media : null;
 
   return (
-    <section className="rounded-2xl border border-white/12 bg-white/[0.03] p-3 sm:p-4">
+    <section className="rounded-2xl bg-white/[0.03] p-3 sm:p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <h2 className="t-title text-white">
@@ -169,7 +169,7 @@ export default function CampaignMetrics({
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/[0.08] sm:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-white/[0.08] sm:grid-cols-4">
         <Tile
           label="Impressions"
           value={impressions ? impressions.toLocaleString() : "None yet"}
@@ -254,12 +254,12 @@ export default function CampaignMetrics({
         type="button"
         aria-expanded={allTiles}
         onClick={() => setAllTiles((v) => !v)}
-        className="mt-2 flex min-h-[2.75rem] w-full items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[13px] font-semibold text-zinc-300 transition-colors hover:bg-white/[0.07] sm:hidden"
+        className="mt-2 flex min-h-[2.75rem] w-full items-center justify-center rounded-xl bg-white/[0.03] px-3 text-[13px] font-semibold text-zinc-300 transition-colors hover:bg-white/[0.07] sm:hidden"
       >
         {allTiles ? "Show fewer numbers" : "Show 4 more numbers"}
       </button>
 
-      <div className="mt-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-3">
+      <div className="mt-3 rounded-xl bg-white/[0.03] px-3 py-3">
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
             ROAS
@@ -286,13 +286,13 @@ export default function CampaignMetrics({
           type="button"
           aria-expanded={projecting}
           onClick={() => setProjecting((v) => !v)}
-          className="mt-2 flex min-h-[2.75rem] w-full items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[13px] font-semibold text-zinc-200 transition-colors hover:bg-white/[0.07]"
+          className="mt-2 flex min-h-[2.75rem] w-full items-center justify-center rounded-xl bg-white/[0.03] px-3 text-[13px] font-semibold text-zinc-200 transition-colors hover:bg-white/[0.07]"
         >
           {projecting ? "Hide the projection" : "Project it with my own numbers"}
         </button>
 
         {projecting ? (
-          <div className="mt-2 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+          <div className="mt-2 rounded-xl bg-white/[0.02] p-3">
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="min-w-0">
                 <label
@@ -393,7 +393,7 @@ export default function CampaignMetrics({
       </div>
 
       {winner ? (
-        <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
+        <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1 rounded-xl bg-white/[0.03] px-3 py-2.5">
           <span
             aria-hidden="true"
             className="h-2 w-2 shrink-0 rounded-full"

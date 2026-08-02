@@ -123,7 +123,7 @@ export default function ProductBar({
           tabIndex={-1}
           role="group"
           aria-label="Product settings"
-          className="absolute left-0 top-full z-50 mt-2 max-h-[min(70vh,32rem)] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain rounded-2xl border border-white/15 bg-zinc-900 p-3 shadow-2xl focus:outline-none"
+          className="absolute left-0 top-full z-50 mt-2 max-h-[min(70vh,32rem)] w-[min(24rem,calc(100vw-2rem))] overflow-y-auto overscroll-contain rounded-2xl bg-zinc-900 p-3 shadow-2xl focus:outline-none"
         >
           <div className="space-y-3">
             {refinable ? (

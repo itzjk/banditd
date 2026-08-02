@@ -20,7 +20,7 @@ interface Props {
 }
 
 const BUTTON =
-  "min-h-[2.75rem] flex-1 rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2 text-[13px] font-semibold text-zinc-100 transition-colors hover:bg-white/[0.10] disabled:cursor-not-allowed disabled:opacity-40";
+  "min-h-[2.75rem] flex-1 rounded-xl bg-white/[0.04] px-3 py-2 text-[13px] font-semibold text-zinc-100 transition-colors hover:bg-white/[0.10] disabled:cursor-not-allowed disabled:opacity-40";
 
 export default function WinnerExport({ creative, productName, probabilityBest, style }: Props) {
   const [note, setNote] = useState<string | null>(null);

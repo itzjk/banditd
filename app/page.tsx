@@ -733,7 +733,7 @@ export default function Home() {
               href="/dashboard"
               className="focus-ring focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground hover-tint inline-flex min-h-11 items-center rounded-lg border border-border bg-surface px-3.5 text-[0.8125rem] font-semibold text-foreground hover:border-border-strong"
             >
-              Open the dashboard
+              Open the demo
             </Link>
             <a
               href="#start"
@@ -767,9 +767,10 @@ export default function Home() {
                 <span className="bd-neon">Then pay for the winner yourself.</span>
               </Display>
               <Lead className="mt-5 max-w-xl">
-                One sentence about what you sell. It reads the market, writes the ads, serves them
-                traffic, and holds the call until the evidence would survive a statistician. Only
-                then does it charge a mandate you signed once with a passkey.
+                Give it a product and it writes four ads, tests them against traffic, and only acts
+                when the data is clear. Most tools stop at making the ads. This one learns which one
+                works, tells you which to switch off and when, and pays for the next round itself
+                inside a mandate you signed once with a passkey.
               </Lead>
             </div>
 
@@ -920,7 +921,7 @@ export default function Home() {
                 <Surface level="feature" className="p-5 sm:p-7">
                   <Eyebrow className="text-muted">The first question everyone asks</Eyebrow>
                   <Headline as="h2" className="mt-3">
-                    Could it run off with the money? It never holds any.
+                    Could the AI run off with the money?
                   </Headline>
                   <Body className="mt-4 max-w-xl text-muted">
                     You never hand the agent a card, and it never sees a card number. You sign one
@@ -1180,7 +1181,7 @@ export default function Home() {
             <Rise>
               <Eyebrow className="text-muted">What makes it different</Eyebrow>
               <Headline className="mt-4 max-w-3xl">
-                Plenty of tools write ads. This one decides which ad stops.
+                Plenty of tools write ads. banditd decides which ad stops.
               </Headline>
               <Body className="mt-5 max-w-2xl text-muted">
                 A generator hands you four files and leaves you the expensive part, which one you
@@ -1223,9 +1224,10 @@ export default function Home() {
                 Four limits it cannot cross, and a card number it never sees.
               </Headline>
               <Body className="mt-5 max-w-xl text-muted">
-                A <Glossary term="mandate" /> is a signed permission, not a stored card. You sign it
-                once with a passkey and it carries your ceiling, your merchant, and your expiry.
-                Every charge after that is agent initiated, and none of them can leave those limits.
+                A <Glossary term="mandate" /> gives an agent permission to pay without asking you
+                every time. You approve it once with a passkey and set the limits: how much it can
+                spend, who it is allowed to pay, and when the permission expires. After that every
+                payment follows those rules, and none of them can leave them.
               </Body>
             </Rise>
 

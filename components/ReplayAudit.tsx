@@ -92,7 +92,7 @@ function Shell({
   return (
     <section
       aria-label="The common rule replayed on this run"
-      className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]"
+      className="overflow-hidden rounded-2xl bg-white/[0.02]"
     >
       <div className="border-b border-white/10 px-3 py-3 sm:px-4 sm:py-3.5">
         <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
@@ -273,7 +273,7 @@ function Aftermath({ replay }: { replay: Replay }) {
         {rows.map((row) => (
           <li
             key={row.arm.id}
-            className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5"
+            className="min-w-0 rounded-xl bg-white/[0.03] px-3 py-2.5"
           >
             <p className="truncate text-[11px] text-zinc-400">{row.tag}</p>
             <p className="mt-0.5 truncate text-[14px] font-semibold text-white">{row.arm.label}</p>

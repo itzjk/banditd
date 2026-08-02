@@ -213,7 +213,7 @@ export default function SampleRun() {
             <p className="mt-2 break-words text-[13px] leading-relaxed text-zinc-200">
               {SAMPLE_CALL.reason}
             </p>
-            <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/[0.08] sm:grid-cols-4">
+            <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-white/[0.08] sm:grid-cols-4">
               <Stat label="Probability best" value={SAMPLE_CALL.probabilityBest} sim />
               <Stat label="Impressions" value={SAMPLE_CALL.impressions.toLocaleString()} sim />
               <Stat label="Clicks" value={SAMPLE_CALL.clicks.toLocaleString()} sim />
@@ -228,7 +228,7 @@ export default function SampleRun() {
                 Real charges against the Prava sandbox
               </span>
             </div>
-            <div className="mt-2 grid grid-cols-3 divide-x divide-white/[0.07] overflow-hidden rounded-xl border border-white/10 bg-white/[0.02]">
+            <div className="mt-2 grid grid-cols-3 divide-x divide-white/[0.07] overflow-hidden rounded-xl bg-white/[0.02]">
               <Total label="Spent" value={`$${SAMPLE_TOTALS.spent}`} dot="bg-emerald-400" />
               <Total label="Blocked" value={`$${SAMPLE_TOTALS.blocked}`} dot="bg-rose-400" />
               <Total label="Charges" value={SAMPLE_TOTALS.charges} />

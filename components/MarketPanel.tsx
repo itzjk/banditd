@@ -56,7 +56,7 @@ function paragraphs(value: string): string[] {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">{children}</section>
+    <section className="rounded-2xl bg-white/[0.02] p-3 sm:p-4">{children}</section>
   );
 }
 
@@ -184,7 +184,7 @@ export default function MarketPanel({ research, productName }: Props) {
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2">
-        <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2">
+        <div className="min-w-0 rounded-xl bg-white/[0.03] px-2.5 py-2">
           <div className="text-base font-semibold tabular-nums leading-none text-white">
             {sources.length}
           </div>
@@ -192,13 +192,13 @@ export default function MarketPanel({ research, productName }: Props) {
             Sources read
           </div>
         </div>
-        <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2">
+        <div className="min-w-0 rounded-xl bg-white/[0.03] px-2.5 py-2">
           <div className="text-base font-semibold tabular-nums leading-none text-white">
             {domains}
           </div>
           <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-zinc-400">Sites</div>
         </div>
-        <div className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2">
+        <div className="min-w-0 rounded-xl bg-white/[0.03] px-2.5 py-2">
           <div className="text-base font-semibold tabular-nums leading-none text-white">
             {angles.length}
           </div>
@@ -270,7 +270,7 @@ export default function MarketPanel({ research, productName }: Props) {
                 type="button"
                 aria-expanded={allAngles}
                 onClick={() => setAllAngles((v) => !v)}
-                className="mt-2 min-h-[2.75rem] w-full cursor-pointer rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[14px] font-medium text-zinc-300 transition-colors hover:bg-white/[0.07]"
+                className="mt-2 min-h-[2.75rem] w-full cursor-pointer rounded-xl bg-white/[0.03] px-3 text-[14px] font-medium text-zinc-300 transition-colors hover:bg-white/[0.07]"
               >
                 {allAngles ? "Show fewer" : `Show all ${angles.length}`}
               </button>
@@ -286,7 +286,7 @@ export default function MarketPanel({ research, productName }: Props) {
           Where your price lands
         </div>
         {parsed.price.text ? (
-          <div className="mt-2 rounded-xl border border-white/15 bg-white/[0.04] p-3">
+          <div className="mt-2 rounded-xl bg-white/[0.04] p-3">
             <p className="break-words text-[14px] leading-relaxed text-zinc-100 [overflow-wrap:anywhere]">
               <Cited
                 value={parsed.price.text}
@@ -325,7 +325,7 @@ export default function MarketPanel({ research, productName }: Props) {
                       href={source.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="group flex items-start gap-2.5 rounded-xl border border-white/10 bg-white/[0.03] px-2.5 py-2 transition-colors hover:border-white/20 hover:bg-white/[0.07]"
+                      className="group flex items-start gap-2.5 rounded-xl bg-white/[0.03] px-2.5 py-2 transition-colors hover:border-white/20 hover:bg-white/[0.07]"
                     >
                       <span className="mt-[1px] flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/[0.06] font-mono text-[10px] tabular-nums text-zinc-400 group-hover:text-zinc-200">
                         {registry.numberOf(source.url)}
@@ -361,7 +361,7 @@ export default function MarketPanel({ research, productName }: Props) {
                 type="button"
                 aria-expanded={allSources}
                 onClick={() => setAllSources((v) => !v)}
-                className="mt-2 min-h-[2.75rem] w-full cursor-pointer rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[14px] font-medium text-zinc-300 transition-colors hover:bg-white/[0.07]"
+                className="mt-2 min-h-[2.75rem] w-full cursor-pointer rounded-xl bg-white/[0.03] px-3 text-[14px] font-medium text-zinc-300 transition-colors hover:bg-white/[0.07]"
               >
                 {allSources ? "Show fewer" : `Show all ${sources.length} sources`}
               </button>

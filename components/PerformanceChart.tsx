@@ -108,7 +108,7 @@ export default function PerformanceChart({ cohort, winnerId, generation, rounds 
 
   if (served === 0) {
     return (
-      <section className="rounded-2xl border border-white/12 bg-white/[0.03] p-3 sm:p-4">
+      <section className="rounded-2xl bg-white/[0.03] p-3 sm:p-4">
         <h2 className="t-title text-white">
           Performance over traffic rounds
         </h2>
@@ -134,7 +134,7 @@ export default function PerformanceChart({ cohort, winnerId, generation, rounds 
   const dots = shown.length <= DOT_LIMIT;
 
   return (
-    <section className="rounded-2xl border border-white/12 bg-white/[0.03] p-3 sm:p-4">
+    <section className="rounded-2xl bg-white/[0.03] p-3 sm:p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <h2 className="t-title text-white">
@@ -285,7 +285,7 @@ export default function PerformanceChart({ cohort, winnerId, generation, rounds 
           </div>
         </div>
       ) : (
-        <div className="mt-3 space-y-2 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+        <div className="mt-3 space-y-2 rounded-xl bg-white/[0.02] p-3">
           {legend.map((c, i) => (
             <div key={`${c.name}-bar-${i}`} className="min-w-0">
               <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">

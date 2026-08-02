@@ -683,7 +683,7 @@ function Band({
 }) {
   return (
     <section className="mx-auto mt-12 w-full max-w-5xl sm:mt-16">
-      <div className="rounded-3xl border border-white/[0.07] bg-white/[0.012] p-0 sm:p-5">
+      <div className="rounded-3xl bg-white/[0.012] p-0 sm:p-5">
         <div className="border-b border-white/[0.07] px-1 pb-4 sm:pb-5">
           <div className="flex items-center gap-2">
             <span aria-hidden="true" className="h-px w-5 shrink-0 bg-white/25" />
@@ -835,7 +835,7 @@ function Fold({
         aria-labelledby={labelId}
         aria-describedby={hintId}
         onClick={() => setChoice(!open)}
-        className="flex min-h-[3.5rem] w-full cursor-pointer items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.02] px-3 py-3 text-left transition-colors duration-150 hover:border-white/20 hover:bg-white/[0.05] sm:px-4"
+        className="flex min-h-[3.5rem] w-full cursor-pointer items-center justify-between gap-3 rounded-2xl bg-white/[0.02] px-3 py-3 text-left transition-colors duration-150 hover:border-white/20 hover:bg-white/[0.05] sm:px-4"
       >
         <span className="min-w-0">
           <span
@@ -1480,10 +1480,13 @@ export default function Dashboard() {
         onRevoke={revoke}
       />
 
-      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl px-4 pb-24 pt-5 sm:px-6 sm:pt-8">
+      <div aria-hidden className="bd-board-bg" />
+      <div aria-hidden className="bd-board-stars" />
+
+      <main id="main" tabIndex={-1} className="relative mx-auto w-full max-w-6xl px-4 pb-24 pt-5 sm:px-6 sm:pt-8">
         <div className="space-y-4 sm:space-y-5">
         {notice ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3 py-1.5 text-[13px] leading-snug text-zinc-300">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/[0.04] px-3 py-1.5 text-[13px] leading-snug text-zinc-300">
             <span className="min-w-0 break-words py-1">{notice}</span>
             <button
               type="button"
@@ -1639,7 +1642,7 @@ export default function Dashboard() {
             </p>
 
             {!decision.shouldBuy && decision.trafficPlan ? (
-              <div className="mt-3 rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2.5">
+              <div className="mt-3 rounded-xl bg-white/[0.04] px-3 py-2.5">
                 <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                   The agent set the next step itself
                 </div>
@@ -1650,7 +1653,7 @@ export default function Dashboard() {
               </div>
             ) : null}
 
-            <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/[0.08] sm:grid-cols-4">
+            <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-white/[0.08] sm:grid-cols-4">
               <Stat label="Probability best" value={pct(freshEvaluation.probabilityBest)} sim />
               <Stat
                 label="Evidence strength"
@@ -1940,7 +1943,7 @@ export default function Dashboard() {
             title="Run it step by step"
             hint={`Manual controls for research, creatives, traffic and the spend decision. Generation ${generation}.`}
           >
-            <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
+            <div className="space-y-3 rounded-2xl bg-white/[0.02] p-3 sm:p-4">
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <Action
                   index={1}

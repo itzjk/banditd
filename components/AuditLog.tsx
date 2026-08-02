@@ -25,7 +25,7 @@ export default function AuditLog({ entries, initial = 8 }: Props) {
 
   if (entries.length === 0) {
     return (
-      <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-4 sm:p-5">
+      <section className="rounded-2xl bg-white/[0.02] p-4 sm:p-5">
         <p className="text-[14px] leading-relaxed text-zinc-400">
           Nothing yet. Every move the agent makes lands here, in the order they happened.
         </p>
@@ -34,7 +34,7 @@ export default function AuditLog({ entries, initial = 8 }: Props) {
   }
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+    <section className="overflow-hidden rounded-2xl bg-white/[0.02]">
       <ol className="divide-y divide-white/[0.06]">
         {shown.map((entry, i) => (
           <li
@@ -64,7 +64,7 @@ export default function AuditLog({ entries, initial = 8 }: Props) {
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="min-h-[2.75rem] w-full rounded-xl border border-white/10 bg-white/[0.03] px-3 text-[14px] font-semibold text-zinc-300 transition-colors duration-150 hover:border-white/25 hover:bg-white/[0.07] hover:text-white"
+            className="min-h-[2.75rem] w-full rounded-xl bg-white/[0.03] px-3 text-[14px] font-semibold text-zinc-300 transition-colors duration-150 hover:border-white/25 hover:bg-white/[0.07] hover:text-white"
           >
             {expanded ? "Show less" : `Show all ${entries.length}`}
           </button>

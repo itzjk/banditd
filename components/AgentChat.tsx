@@ -722,7 +722,7 @@ export default function AgentChat({ state }: Props) {
     <div
       role="dialog"
       aria-label="Chat with the banditd agent"
-      className="fixed inset-x-3 bottom-[calc(0.75rem_+_env(safe-area-inset-bottom,0px))] z-50 flex h-[min(78dvh,34rem)] flex-col overflow-hidden rounded-2xl border border-white/15 bg-zinc-900/95 text-zinc-100 shadow-2xl backdrop-blur sm:inset-x-auto sm:bottom-[calc(1.5rem_+_env(safe-area-inset-bottom,0px))] sm:right-6 sm:w-[24rem]"
+      className="fixed inset-x-3 bottom-[calc(0.75rem_+_env(safe-area-inset-bottom,0px))] z-50 flex h-[min(78dvh,34rem)] flex-col overflow-hidden rounded-2xl bg-zinc-900/95 text-zinc-100 shadow-2xl backdrop-blur sm:inset-x-auto sm:bottom-[calc(1.5rem_+_env(safe-area-inset-bottom,0px))] sm:right-6 sm:w-[24rem]"
     >
       <div className="flex items-start justify-between gap-2 border-b border-white/10 px-4 py-3">
         <div className="min-w-0">
@@ -844,7 +844,7 @@ export default function AgentChat({ state }: Props) {
             maxLength={MAX_QUESTION}
             placeholder="Ask it to do something"
             aria-label="Your question"
-            className="max-h-24 min-h-[2.75rem] flex-1 resize-none rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2.5 text-[13px] text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-white/30"
+            className="max-h-24 min-h-[2.75rem] flex-1 resize-none rounded-xl bg-white/[0.04] px-3 py-2.5 text-[13px] text-zinc-100 outline-none placeholder:text-zinc-500 focus:border-white/30"
           />
           <button
             type="button"

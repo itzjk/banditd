@@ -24,7 +24,7 @@ const STEPS = [
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
+    <section className="rounded-2xl bg-white/[0.02] p-3 sm:p-4">
       {children}
     </section>
   );
@@ -151,7 +151,7 @@ export default function Insights({
                 {insights.competitorPlays.map((p, i) => (
                   <li
                     key={`${p.play}-${i}`}
-                    className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5"
+                    className="rounded-xl bg-white/[0.03] px-3 py-2.5"
                   >
                     <div className="flex gap-2.5">
                       <span className="mt-[3px] w-5 shrink-0 font-mono text-[10px] tabular-nums text-zinc-400">
@@ -209,7 +209,7 @@ export default function Insights({
                 {insights.estimates.map((e, i) => (
                   <div
                     key={`${e.label}-${i}`}
-                    className="min-w-0 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5"
+                    className="min-w-0 rounded-xl bg-white/[0.03] px-3 py-2.5"
                   >
                     <div className="break-words text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400 [overflow-wrap:anywhere]">
                       {plain(e.label)}

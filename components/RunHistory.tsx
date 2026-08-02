@@ -89,7 +89,7 @@ function Comparison({ left, right }: { left: ArchivedRun; right: ArchivedRun }) 
   const gapBetween = points(winnerCtr(left), winnerCtr(right));
 
   return (
-    <div className="rounded-2xl border border-white/15 bg-white/[0.03] p-3 sm:p-4">
+    <div className="rounded-2xl bg-white/[0.03] p-3 sm:p-4">
       <h4 className="t-caption break-words font-semibold text-white">
         Which angle won on each product
       </h4>
@@ -100,7 +100,7 @@ function Comparison({ left, right }: { left: ArchivedRun; right: ArchivedRun }) 
           return (
             <section
               key={run.id}
-              className="min-w-0 rounded-xl border border-white/10 bg-white/[0.02] p-3"
+              className="min-w-0 rounded-xl bg-white/[0.02] p-3"
             >
               <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
                 {i === 0 ? "First pick" : "Second pick"}
@@ -149,7 +149,7 @@ function Row({
   onPick: () => void;
 }) {
   return (
-    <li className="min-w-0 rounded-xl border border-white/10 bg-white/[0.02] p-3">
+    <li className="min-w-0 rounded-xl bg-white/[0.02] p-3">
       <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <h4 className="t-caption min-w-0 break-words font-semibold text-white [overflow-wrap:anywhere]">
           {run.product.name}
@@ -205,7 +205,7 @@ export default function RunHistory({ runs }: Props) {
 
   if (open) {
     return (
-      <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
+      <div className="space-y-3 rounded-2xl bg-white/[0.02] p-3 sm:p-4">
         <button
           type="button"
           onClick={() => setOpenId(null)}
@@ -226,7 +226,7 @@ export default function RunHistory({ runs }: Props) {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 rounded-xl bg-white/[0.03] p-3 sm:grid-cols-4">
           <Field label="Price" value={open.product.price || "not given"} />
           <Field label="Winning angle" value={open.winner ? open.winner.angle : "none"} />
           <Field label="Winner CTR" value={pct(winnerCtr(open), 2)} />

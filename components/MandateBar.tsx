@@ -294,7 +294,7 @@ export default function MandateBar({
         <div className="mx-auto w-full max-w-6xl px-4 py-3 sm:px-6 sm:py-4">
           {armed ? (
             <>
-              <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/[0.08] sm:grid-cols-4">
+              <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-white/[0.08] sm:grid-cols-4">
                 <Field
                   label="This cycle"
                   value={revoked ? "Revoked" : cycleUsed ? "Charge used" : cycleValue}
@@ -404,7 +404,7 @@ export default function MandateBar({
                 Until it exists every purchase attempt is refused before it reaches a card.
                 Everything below still runs, only the charge is off.
               </p>
-              <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/[0.08] sm:grid-cols-4">
+              <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-white/[0.08] sm:grid-cols-4">
                 <Field label="This cycle" value="Not set" hint="nothing is authorized" />
                 <Field label="Most it can charge" value="Not set" hint={`$${money(cap)} planned`} />
                 <Field label="Merchant" value="Not set" hint="Render credits only" />

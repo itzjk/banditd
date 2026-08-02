@@ -376,7 +376,7 @@ function RoundTrack({ rounds }: { rounds: Round[] }) {
         </span>
       </div>
 
-      <div className="mt-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+      <div className="mt-2 rounded-xl bg-white/[0.03] p-3">
         <div className="flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
           <div className="min-w-0">
             <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
@@ -419,7 +419,7 @@ function RoundTrack({ rounds }: { rounds: Round[] }) {
         </p>
       </div>
 
-      <div className="mt-2 overflow-hidden rounded-xl border border-white/10">
+      <div className="mt-2 overflow-hidden rounded-xl">
         <div className="grid grid-cols-[1.6rem_1fr_3rem_3.4rem] gap-1 border-b border-white/10 bg-white/[0.03] px-2 py-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
           <span>Rd</span>
           <span>Impressions</span>
@@ -476,7 +476,7 @@ function PlanTrack({ plans }: { plans: PlanShown[] }) {
         </span>
       </div>
 
-      <div className="mt-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
+      <div className="mt-2 rounded-xl bg-white/[0.03] p-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-md bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-950">
             {ACTION_LABEL[latest.action]}
@@ -1733,7 +1733,7 @@ export default function DemoRunner({
   }, [ending]);
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-white/15 bg-white/[0.04]">
+    <section className="overflow-hidden rounded-2xl bg-white/[0.04]">
       <div className="p-3 sm:p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-md bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-950">

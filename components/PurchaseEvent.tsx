@@ -375,7 +375,7 @@ export function PurchaseLedger({ events, headlineFor }: LedgerProps) {
   const charged = events.filter((e) => e.ok).length;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
+    <div className="overflow-hidden rounded-2xl bg-white/[0.02]">
       <div
         className={`grid divide-x divide-white/[0.07] border-b border-white/[0.07] bg-white/[0.02] ${
           stalled > 0 ? "grid-cols-2 divide-y sm:grid-cols-4 sm:divide-y-0" : "grid-cols-3"

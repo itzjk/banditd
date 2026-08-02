@@ -103,7 +103,7 @@ export default function AgentReadout({ cohort, generation, evaluation, winnerId 
       : "hold the split even, no ad has pulled far enough ahead to earn more traffic";
 
   return (
-    <section className="rounded-2xl border border-white/12 bg-white/[0.03] p-3 sm:p-4">
+    <section className="rounded-2xl bg-white/[0.03] p-3 sm:p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <h2 className="t-title text-white">
@@ -118,7 +118,7 @@ export default function AgentReadout({ cohort, generation, evaluation, winnerId 
         </span>
       </div>
 
-      <div className="mt-3 rounded-xl border border-white/10 bg-black/40 p-3">
+      <div className="mt-3 rounded-xl bg-black/40 p-3">
         <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2.5 gap-y-1.5 font-mono text-[11px] leading-snug sm:text-[12px]">
           <Row tag="ANALYZING">
             {cohort.length} ads, {served.toLocaleString()} simulated impressions,{" "}

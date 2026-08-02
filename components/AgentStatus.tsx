@@ -36,7 +36,7 @@ export default function AgentStatus({ title, steps, intervalMs = 2200 }: Props) 
   return (
     <div
       aria-busy="true"
-      className="overflow-hidden rounded-2xl border border-white/15 bg-white/[0.04]"
+      className="overflow-hidden rounded-2xl bg-white/[0.04]"
     >
       <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2.5 sm:px-4">
         <div className="flex min-w-0 items-center gap-2.5">

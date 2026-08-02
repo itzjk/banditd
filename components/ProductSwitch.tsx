@@ -194,7 +194,7 @@ export default function ProductSwitch({ product, hasRun, disabled, onApply }: Pr
             aria-activedescendant={
               listOpen && active >= 0 ? `${ids}-suggestion-${active}` : undefined
             }
-            className="mt-1 min-h-[2.75rem] w-full min-w-0 rounded-xl border border-white/15 bg-white/[0.03] px-3 py-2 text-[14px] text-white placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-1 min-h-[2.75rem] w-full min-w-0 rounded-xl bg-white/[0.03] px-3 py-2 text-[14px] text-white placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-40"
           />
           <ul
             id={`${ids}-suggestions`}
@@ -249,7 +249,7 @@ export default function ProductSwitch({ product, hasRun, disabled, onApply }: Pr
               setError(null);
             }}
             placeholder="$34.00"
-            className="mt-1 min-h-[2.75rem] w-full min-w-0 rounded-xl border border-white/15 bg-white/[0.03] px-3 py-2 text-[14px] tabular-nums text-white placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-1 min-h-[2.75rem] w-full min-w-0 rounded-xl bg-white/[0.03] px-3 py-2 text-[14px] tabular-nums text-white placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-40"
           />
         </div>
 
@@ -267,7 +267,7 @@ export default function ProductSwitch({ product, hasRun, disabled, onApply }: Pr
               setError(null);
             }}
             placeholder="What it is and who it is for, in a line."
-            className="mt-1 w-full min-w-0 resize-y rounded-xl border border-white/15 bg-white/[0.03] px-3 py-2 text-[14px] leading-relaxed text-white placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-40"
+            className="mt-1 w-full min-w-0 resize-y rounded-xl bg-white/[0.03] px-3 py-2 text-[14px] leading-relaxed text-white placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-40"
           />
         </div>
       </div>
@@ -304,7 +304,7 @@ export default function ProductSwitch({ product, hasRun, disabled, onApply }: Pr
         <button
           type="button"
           onClick={close}
-          className="min-h-[2.75rem] rounded-xl border border-white/15 bg-white/[0.03] px-5 text-[14px] font-semibold text-zinc-200 transition-colors hover:bg-white/[0.1]"
+          className="min-h-[2.75rem] rounded-xl bg-white/[0.03] px-5 text-[14px] font-semibold text-zinc-200 transition-colors hover:bg-white/[0.1]"
         >
           Cancel
         </button>

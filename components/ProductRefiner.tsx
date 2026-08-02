@@ -86,7 +86,7 @@ function Cards({ count }: { count: number }) {
       {Array.from({ length: count }, (_, i) => (
         <span
           key={i}
-          className="block animate-pulse rounded-xl border border-white/10 bg-white/[0.05] pb-[100%]"
+          className="block animate-pulse rounded-xl bg-white/[0.05] pb-[100%]"
         />
       ))}
     </div>
@@ -288,7 +288,7 @@ function Group({
             commit();
           }}
           placeholder={placeholder}
-          className="min-h-[2.75rem] w-full min-w-0 rounded-xl border border-white/15 bg-white/[0.03] px-3 py-2 text-[14px] text-white placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-40"
+          className="min-h-[2.75rem] w-full min-w-0 rounded-xl bg-white/[0.03] px-3 py-2 text-[14px] text-white placeholder:text-zinc-400 disabled:cursor-not-allowed disabled:opacity-40"
         />
         <button
           type="submit"
@@ -381,7 +381,7 @@ export default function ProductRefiner({
   return (
     <div className="min-w-0">
       {failed ? (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/15 bg-white/[0.04] px-3 py-2 text-[12px] leading-snug text-zinc-300">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-white/[0.04] px-3 py-2 text-[12px] leading-snug text-zinc-300">
           <span className="min-w-0 break-words">
             The suggestions did not come back this time. You can still type the variant and the
             brand yourself.

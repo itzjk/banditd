@@ -30,7 +30,7 @@ export default function RunExport({ state, images, evaluation }: Props) {
   return (
     <section
       aria-label="Export the run"
-      className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4"
+      className="rounded-2xl bg-white/[0.02] p-3 sm:p-4"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
         <div className="flex min-w-0 flex-wrap items-center gap-2">

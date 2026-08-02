@@ -216,7 +216,7 @@ export default function PosteriorChart({ creatives, winnerIndex }: Props) {
 
   if (creatives.length === 0 || served === 0 || !view) {
     return (
-      <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
+      <section className="rounded-2xl bg-white/[0.02] p-3 sm:p-4">
         <h2 className="t-title text-white">What the agent believes</h2>
         <div className="mt-3 flex h-40 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-white/12 px-4 text-center sm:h-48">
           <p className="text-[13px] font-medium text-zinc-300">No impressions yet</p>
@@ -232,7 +232,7 @@ export default function PosteriorChart({ creatives, winnerIndex }: Props) {
   const spread = view.hi - view.lo;
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-3 sm:p-4">
+    <section className="rounded-2xl bg-white/[0.02] p-3 sm:p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="t-title text-white">What the agent believes</h2>
         <span className="text-[11px] text-zinc-400">
