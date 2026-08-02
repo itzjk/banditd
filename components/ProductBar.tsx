@@ -91,21 +91,21 @@ export default function ProductBar({
       }}
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-        <h1 className="min-w-0 break-words text-[19px] font-semibold leading-tight tracking-tight text-white [overflow-wrap:anywhere] sm:text-xl">
-          {product.name}
+        <h1 className="min-w-0 text-[19px] font-semibold leading-tight tracking-tight text-white sm:text-xl">
+          <button
+            ref={triggerRef}
+            type="button"
+            aria-expanded={open}
+            aria-controls={panelId}
+            onClick={() => setOpen((was) => !was)}
+            className="-mx-2 -my-1 flex min-h-11 min-w-0 items-center gap-2 rounded-lg px-2 py-1 text-left transition-colors hover:bg-white/[0.08] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+          >
+            <span className="min-w-0 break-words [overflow-wrap:anywhere]">{product.name}</span>
+            <span className="shrink-0 text-zinc-400">
+              <Chevron open={open} />
+            </span>
+          </button>
         </h1>
-
-        <button
-          ref={triggerRef}
-          type="button"
-          aria-expanded={open}
-          aria-controls={panelId}
-          aria-label={open ? "Close the product settings" : "Change the product, the variant or the brand"}
-          onClick={() => setOpen((was) => !was)}
-          className="-my-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-zinc-300 transition-colors hover:bg-white/[0.08] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-        >
-          <Chevron open={open} />
-        </button>
 
         <span className="shrink-0 text-[15px] font-medium tabular-nums text-zinc-300">
           {product.price}
