@@ -62,7 +62,7 @@ export default function CreativeCard({
   const depth = useDepth() && !retired;
   const entry = useDeckEntry({ index, active: !retired });
   const tiltRef = useTilt<HTMLElement>({ disabled: Boolean(retired), max: 5.5, perspective: 900 });
-  const banner = Boolean(isWinner) || Boolean(isLeader);
+  const banner = Boolean(isWinner);
 
   return (
     <div style={entry} className={`h-full ${retired ? "opacity-60" : ""}`}>
@@ -88,10 +88,6 @@ export default function CreativeCard({
                 {pct(probabilityBest)} probability best
               </span>
             ) : null}
-          </div>
-        ) : isLeader ? (
-          <div className="rounded-t-[15px] bg-white/[0.06] px-3 py-1.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-zinc-300 lg:text-[11px]">
-            Leading on simulated clicks
           </div>
         ) : null}
 
@@ -140,6 +136,11 @@ export default function CreativeCard({
             <span className="rounded-full border border-white/15 bg-black/50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-300 backdrop-blur">
               Gen {creative.generation}
             </span>
+            {isLeader && !isWinner ? (
+              <span className="rounded-full border border-accent/50 bg-black/60 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-accent backdrop-blur">
+                Leading
+              </span>
+            ) : null}
           </div>
         </div>
 

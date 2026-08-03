@@ -118,7 +118,7 @@ export default function AgentReadout({ cohort, generation, evaluation, winnerId 
         </span>
       </div>
 
-      <div className="mt-3 rounded-xl bg-black/40 p-3">
+      <div className="mt-3 rounded-xl p-3">
         <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2.5 gap-y-1.5 font-mono text-[11px] leading-snug sm:text-[12px]">
           <Row tag="ANALYZING">
             {cohort.length} ads, {served.toLocaleString()} simulated impressions,{" "}
