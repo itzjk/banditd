@@ -1733,7 +1733,7 @@ export default function DemoRunner({
   }, [ending]);
 
   return (
-    <section className="overflow-hidden rounded-2xl bg-white/[0.04]">
+    <section className="overflow-hidden rounded-2xl">
       <div className="p-3 sm:p-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="rounded-md bg-white px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-950">
