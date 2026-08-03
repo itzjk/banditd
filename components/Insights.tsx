@@ -24,7 +24,7 @@ const STEPS = [
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl bg-white/[0.02] p-3 sm:p-4">
+    <section className="rounded-2xl p-3 sm:p-4">
       {children}
     </section>
   );

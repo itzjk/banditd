@@ -236,7 +236,7 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
 
   if (!rows.length) {
     return (
-      <section className="rounded-2xl bg-white/[0.02] p-3 sm:p-4">
+      <section className="rounded-2xl p-3 sm:p-4">
         <div className="rounded-xl border border-dashed border-white/12 p-6 text-center">
           <p className="text-[13px] text-zinc-400">
             The family tree draws itself here as soon as the agent writes its first four creatives.
@@ -249,7 +249,7 @@ export default function LineageTree({ creatives, winnerId, purchases }: Props) {
   const onlySeed = rows.length === 1;
 
   return (
-    <section className="rounded-2xl bg-white/[0.02] p-3 sm:p-4">
+    <section className="rounded-2xl p-3 sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 border-b border-white/10 pb-3">
         <div className="min-w-0">
           <div className="text-[13px] font-semibold tabular-nums text-zinc-200">

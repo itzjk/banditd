@@ -89,7 +89,7 @@ function Comparison({ left, right }: { left: ArchivedRun; right: ArchivedRun }) 
   const gapBetween = points(winnerCtr(left), winnerCtr(right));
 
   return (
-    <div className="rounded-2xl bg-white/[0.03] p-3 sm:p-4">
+    <div className="rounded-2xl p-3 sm:p-4">
       <h4 className="t-caption break-words font-semibold text-white">
         Which angle won on each product
       </h4>
@@ -205,7 +205,7 @@ export default function RunHistory({ runs }: Props) {
 
   if (open) {
     return (
-      <div className="space-y-3 rounded-2xl bg-white/[0.02] p-3 sm:p-4">
+      <div className="space-y-3 rounded-2xl p-3 sm:p-4">
         <button
           type="button"
           onClick={() => setOpenId(null)}

@@ -140,7 +140,7 @@ export default function CampaignMetrics({
   const roas = revenue !== null && media !== null && media > 0 ? revenue / media : null;
 
   return (
-    <section className="rounded-2xl bg-white/[0.03] p-3 sm:p-4">
+    <section className="rounded-2xl p-3 sm:p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1.5">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <h2 className="t-title text-white">

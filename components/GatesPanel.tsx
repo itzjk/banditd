@@ -228,7 +228,7 @@ function Shell({ children }: { children: ReactNode }) {
   return (
     <section
       aria-label="Decision gates"
-      className="overflow-hidden rounded-2xl bg-white/[0.02]"
+      className="overflow-hidden rounded-2xl"
     >
       {children}
     </section>

@@ -92,7 +92,7 @@ function Shell({
   return (
     <section
       aria-label="The common rule replayed on this run"
-      className="overflow-hidden rounded-2xl bg-white/[0.02]"
+      className="overflow-hidden rounded-2xl"
     >
       <div className="border-b border-white/10 px-3 py-3 sm:px-4 sm:py-3.5">
         <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">

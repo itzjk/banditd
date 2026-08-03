@@ -165,7 +165,7 @@ function Charge({ charge }: { charge: SampleCharge }) {
 export default function SampleRun() {
   return (
     <section aria-label="Frozen example of a finished run" className="scroll-mt-20">
-      <div className="overflow-hidden rounded-2xl border border-amber-400/30 bg-white/[0.02]">
+      <div className="overflow-hidden rounded-2xl border border-amber-400/30">
         <div className="border-b border-white/[0.07] bg-amber-400/[0.06] px-3 py-3 sm:px-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-md border border-amber-400/40 bg-amber-400/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-200">

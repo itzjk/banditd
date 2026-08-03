@@ -835,7 +835,7 @@ function Fold({
         aria-labelledby={labelId}
         aria-describedby={hintId}
         onClick={() => setChoice(!open)}
-        className="flex min-h-[3.5rem] w-full cursor-pointer items-center justify-between gap-3 rounded-2xl bg-white/[0.02] px-3 py-3 text-left transition-colors duration-150 hover:border-white/20 hover:bg-white/[0.05] sm:px-4"
+        className="flex min-h-[3.5rem] w-full cursor-pointer items-center justify-between gap-3 rounded-2xl px-3 py-3 text-left transition-colors duration-150 hover:border-white/20 hover:bg-white/[0.05] sm:px-4"
       >
         <span className="min-w-0">
           <span
@@ -1944,7 +1944,7 @@ export default function Dashboard() {
             title="Run it step by step"
             hint={`Manual controls for research, creatives, traffic and the spend decision. Generation ${generation}.`}
           >
-            <div className="space-y-3 rounded-2xl bg-white/[0.02] p-3 sm:p-4">
+            <div className="space-y-3 rounded-2xl p-3 sm:p-4">
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <Action
                   index={1}
