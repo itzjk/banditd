@@ -52,6 +52,16 @@ PRAVA_USER_EMAIL=seller@banditd.dev
 
 Everything else has a default and you can skip it: `MANDATE_CAP` (50.00), `RENDER_MERCHANT_NAME`, `RENDER_MERCHANT_URL`, `RENDER_MERCHANT_COUNTRY`, `RENDER_CREDIT_PRICE` (4.00), `OPENAI_TEXT_MODEL` (gpt-5.6-luna), `OPENAI_IMAGE_MODEL` (gpt-image-1), `OPENAI_SEARCH_CONTEXT` (low).
 
+A deployment needs two more things, and refuses to start a run without the first:
+
+```
+KV_REST_API_URL=...        # Vercel KV or Upstash REST, where runs, credits and rate limits live
+KV_REST_API_TOKEN=...      # (or RUN_STORE=memory on a single-instance server)
+APP_URL=https://your.domain  # only when the site is not on its Vercel URL
+```
+
+`DAILY_MODEL_CALLS` (1500), `DAILY_IMAGE_RENDERS` (400) and `DAILY_PURCHASES` (60) cap the paid calls of the whole deployment per UTC day. Locally none of this is needed: runs live in process memory.
+
 Then you need a signed mandate. Without one the agent has nothing to charge and `/api/purchase` answers 400 telling you so.
 
 ```bash
@@ -70,12 +80,13 @@ Copy the mandate id into `.env.local`:
 PRAVA_MANDATE_ID=mdt_...
 ```
 
-The demo also fires a deliberate over-cap charge to show the ceiling holding. It uses the smallest signed mandate for that, or the one you pin:
+The demo also fires a deliberate over-cap charge to show the ceiling holding. Pin the mandate it should aim at; without a pin it aims at the first chargeable one, and Visa refuses it all the same:
 
 ```
 PRAVA_REJECTION_MANDATE_ID=mdt_...
-PRAVA_REJECTION_MANDATE_AMOUNT=5.00
 ```
+
+The forced charges are open in development. In production they need `DEMO_FORCE=1` and the operator's `ADMIN_TOKEN` sent as the `x-banditd-admin` header, because they spend against real mandates.
 
 Now run it:
 
@@ -83,7 +94,15 @@ Now run it:
 npm run dev
 ```
 
-The statistics are testable on their own, no keys involved:
+The tests need no keys and no network (every outbound call is stubbed):
+
+```bash
+npm test
+```
+
+They cover the trust boundary (a forged ledger, a forged cohort, `force` in production, a foreign run, oversize input, a mandate id with `../`), the atomic credit debit, the limits, the SSRF filter and the statistics (Beta moments, the e-value staying an e-value under no difference).
+
+The statistics also have a long report of their own:
 
 ```bash
 node scripts/bandit-test.mts
@@ -93,13 +112,15 @@ Node 24, it runs the TypeScript straight. The last full run printed `elapsed 107
 
 How it's built
 
-Next 16 App Router, React 19, Tailwind 4, TypeScript. No database, no session store, no cache.
+Next 16 App Router, React 19, Tailwind 4, TypeScript, and a small key-value store (Vercel KV or Upstash over REST) for the runs.
 
-The whole run is one JSON object that travels in the request body. Every route takes a `state`, returns the state it produced, and the browser holds it in localStorage between calls. That is not a shortcut, it is the deployment target: on Vercel each invocation is a separate instance, so anything left in module memory is gone by the next request. Running locally the store also writes `data/state.json`, which is convenience for poking at it with curl, not the source of truth.
+The run lives on the server. `POST /api/product` creates it, owned by an HttpOnly session cookie, and every other route takes a `runId` and reads the run from the store, never from the request. Click counts are written only by `/api/simulate`, credits only by `/api/image` and `/api/purchase`, the mandate on file only by the server, and every write is a compare-and-swap on the run's version, so parallel requests cannot spend the same credit twice. The browser keeps a read-only copy in localStorage for display and history. Request bodies are checked against strict zod contracts in `lib/contracts.ts`: a field the contract does not name, a whole `state` included, is refused with a 400 that says which one.
+
+Every route that costs money passes `lib/access.ts` first: the request has to come from this site, and the caller has to be inside per-address and per-session limits plus a daily ceiling for the whole deployment. The same-site check is CSRF protection, not authentication; what bounds the bill against a scripted caller is the limits and the ceiling.
 
 Seven routes carry the run itself, one step each. The rest of `app/api` is around them: export, insights, chat, merchant lookup, product refinement and mandate revocation.
 
-`POST /api/product` takes name, price, description and starts a clean run.
+`POST /api/product` takes name, price, description and starts a clean run. `PATCH /api/product` corrects the listing or narrows the variant and brand.
 
 `POST /api/research` searches the live web and returns buyer profile, competitor angles, price positioning and the URLs it actually cited.
 
@@ -109,15 +130,15 @@ Seven routes carry the run itself, one step each. The rest of `app/api` is aroun
 
 `POST /api/decide` runs the bandit evaluation, hands the result plus the live mandate constraints to the model, and gets back either a purchase call or an abstention.
 
-`POST /api/purchase` charges the mandate, rotates across the signed ones, reports the charge back to Prava, and credits the ledger: one approved dollar is one render credit. Send `force: true` and it deliberately charges over the ceiling so you can watch the rejection.
+`POST /api/purchase` charges the mandate, rotates across the signed ones, reports the charge back to Prava, and credits the ledger: one approved dollar is one render credit. Send `force: true` and it deliberately charges over the ceiling so you can watch the rejection (see above for production).
 
-`POST /api/image` renders one creative image and debits one render credit. At a balance of zero it answers 402: no render credits left, the agent has to buy more through the mandate before it can render.
+`POST /api/image` renders one creative image from the prompt stored with it and debits one render credit, handing it back if the render fails. At a balance of zero it answers 402: no render credits left, the agent has to buy more through the mandate before it can render.
 
 The five files in `lib` that matter:
 
 `bandit.ts` is the posterior, the gates and the traffic simulation. Zero dependencies, the gamma sampler, the Beta sampler, log gamma and the cohort Bayes factor behind the e-value are all in there.
 
-`store.ts` is the state shape and the coercion of everything arriving from the client, plus the audit log.
+`state-schema.ts` is the run shape and the reader for stored runs; `store.ts` is the edits on a run (audit, credits, rounds); `run-store.ts` keeps runs on the server.
 
 `openai.ts` is the three model calls.
 
@@ -337,11 +358,11 @@ The over-cap charge is not blocked by our code. We send it, the Visa network ref
 
 What the server refuses to believe
 
-The state travels in the browser, and `/api/purchase` treats it as a proposal, not as truth: before any mandate is touched, the server re-runs the four gates on the cohort it was handed and answers 422 to any evidence that is implausible on its face, meaning a claimed CTR above 25% on any arm, more than 5,000,000 claimed impressions, or more clicks than impressions. Even a state the server believed cannot spend past what the seller signed, because the ceiling and the merchant scope are enforced by the Visa network, not by the client. In production the counts would come as signed server-side telemetry from the ad platform, with the browser only reading; the plausibility check is the demo-sized version of that boundary.
+Anything the browser says about the run. `/api/purchase` re-runs the four gates on the cohort the server itself measured and stored, charges only mandates Prava just listed (or the one the server has on file), and lets one charge per run be in flight at a time. A cohort of one ad is not a comparison, so `evaluate` shuts every gate on it. And even a charge the server allowed cannot spend past what the seller signed, because the ceiling and the merchant scope are enforced by the Visa network. With a live ad platform the counts would come from its server-side reporting instead of the simulator; the browser would still only read.
 
 The ledger of what the money bought
 
-Every approved charge delivers render credits at one dollar per render, written to a ledger on the state. Every image render debits one credit, and at zero `/api/image` answers 402 and the agent cannot make more until it buys again through the mandate. The run starts with a starter grant of 4 renders, so the first generation is on the house and every one after that is bought, debited and audited.
+Every approved charge delivers render credits at one dollar per render, written to the run's ledger on the server, once per transaction. Every image render debits one credit, and at zero `/api/image` answers 402 and the agent cannot make more until it buys again through the mandate. The run starts with a starter grant of 4 renders, so the first generation is on the house and every one after that is bought, debited and audited.
 
 What's simulated and what isn't
 
@@ -439,4 +460,4 @@ Who
 
 [@itzjk](https://github.com/itzjk)
 
-MIT
+MIT, see [LICENSE](LICENSE).

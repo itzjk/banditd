@@ -81,11 +81,11 @@ says so rather than failing silently.
 
 ## app/api/export/route.ts
 
-`POST` only. Takes the state on the body, the same way every other route does.
+`POST` only. Names the run by id, the same way every other route does, and exports the server's copy of it.
 
 ```jsonc
 {
-  "state": { /* State */ },
+  "runId": "run_...",
   "format": "json" | "csv",     // default json
   "section": "creatives" | "purchases" | "audit" | "research" | "all"  // default all
 }
@@ -96,15 +96,18 @@ Responses:
 - `200` with `Content-Type: text/csv; charset=utf-8` or `application/json; charset=utf-8`,
   `Content-Disposition: attachment; filename="banditd-<product>-<section>-<date>.<ext>"`,
   `Cache-Control: no-store` and `X-Banditd-Rows` with the row count.
-- `400 NO_STATE` when the body carries no usable state.
-- `400 EMPTY_RUN` when the state has no product, no creatives and no purchases.
+- `400 BAD_REQUEST` when the body is not in this shape, `403 RUN_NOT_YOURS` / `404 RUN_NOT_FOUND`
+  when the session cookie does not own that run.
+- `400 EMPTY_RUN` when the run has no product, no creatives and no purchases.
 
 Notes:
 
 - The filename is built server side from a slug of the product name, so nothing from the body
   reaches the header raw.
-- `format` and `section` fall back to their defaults on anything unrecognized.
-- Base64 images are never written into the export. Each ad carries `hasImage` and its
+- `format` and `section` are refused with a 400 on anything unrecognized.
+- Text cells that a spreadsheet would run as a formula (`=`, `+`, `-`, `@`) are prefixed with `'`.
+- Base64 images are never written into the export. Each ad carries `hasImage` (a render was paid
+  for and not refunded) and its
   `imagePrompt` instead, which keeps the file small enough to open.
 - Both formats carry a `disclosure` line saying the impressions, clicks and CTR are simulated and
   the charges are real. CSV performance columns are named `*_simulated` for the same reason.
@@ -113,8 +116,8 @@ Notes:
 
 ```bash
 curl -X POST localhost:3000/api/export \
-  -H "Content-Type: application/json" \
-  -d '{"state": {...}, "format": "csv", "section": "creatives"}'
+  -H "Content-Type: application/json" -b "banditd_sid=<your session>" \
+  -d '{"runId": "run_...", "format": "csv", "section": "creatives"}'
 ```
 
 ---
@@ -265,13 +268,15 @@ import MerchantHandshake from "@/components/MerchantHandshake";
 
 ## app/api/merchant/route.ts
 
-`GET /api/merchant?domain=allbirds.com&query=shoes`, or `POST` with the same keys on the body
-(`domain`, `query`, `country`, `profile`). Read only. It never opens a cart, a checkout or an order,
-and it holds no credential.
+`POST` with `domain`, `query`, `country` and `version` on the body. Read only. It never opens a
+cart, a checkout or an order, and it holds no credential. It calls a host the caller names, so it
+only answers this site, is rate limited per address with a daily ceiling, and only connects to
+addresses on the public internet: the name is resolved first and redirects are checked hop by hop
+(`lib/public-fetch.ts`).
 
 Responses:
 
-- `400 NO_DOMAIN` when no domain was sent. The only non `200` it can return.
+- `400 BAD_REQUEST` when the body is not in that shape, `403`/`429` from the access gate.
 - `200` otherwise, always with `Cache-Control: no-store` and this shape:
 
 ```jsonc
@@ -296,7 +301,8 @@ request arrives over https, and falls back to the production origin when running
 matters because the store fetches this URL before it will answer, so it has to be publicly reachable.
 
 ```bash
-curl -s "localhost:3000/api/merchant?domain=decathlon.com&query=running%20shoes"
+curl -s -X POST localhost:3000/api/merchant -H "Content-Type: application/json" \
+  -d '{"domain": "decathlon.com", "query": "running shoes"}'
 ```
 
 ---
