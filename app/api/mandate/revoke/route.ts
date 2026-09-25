@@ -1,23 +1,26 @@
 import { NextResponse } from "next/server";
-import { openSession, commit, logAudit } from "@/lib/store";
+import { logAudit } from "@/lib/store";
 import { cancelMandate, PravaError } from "@/lib/prava";
-import { fromOurPage, OFF_PAGE_CODE, OFF_PAGE_MESSAGE } from "@/lib/same-origin";
+import { guard } from "@/lib/access";
+import type { Client } from "@/lib/access";
+import { readRun, updateRun } from "@/lib/run-store";
+import { failure, readJson } from "@/lib/http";
+import { RunOnly } from "@/lib/contracts";
 
 export const maxDuration = 30;
 
-interface RevokeBody {
-  state?: unknown;
+export async function POST(req: Request) {
+  try {
+    const client = await guard(req, "purchase");
+    const { runId } = await readJson(req, RunOnly);
+    await readRun(runId, client);
+    return await revoke(runId, client);
+  } catch (err) {
+    return failure(err);
+  }
 }
 
-export async function POST(req: Request) {
-  if (!fromOurPage(req)) {
-    return NextResponse.json({ error: OFF_PAGE_MESSAGE, code: OFF_PAGE_CODE }, { status: 403 });
-  }
-
-  const body = (await req.json().catch(() => ({}))) as RevokeBody;
-
-  const session = openSession(body.state);
-  const state = session.state;
+async function revoke(runId: string, client: Client) {
   const mandateId = (process.env.PRAVA_REVOKE_DEMO_MANDATE_ID ?? "").trim();
 
   if (!mandateId) {
@@ -34,14 +37,16 @@ export async function POST(req: Request) {
   try {
     const mandate = await cancelMandate(mandateId);
 
-    logAudit(
-      state,
-      "mandate",
-      `Seller revoked the mandate ${mandateId}: Prava reports it as ${mandate.status}. Every future charge attempt dies before it reaches a card, past charges stand.`,
+    const { record } = await updateRun(runId, client, ({ state }) =>
+      logAudit(
+        state,
+        "mandate",
+        `Seller revoked the mandate ${mandateId}: Prava reports it as ${mandate.status}. Every future charge attempt dies before it reaches a card, past charges stand.`,
+      ),
     );
 
     return NextResponse.json({
-      ...commit(session),
+      ...record.state,
       revoked: { mandateId, status: mandate.status },
     });
   } catch (e) {

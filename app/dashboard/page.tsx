@@ -11,23 +11,7 @@ import {
   type CSSProperties,
 } from "react";
 import Link from "next/link";
-import type {
-  AuditEntry,
-  Creative,
-  CreativeAngle,
-  CreditEntry,
-  CreditKind,
-  Credits,
-  Insights as InsightsData,
-  PriceRange,
-  Product,
-  ProductOptions,
-  PurchaseEvent,
-  Research,
-  Round,
-  RoundArm,
-  State,
-} from "@/lib/store";
+import type { Creative, State } from "@/lib/store";
 import MandateBar from "@/components/MandateBar";
 import CreativeCard from "@/components/CreativeCard";
 import RunExport from "@/components/RunExport";
@@ -43,7 +27,7 @@ import GatesPanel from "@/components/GatesPanel";
 import LineageTree from "@/components/LineageTree";
 import MarketPanel from "@/components/MarketPanel";
 import ProductBar from "@/components/ProductBar";
-import { priceLabel } from "@/lib/state-schema";
+import { coerceState } from "@/lib/state-schema";
 import Insights from "@/components/Insights";
 import ProofLab from "@/components/ProofLab";
 import AgentChat from "@/components/AgentChat";
@@ -60,307 +44,22 @@ const MANDATE_CAP = 50;
 const STORAGE_KEY = "banditd_state";
 const IMAGES_KEY = "banditd_images";
 const REV_KEY = "banditd_rev";
-const ANGLES: CreativeAngle[] = ["price", "ritual", "gift", "quality"];
-const CREDIT_KINDS: CreditKind[] = ["purchase", "render", "grant"];
-const MAX_AUDIT = 200;
-const MAX_ROUNDS = 200;
-const MAX_MARKET_CONTEXT = 500;
-const MAX_REFINEMENT = 60;
-const MAX_OPTIONS = 6;
-const MAX_PRICE_LABEL = 16;
-const MAX_PRICE_REASON = 180;
-const STARTER_CREDITS = 4;
-
 const UNREADABLE =
   "A saved session in this browser could not be read, so it was discarded. You are starting clean.";
-const PATCHED =
-  "A saved session in this browser had damaged entries. They were dropped and the rest was restored.";
 const ADOPTED =
   "The run moved forward somewhere else, either the agent working through the chat or another tab of this dashboard, so this tab picked up that state. Nothing was overwritten.";
-const RENDER_FAILED =
-  "An image render came back empty, so that card is showing no picture. The copy, the traffic test and the mandate are untouched, and no render credit was debited for it. Everything else in the run stands.";
+const LEGACY =
+  "The run saved in this browser was made by an older version that kept the run in the browser itself. Runs now live on the server, so it was moved to Earlier runs for reference. Start a new run to keep testing.";
 
 type Images = Record<string, string>;
 
-function record(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
+function runIdOf(state: State | null): string {
+  if (!state) throw new Error("There is no run on this page yet. Start one from the home page.");
+  return state.runId;
 }
 
-function text(value: unknown, fallback = ""): string {
-  return typeof value === "string" ? value : fallback;
-}
-
-function count(value: unknown): number {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function list(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
-}
-
-function safeRefinement(value: unknown): string {
-  return text(value).trim().slice(0, MAX_REFINEMENT);
-}
-
-function safeProduct(value: unknown): Product | null {
-  const p = record(value);
-  if (!p || typeof p.name !== "string") return null;
-  return {
-    name: p.name,
-    price: priceLabel(text(p.price)),
-    description: text(p.description),
-    marketContext: text(p.marketContext).slice(0, MAX_MARKET_CONTEXT),
-    variant: safeRefinement(p.variant),
-    brand: safeRefinement(p.brand),
-  };
-}
-
-function safeOptionList(value: unknown): string[] {
-  const seen = new Set<string>();
-  const kept: string[] = [];
-  for (const item of list(value)) {
-    const clean = safeRefinement(item);
-    if (!clean) continue;
-    const key = clean.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    kept.push(clean);
-    if (kept.length >= MAX_OPTIONS) break;
-  }
-  return kept;
-}
-
-function safePriceRange(value: unknown): PriceRange | null {
-  const p = record(value);
-  if (!p) return null;
-  const low = text(p.low).trim().slice(0, MAX_PRICE_LABEL);
-  const high = text(p.high).trim().slice(0, MAX_PRICE_LABEL);
-  const recommended = text(p.recommended).trim().slice(0, MAX_PRICE_LABEL);
-  if (!low || !high || !recommended) return null;
-  return { low, high, recommended, why: text(p.why).trim().slice(0, MAX_PRICE_REASON) };
-}
-
-function safeOptions(value: unknown): ProductOptions | null {
-  const o = record(value);
-  if (!o) return null;
-  return {
-    variants: safeOptionList(o.variants),
-    brands: safeOptionList(o.brands),
-    priceRange: safePriceRange(o.priceRange),
-  };
-}
-
-function safeResearch(value: unknown): Research | null {
-  const r = record(value);
-  if (!r) return null;
-  return {
-    buyerProfile: text(r.buyerProfile),
-    competitorAngles: list(r.competitorAngles).map((a) => text(a)),
-    pricePositioning: text(r.pricePositioning),
-    sources: list(r.sources)
-      .map((s) => record(s))
-      .filter((s): s is Record<string, unknown> => s !== null)
-      .map((s) => ({ title: text(s.title), url: text(s.url) })),
-  };
-}
-
-function pairs(value: unknown): Record<string, unknown>[] {
-  return list(value)
-    .map((item) => record(item))
-    .filter((item): item is Record<string, unknown> => item !== null);
-}
-
-function safeInsights(value: unknown): InsightsData | null {
-  const i = record(value);
-  if (!i) return null;
-  return {
-    at: text(i.at),
-    generation: Math.max(0, Math.floor(count(i.generation))),
-    impressions: Math.max(0, Math.floor(count(i.impressions))),
-    winnerAngle: text(i.winnerAngle),
-    winnerHeadline: text(i.winnerHeadline),
-    buyerLesson: text(i.buyerLesson),
-    competitorPlays: pairs(i.competitorPlays)
-      .map((p) => ({ play: text(p.play), why: text(p.why) }))
-      .filter((p) => p.play.length > 0),
-    nextTests: pairs(i.nextTests)
-      .map((t) => ({ idea: text(t.idea), why: text(t.why) }))
-      .filter((t) => t.idea.length > 0),
-    estimates: pairs(i.estimates)
-      .map((e) => ({ label: text(e.label), call: text(e.call), basis: text(e.basis) }))
-      .filter((e) => e.label.length > 0),
-  };
-}
-
-function safeArm(raw: Record<string, unknown> | null): Creative["arm"] {
-  const impressions = Math.max(0, Math.floor(count(raw?.impressions)));
-  const clicks = Math.max(0, Math.floor(count(raw?.clicks)));
-  return { impressions, clicks: Math.min(clicks, impressions) };
-}
-
-function safeCreative(value: unknown): Creative | null {
-  const c = record(value);
-  if (!c || typeof c.id !== "string") return null;
-  return {
-    id: c.id,
-    generation: count(c.generation),
-    parentId: typeof c.parentId === "string" ? c.parentId : null,
-    angle: ANGLES.includes(c.angle as CreativeAngle) ? (c.angle as CreativeAngle) : "quality",
-    headline: text(c.headline),
-    body: text(c.body),
-    imagePrompt: text(c.imagePrompt),
-    targetEmotion: text(c.targetEmotion),
-    imageData: typeof c.imageData === "string" ? c.imageData : null,
-    arm: safeArm(record(c.arm)),
-  };
-}
-
-function safePurchase(value: unknown): PurchaseEvent | null {
-  const p = record(value);
-  if (!p || typeof p.id !== "string") return null;
-  return {
-    id: p.id,
-    at: text(p.at),
-    amount: text(p.amount),
-    reason: text(p.reason),
-    winnerId: text(p.winnerId),
-    probabilityBest: count(p.probabilityBest),
-    impressions: count(p.impressions),
-    ok: p.ok === true,
-    errorCode: typeof p.errorCode === "string" ? p.errorCode : null,
-    cardLast4: typeof p.cardLast4 === "string" ? p.cardLast4 : null,
-    transactionId: typeof p.transactionId === "string" ? p.transactionId : null,
-    mandateId: typeof p.mandateId === "string" ? p.mandateId : null,
-  };
-}
-
-function safeAudit(value: unknown): AuditEntry | null {
-  const a = record(value);
-  if (!a) return null;
-  return { at: text(a.at), kind: text(a.kind), detail: text(a.detail) };
-}
-
-function safeRoundArm(value: unknown): RoundArm | null {
-  const a = record(value);
-  if (!a || typeof a.id !== "string") return null;
-  const impressions = Math.max(0, Math.floor(count(a.impressions)));
-  const clicks = Math.max(0, Math.floor(count(a.clicks)));
-  return { id: a.id, impressions, clicks: Math.min(clicks, impressions) };
-}
-
-function safeRound(value: unknown): Round | null {
-  const r = record(value);
-  if (!r) return null;
-  const arms = list(r.arms)
-    .map(safeRoundArm)
-    .filter((a): a is RoundArm => a !== null);
-  if (arms.length === 0) return null;
-  return {
-    at: text(r.at),
-    generation: Math.max(0, Math.floor(count(r.generation))),
-    served: Math.max(0, Math.floor(count(r.served))),
-    arms,
-  };
-}
-
-function starterCredits(): Credits {
-  return {
-    balance: STARTER_CREDITS,
-    entries: [
-      {
-        at: new Date().toISOString(),
-        kind: "grant",
-        amount: STARTER_CREDITS,
-        ref: "starter_grant",
-      },
-    ],
-  };
-}
-
-function safeCreditEntry(value: unknown): CreditEntry | null {
-  const e = record(value);
-  if (!e || !CREDIT_KINDS.includes(e.kind as CreditKind)) return null;
-  const amount = Math.trunc(count(e.amount));
-  if (amount === 0) return null;
-  return { at: text(e.at), kind: e.kind as CreditKind, amount, ref: text(e.ref) };
-}
-
-function ledgerBalance(entries: CreditEntry[]): number {
-  return Math.max(0, entries.reduce((sum, e) => sum + e.amount, 0));
-}
-
-function safeCredits(value: unknown): Credits {
-  const c = record(value);
-  if (!c) return starterCredits();
-  const entries = list(c.entries)
-    .map(safeCreditEntry)
-    .filter((e): e is CreditEntry => e !== null)
-    .slice(0, MAX_AUDIT);
-  return { balance: ledgerBalance(entries), entries };
-}
-
-function mergeCredits(prev: State | null, next: State): State {
-  if (!prev) return next;
-  const prevGrant = prev.credits.entries.find((e) => e.kind === "grant");
-  const nextGrant = next.credits.entries.find((e) => e.kind === "grant");
-  if (!prevGrant || !nextGrant || prevGrant.at !== nextGrant.at || prevGrant.ref !== nextGrant.ref) {
-    return next;
-  }
-  const seen = new Set<string>();
-  const entries: CreditEntry[] = [];
-  for (const entry of [...next.credits.entries, ...prev.credits.entries]) {
-    const key = `${entry.kind}:${entry.ref}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    entries.push(entry);
-  }
-  entries.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
-  const capped = entries.slice(0, MAX_AUDIT);
-  return { ...next, credits: { balance: ledgerBalance(capped), entries: capped } };
-}
-
-function mergeAudit(prev: AuditEntry[], next: AuditEntry[]): AuditEntry[] {
-  const seen = new Set<string>();
-  const entries: AuditEntry[] = [];
-  for (const entry of [...next, ...prev]) {
-    const key = `${entry.at}|${entry.kind}|${entry.detail}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    entries.push(entry);
-  }
-  entries.sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
-  return entries.slice(0, MAX_AUDIT);
-}
-
-function sanitize(value: unknown): State | null {
-  const raw = record(value);
-  if (!raw) return null;
-  return {
-    product: safeProduct(raw.product),
-    productOptions: safeOptions(raw.productOptions),
-    research: safeResearch(raw.research),
-    insights: safeInsights(raw.insights),
-    creatives: list(raw.creatives)
-      .map(safeCreative)
-      .filter((c): c is Creative => c !== null),
-    purchases: list(raw.purchases)
-      .map(safePurchase)
-      .filter((p): p is PurchaseEvent => p !== null),
-    audit: list(raw.audit)
-      .map(safeAudit)
-      .filter((a): a is AuditEntry => a !== null)
-      .slice(0, MAX_AUDIT),
-    rounds: list(raw.rounds)
-      .map(safeRound)
-      .filter((r): r is Round => r !== null)
-      .slice(-MAX_ROUNDS),
-    credits: safeCredits(raw.credits),
-    mandateId: typeof raw.mandateId === "string" ? raw.mandateId : null,
-    simulatedImpressions: count(raw.simulatedImpressions),
-  };
+function hasRunId(value: unknown): boolean {
+  return Boolean(value) && typeof value === "object" && typeof (value as { runId?: unknown }).runId === "string";
 }
 
 function split(input: State): { clean: State; images: Images } {
@@ -369,19 +68,7 @@ function split(input: State): { clean: State; images: Images } {
     if (c.imageData) images[c.id] = c.imageData;
     return { ...c, imageData: null };
   });
-  const clean: State = {
-    product: input.product,
-    productOptions: input.productOptions,
-    research: input.research,
-    insights: input.insights,
-    creatives,
-    purchases: input.purchases,
-    audit: input.audit,
-    rounds: input.rounds,
-    credits: input.credits,
-    mandateId: input.mandateId,
-    simulatedImpressions: input.simulatedImpressions,
-  };
+  const clean: State = { ...input, creatives };
   return { clean, images };
 }
 
@@ -472,16 +159,6 @@ function forget() {
   }
 }
 
-function dropped(raw: Record<string, unknown>, safe: State): number {
-  const audit = Math.min(list(raw.audit).length, MAX_AUDIT);
-  return (
-    list(raw.creatives).length -
-    safe.creatives.length +
-    (list(raw.purchases).length - safe.purchases.length) +
-    (audit - safe.audit.length)
-  );
-}
-
 function restore(): { state: State | null; notice: string | null } {
   let stored: string | null = null;
   try {
@@ -499,13 +176,17 @@ function restore(): { state: State | null; notice: string | null } {
     return { state: null, notice: UNREADABLE };
   }
 
-  const raw = record(parsed);
-  const safe = raw ? sanitize(raw) : null;
-  if (!raw || !safe) {
+  const safe = coerceState(parsed);
+  if (!safe) {
+    if (parsed && typeof parsed === "object" && !hasRunId(parsed)) {
+      archiveRun(stored);
+      forget();
+      return { state: null, notice: LEGACY };
+    }
     forget();
     return { state: null, notice: UNREADABLE };
   }
-  return { state: safe, notice: dropped(raw, safe) > 0 ? PATCHED : null };
+  return { state: safe, notice: null };
 }
 
 interface DecideResponse {
@@ -518,10 +199,12 @@ type PurchaseResponse = State & { lastPurchase?: LastPurchase };
 
 class ApiError extends Error {
   status: number;
+  code: string | null;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code: string | null) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
@@ -531,25 +214,26 @@ const OFFLINE_CALL =
 const UNREADABLE_CALL =
   "with no answer this page could read. That is the request being dropped on the way, not a rule on the mandate refusing a spend. The payment ledger and the audit log are the record of whether money moved.";
 
-async function api<T>(url: string, body?: unknown): Promise<T> {
+async function api<T>(url: string, body: unknown, method: "POST" | "PATCH" = "POST"): Promise<T> {
   let res: Response;
   try {
     res = await fetch(url, {
-      method: body === undefined ? "GET" : "POST",
+      method,
       headers: { "Content-Type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: JSON.stringify(body),
       cache: "no-store",
     });
   } catch {
-    throw new ApiError(OFFLINE_CALL, 0);
+    throw new ApiError(OFFLINE_CALL, 0, null);
   }
   const data: unknown = await res.json().catch(() => null);
   if (!res.ok) {
+    const failure = data && typeof data === "object" ? (data as { error?: unknown; code?: unknown }) : null;
     const message =
-      data && typeof data === "object" && "error" in data
-        ? String((data as { error: unknown }).error)
+      typeof failure?.error === "string"
+        ? failure.error
         : `The server answered HTTP ${res.status} ${UNREADABLE_CALL}`;
-    throw new ApiError(message, res.status);
+    throw new ApiError(message, res.status, typeof failure?.code === "string" ? failure.code : null);
   }
   return data as T;
 }
@@ -928,10 +612,15 @@ export default function Dashboard() {
 
   const absorb = useCallback(
     (next: State) => {
-      const sane = sanitize(next);
+      const sane = coerceState(next);
       if (!sane) throw new Error("The server answered with something this run could not read. Nothing was changed.");
 
-      const clean = take(mergeCredits(stateRef.current, sane));
+      // Answers can land out of order (four renders in parallel): an older
+      // version of the same run never overwrites a newer one.
+      const current = stateRef.current;
+      if (current && current.runId === sane.runId && sane.version < current.version) return current;
+
+      const clean = take(sane);
       if (staleRef.current) return clean;
       const rev = Math.max(readRev(), revRef.current) + 1;
       revRef.current = rev;
@@ -948,15 +637,6 @@ export default function Dashboard() {
     setStale(false);
     if (stored) take(stored);
   }, [take]);
-
-  const absorbLedger = useCallback(
-    (next: State) => {
-      const base = stateRef.current;
-      if (!base) return absorb(next);
-      return absorb({ ...base, credits: next.credits, audit: mergeAudit(base.audit, next.audit) });
-    },
-    [absorb],
-  );
 
   const carryDecision = useCallback((next: Decision | null, evaluated: Evaluation | null) => {
     setDecision(next);
@@ -983,33 +663,20 @@ export default function Dashboard() {
       if (alive && Object.keys(cached).length > 0) setImages(cached);
 
       const { state: stored, notice: warning } = restore();
-      if (alive && warning) setNotice(warning);
+      if (!alive) return;
+      if (warning) setNotice(warning);
       if (stored) {
-        if (alive) {
-          take(stored);
-          revRef.current = Math.max(readRev(), revRef.current);
-          setBusy(null);
-          setBooted(true);
-        }
-        return;
+        take(stored);
+        revRef.current = Math.max(readRev(), revRef.current);
       }
-      try {
-        const fresh = await api<State>("/api/product");
-        if (alive) absorb(fresh);
-      } catch (e) {
-        if (alive) setError(e instanceof Error ? e.message : "Could not reach the agent");
-      } finally {
-        if (alive) {
-          setBusy(null);
-          setBooted(true);
-        }
-      }
+      setBusy(null);
+      setBooted(true);
     };
     void boot();
     return () => {
       alive = false;
     };
-  }, [absorb, take]);
+  }, [take]);
 
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
@@ -1083,27 +750,29 @@ export default function Dashboard() {
     missing.forEach((c) => {
       const draw = async () => {
         try {
-          const res = await api<ImageResponse>("/api/image", {
-            creativeId: c.id,
-            imagePrompt: c.imagePrompt,
-            state: stateRef.current,
-          });
-          if (res.state) absorbLedger(res.state);
+          const runId = stateRef.current?.runId;
+          if (!runId) return;
+          const res = await api<ImageResponse>("/api/image", { runId, creativeId: c.id });
+          if (res.state) absorb(res.state);
           setImages((prev) => {
             const merged = { ...prev, [c.id]: res.imageData };
             saveImages(merged);
             return merged;
           });
         } catch (e) {
-          if (e instanceof ApiError && e.status === 402) setNotice(e.message);
-          else setNotice((prev) => prev ?? RENDER_FAILED);
+          const said = e instanceof Error ? e.message : "The render failed and gave no reason.";
+          setNotice((prev) =>
+            e instanceof ApiError && e.code === "NO_CREDITS"
+              ? said
+              : (prev ?? `That card has no picture: ${said} The copy, the traffic test and the mandate are untouched.`),
+          );
         } finally {
           settle(c.id);
         }
       };
       void draw().catch(() => settle(c.id));
     });
-  }, [creatives, images, settle, absorbLedger]);
+  }, [creatives, images, settle, absorb]);
 
   const winner = winnerId ? byId.get(winnerId) : undefined;
   const cohortImpressions = cohort.reduce((sum, c) => sum + c.arm.impressions, 0);
@@ -1136,14 +805,7 @@ export default function Dashboard() {
     setOptionsLoading(true);
     setOptionsFailed(false);
     try {
-      const next = await api<State>("/api/refine", { state: base });
-      const current = stateRef.current;
-      if (!current?.product) return;
-      absorb({
-        ...current,
-        productOptions: next.productOptions,
-        audit: mergeAudit(current.audit, next.audit),
-      });
+      absorb(await api<State>("/api/refine", { runId: base.runId }));
     } catch {
       setOptionsFailed(true);
     } finally {
@@ -1164,7 +826,9 @@ export default function Dashboard() {
   const refine = (patch: { variant?: string; brand?: string; price?: string }) => {
     const base = stateRef.current;
     if (!base?.product) return;
-    absorb({ ...base, product: { ...base.product, ...patch } });
+    api<State>("/api/product", { runId: base.runId, ...patch }, "PATCH")
+      .then(absorb)
+      .catch((e: unknown) => setError(e instanceof Error ? e.message : "The change did not reach the server"));
   };
 
   const retryOptions = () => {
@@ -1180,20 +844,18 @@ export default function Dashboard() {
     if (!base?.product || locked) return;
 
     if (!restart) {
-      absorb({
-        ...base,
-        product: { ...base.product, price: next.price, description: next.description },
-        audit: mergeAudit(base.audit, [
-          {
-            at: new Date().toISOString(),
-            kind: "product",
-            detail: `Seller corrected the listing for "${base.product.name}": ${next.price}, ${next.description}`,
-          },
-        ]),
+      void run("load", async () => {
+        absorb(
+          await api<State>(
+            "/api/product",
+            { runId: base.runId, price: next.price, description: next.description },
+            "PATCH",
+          ),
+        );
+        setNotice(
+          `The listing for ${base.product?.name ?? "this product"} was corrected. The ads, the traffic and the evidence behind them were left alone.`,
+        );
       });
-      setNotice(
-        `The listing for ${base.product.name} was corrected. The ads, the traffic and the evidence behind them were left alone.`,
-      );
       return;
     }
 
@@ -1204,7 +866,6 @@ export default function Dashboard() {
         price: next.price,
         description: next.description,
         marketContext: base.product?.marketContext ?? "",
-        state: base,
       });
       const filed = archiveRun(storedRaw());
       dropImages();
@@ -1289,7 +950,8 @@ export default function Dashboard() {
     setAdvising(true);
     setError(null);
     try {
-      absorb(await api<State>("/api/insights", { state }));
+      if (!state) return;
+      absorb(await api<State>("/api/insights", { runId: state.runId }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something broke on the way to the server");
     } finally {
@@ -1344,7 +1006,7 @@ export default function Dashboard() {
 
   const research = () =>
     runManual("research", "steps", async () => {
-      const next = absorb(await api<State>("/api/research", { state }));
+      const next = absorb(await api<State>("/api/research", { runId: runIdOf(state) }));
       return {
         ok: true,
         slot: "steps",
@@ -1360,7 +1022,10 @@ export default function Dashboard() {
     if (locked) return;
     return runManual(parentId ? "evolve" : "creatives", "steps", async () => {
       const next = absorb(
-        await api<State>("/api/creatives", parentId ? { parentId, state } : { state }),
+        await api<State>(
+          "/api/creatives",
+          parentId ? { runId: runIdOf(state), parentId } : { runId: runIdOf(state) },
+        ),
       );
       setDecision(null);
       setEvaluation(null);
@@ -1377,7 +1042,7 @@ export default function Dashboard() {
 
   const simulate = () =>
     runManual("simulate", "traffic", async () => {
-      const next = absorb(await api<State>("/api/simulate", { impressions, state }));
+      const next = absorb(await api<State>("/api/simulate", { runId: runIdOf(state), impressions }));
       const top = next.creatives.length ? Math.max(...next.creatives.map((c) => c.generation)) : 0;
       const served = next.creatives
         .filter((c) => c.generation === top)
@@ -1392,7 +1057,7 @@ export default function Dashboard() {
 
   const decide = () =>
     runManual("decide", "steps", async () => {
-      const res = await api<DecideResponse>("/api/decide", { state });
+      const res = await api<DecideResponse>("/api/decide", { runId: runIdOf(state) });
       absorb(res.state);
       setDecision(res.decision);
       setEvaluation(res.evaluation);
@@ -1408,12 +1073,9 @@ export default function Dashboard() {
   const purchase = () =>
     run("purchase", async () => {
       const res = await api<PurchaseResponse>("/api/purchase", {
-        amount: decision?.amount ?? "4.00",
+        runId: runIdOf(state),
+        ...(decision?.amount ? { amount: decision.amount } : {}),
         reason: decision?.reason ?? "Bandit called the winner",
-        winnerId: winnerId ?? cohort[0]?.id,
-        probabilityBest: freshEvaluation?.probabilityBest ?? 0,
-        impressions: cohortImpressions,
-        state,
       });
       absorb(res);
       setReceipt(res.lastPurchase ?? null);
@@ -1422,13 +1084,10 @@ export default function Dashboard() {
   const forceReject = () =>
     runManual("force", "charge", async () => {
       const res = await api<PurchaseResponse>("/api/purchase", {
+        runId: runIdOf(state),
         reason:
           "Deliberate over cap charge, fired by hand to show the mandate refusing the agent instead of paying it",
-        winnerId: winnerId ?? cohort[0]?.id,
-        probabilityBest: freshEvaluation?.probabilityBest ?? 0,
-        impressions: cohortImpressions,
         force: true,
-        state,
       });
       absorb(res);
       setReceipt(res.lastPurchase ?? null);
@@ -1438,13 +1097,10 @@ export default function Dashboard() {
   const forceMerchantReject = () =>
     runManual("scope", "charge", async () => {
       const res = await api<PurchaseResponse>("/api/purchase", {
+        runId: runIdOf(state),
         reason:
           "Deliberate charge for the render credits merchant against the mandate signed for Allbirds, fired by hand to show the merchant lock refusing the agent",
-        winnerId: winnerId ?? cohort[0]?.id,
-        probabilityBest: freshEvaluation?.probabilityBest ?? 0,
-        impressions: cohortImpressions,
         force: "merchant",
-        state,
       });
       absorb(res);
       setReceipt(res.lastPurchase ?? null);
@@ -1460,7 +1116,7 @@ export default function Dashboard() {
 
   const revoke = () =>
     run("revoke", async () => {
-      const res = await api<PurchaseResponse>("/api/mandate/revoke", { state });
+      const res = await api<PurchaseResponse>("/api/mandate/revoke", { runId: runIdOf(state) });
       absorb(res);
       setRevoked(true);
     });
@@ -1528,6 +1184,7 @@ export default function Dashboard() {
         <section>
           {state?.product ? (
             <ProductBar
+              runId={state.runId}
               product={state.product}
               options={productOptions}
               optionsLoading={optionsLoading}

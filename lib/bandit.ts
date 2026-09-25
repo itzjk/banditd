@@ -35,7 +35,16 @@ export interface Evaluation {
   minImpressionsMet: boolean;
   effectSizeOk: boolean;
   anytimeValid: boolean;
+  /**
+   * Why no comparison was made at all, null when the arms were compared. One
+   * arm is not a test: nothing was measured against it, so every gate is shut.
+   */
+  cohortProblem: CohortProblem | null;
 }
+
+export type CohortProblem = "NO_ARMS" | "COHORT_TOO_SMALL";
+
+export const MIN_COHORT_ARMS = 2;
 
 const defaultRng: Rng = Math.random;
 
@@ -227,36 +236,21 @@ export function evaluate(arms: Arm[], options: EvaluateOptions = {}): Evaluation
   const alphaLevel = options.alpha ?? DEFAULT_ALPHA;
   const totalImpressions = arms.reduce((sum, a) => sum + a.impressions, 0);
 
-  if (arms.length === 0) {
+  if (arms.length < MIN_COHORT_ARMS) {
+    const lone = arms[0];
     return {
-      candidateIndex: -1,
+      candidateIndex: lone ? 0 : -1,
       probabilityBest: 0,
       sufficientEvidence: false,
       totalImpressions,
-      expectedLoss: Number.POSITIVE_INFINITY,
+      expectedLoss: 0,
       eValue: 0,
-      posteriorMean: 0,
+      posteriorMean: lone ? (lone.clicks + priorAlpha) / (lone.impressions + priorAlpha + priorBeta) : 0,
       thresholdMet: false,
       minImpressionsMet: false,
       effectSizeOk: false,
       anytimeValid: false,
-    };
-  }
-  if (arms.length === 1) {
-    const enough = arms[0].impressions >= minImpressions;
-    return {
-      candidateIndex: 0,
-      probabilityBest: 1,
-      sufficientEvidence: enough,
-      totalImpressions,
-      expectedLoss: 0,
-      eValue: Number.POSITIVE_INFINITY,
-      posteriorMean:
-        (arms[0].clicks + priorAlpha) / (arms[0].impressions + priorAlpha + priorBeta),
-      thresholdMet: true,
-      minImpressionsMet: enough,
-      effectSizeOk: true,
-      anytimeValid: true,
+      cohortProblem: lone ? "COHORT_TOO_SMALL" : "NO_ARMS",
     };
   }
 
@@ -329,6 +323,7 @@ export function evaluate(arms: Arm[], options: EvaluateOptions = {}): Evaluation
     minImpressionsMet,
     effectSizeOk,
     anytimeValid,
+    cohortProblem: null,
   };
 }
 

@@ -44,7 +44,7 @@ function creative(i: number, impressions: number, clicks: number, generation = 0
 }
 
 function baseState(): State {
-  const s = emptyState();
+  const s = emptyState("run_00000000000000000000000000000000");
   s.product = {
     name: "Cold-Pressed Coffee Concentrate",
     price: "$28.00",

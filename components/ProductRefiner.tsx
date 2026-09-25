@@ -17,6 +17,7 @@ interface Patch {
 }
 
 interface Props {
+  runId: string;
   productName: string;
   options: ProductOptions | null;
   loading: boolean;
@@ -303,6 +304,7 @@ function Group({
 }
 
 export default function ProductRefiner({
+  runId,
   productName,
   options,
   loading,
@@ -353,7 +355,7 @@ export default function ProductRefiner({
           const res = await fetch("/api/refine/image", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ productName, variant: v }),
+            body: JSON.stringify({ runId, variant: v }),
             cache: "no-store",
           });
           if (!res.ok) return;
@@ -372,7 +374,7 @@ export default function ProductRefiner({
       };
       void draw();
     });
-  }, [productName, options, shots, settle]);
+  }, [runId, productName, options, shots, settle]);
 
   const range = options?.priceRange ?? null;
   const priceSet = Boolean(range && price && same(price, range.recommended));

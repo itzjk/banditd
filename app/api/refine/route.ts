@@ -1,44 +1,40 @@
 import { NextResponse } from "next/server";
-import { fromOurPage, OFF_PAGE_CODE, OFF_PAGE_MESSAGE } from "@/lib/same-origin";
-import { openSession, commit, logAudit } from "@/lib/store";
-import { refineProduct, startBudget, failureBody } from "@/lib/openai";
+import { logAudit } from "@/lib/store";
+import { refineProduct, startBudget } from "@/lib/openai";
+import { guard } from "@/lib/access";
+import { readRun, updateRun } from "@/lib/run-store";
+import { failure, readJson, HttpFailure } from "@/lib/http";
+import { RunOnly } from "@/lib/contracts";
 
 export const maxDuration = 300;
 
 const BUDGET_MS = Number(process.env.REFINE_BUDGET_MS ?? 60000);
 
 export async function POST(req: Request) {
-  if (!fromOurPage(req)) {
-    return NextResponse.json({ error: OFF_PAGE_MESSAGE, code: OFF_PAGE_CODE }, { status: 403 });
-  }
-  const body = (await req.json().catch(() => ({}))) as { state?: unknown };
-  const session = openSession(body.state);
-
-  const product = session.state.product;
-  if (!product) {
-    return NextResponse.json({ error: "no product submitted yet" }, { status: 400 });
-  }
-
-  const budget = startBudget("The product options", BUDGET_MS);
   const started = Date.now();
-
   try {
-    const options = await refineProduct(product, budget);
-    session.state.productOptions = options;
+    const client = await guard(req, "model");
+    const { runId } = await readJson(req, RunOnly);
+    const { state } = await readRun(runId, client);
 
-    logAudit(
-      session.state,
-      "refine",
-      `Listed ${options.variants.length} variants and ${options.brands.length} brands for "${product.name}" so the seller can aim the run before it starts`,
-    );
+    const product = state.product;
+    if (!product) throw new HttpFailure("NO_PRODUCT", 400, "no product submitted yet");
 
-    return NextResponse.json(commit(session));
+    const options = await refineProduct(product, startBudget("The product options", BUDGET_MS));
+
+    const { record } = await updateRun(runId, client, ({ state: latest }) => {
+      latest.productOptions = options;
+      logAudit(
+        latest,
+        "refine",
+        `Listed ${options.variants.length} variants and ${options.brands.length} brands for "${product.name}" so the seller can aim the run before it starts`,
+      );
+    });
+    return NextResponse.json(record.state);
   } catch (err) {
-    const { status, body: payload } = failureBody(err);
-    console.error(
-      `refine gave up after ${Math.round((Date.now() - started) / 1000)}s: ${payload.code}`,
-      err,
-    );
-    return NextResponse.json(payload, { status });
+    if (!(err instanceof HttpFailure)) {
+      console.error(`refine gave up after ${Math.round((Date.now() - started) / 1000)}s`, err);
+    }
+    return failure(err);
   }
 }

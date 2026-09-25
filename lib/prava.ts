@@ -24,6 +24,26 @@ export class PravaError extends Error {
 
 type Json = Record<string, unknown>;
 
+const MANDATE_ID = /^mdt_[A-Za-z0-9]{8,64}$/;
+const TRANSACTION_ID = /^txn_[A-Za-z0-9]{8,64}$/;
+
+export function isMandateId(value: unknown): value is string {
+  return typeof value === "string" && MANDATE_ID.test(value);
+}
+
+/**
+ * Ids go into the URL path of a call made with the secret key, so they are
+ * checked against the shape Prava issues and encoded, never pasted in.
+ */
+function segment(id: string, shape: RegExp, what: string): string {
+  if (!shape.test(id)) {
+    throw new PravaError(`${what} "${id.slice(0, 40)}" is not an id Prava issues`, "INVALID_ID", 400, null);
+  }
+  return encodeURIComponent(id);
+}
+
+const mandatePath = (id: string) => `/v1/mandates/${segment(id, MANDATE_ID, "Mandate id")}`;
+
 const READ_TIMEOUT_MS = Number(process.env.PRAVA_READ_TIMEOUT_MS ?? 8000);
 
 async function call<T>(
@@ -169,7 +189,7 @@ export async function listMandates(customerId?: string): Promise<Mandate[]> {
 
 export async function getMandate(id: string): Promise<Mandate> {
   const res = await call<Mandate | { data?: Mandate; mandate?: Mandate }>(
-    `/v1/mandates/${id}`,
+    mandatePath(id),
     "GET",
     undefined,
     READ_TIMEOUT_MS,
@@ -180,7 +200,7 @@ export async function getMandate(id: string): Promise<Mandate> {
 
 export async function cancelMandate(id: string): Promise<Mandate> {
   const res = await call<Mandate | { data?: Mandate; mandate?: Mandate }>(
-    `/v1/mandates/${id}/cancel`,
+    `${mandatePath(id)}/cancel`,
     "POST",
     {},
   );
@@ -249,11 +269,14 @@ function declineCode(rawCode: string | undefined, message: string): string {
   return rawCode ?? "CHARGE_FAILED";
 }
 
+export const CHARGE_OUTCOME_UNKNOWN = "CHARGE_OUTCOME_UNKNOWN";
+
 export async function chargeMandate(
   mandateId: string,
   amount: string,
   reference: string,
-  context?: ChargeContext,
+  context: ChargeContext | undefined,
+  timeoutMs: number,
 ): Promise<ChargeResult> {
   const body: Json = { amount, reference };
   if (context) {
@@ -277,8 +300,19 @@ export async function chargeMandate(
 
   let raw: RawCharge;
   try {
-    raw = await call<RawCharge>(`/v1/mandates/${mandateId}/charge`, "POST", body);
+    raw = await call<RawCharge>(`${mandatePath(mandateId)}/charge`, "POST", body, timeoutMs);
   } catch (e) {
+    if (e instanceof PravaError && e.code === "PRAVA_TIMEOUT") {
+      // The charge left and no answer came back: Prava may or may not have
+      // issued the card. That is not a decline and it is not safe to retry.
+      return {
+        ok: false,
+        code: CHARGE_OUTCOME_UNKNOWN,
+        message: `${e.message}. Whether the charge went through is unknown until it is looked up by its reference ${reference}.`,
+        httpStatus: 0,
+        mandateId,
+      };
+    }
     if (e instanceof PravaError) {
       return {
         ok: false,
@@ -335,7 +369,8 @@ export async function reportCharge(
   approved: boolean,
   amountPaid?: string,
 ): Promise<ReportResult> {
-  return call<ReportResult>(`/v1/mandates/${mandateId}/charges/${txnId}/report`, "POST", {
+  const path = `${mandatePath(mandateId)}/charges/${segment(txnId, TRANSACTION_ID, "Transaction id")}/report`;
+  return call<ReportResult>(path, "POST", {
     txn_status: approved ? "APPROVED" : "DECLINED",
     txn_type: "PURCHASE",
     ...(amountPaid ? { amount_paid: amountPaid } : {}),

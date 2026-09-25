@@ -22,6 +22,9 @@ export interface ProductOptions {
   priceRange: PriceRange | null;
 }
 
+export const MAX_PRODUCT_NAME = 120;
+export const MAX_PRODUCT_PRICE = 24;
+export const MAX_PRODUCT_DESCRIPTION = 300;
 export const MAX_MARKET_CONTEXT = 500;
 export const MAX_MARKET_LINKS = 4;
 export const MAX_REFINEMENT = 60;
@@ -170,7 +173,7 @@ export interface AuditEntry {
   detail: string;
 }
 
-export type CreditKind = "purchase" | "render" | "grant";
+export type CreditKind = "purchase" | "render" | "grant" | "refund";
 
 export interface CreditEntry {
   at: string;
@@ -197,7 +200,16 @@ export interface Round {
   arms: RoundArm[];
 }
 
+/**
+ * One run as the server keeps it. The server is the only writer: the browser
+ * holds a read-only copy and addresses the run by `runId`. `version` goes up by
+ * one on every write, so a client can drop an answer older than the one it has.
+ * `imageData` on a creative is always null here, the rendered picture is handed
+ * to the browser once by /api/image and never stored with the run.
+ */
 export interface State {
+  runId: string;
+  version: number;
   product: Product | null;
   productOptions: ProductOptions | null;
   research: Research | null;
@@ -211,13 +223,9 @@ export interface State {
   simulatedImpressions: number;
 }
 
-export interface Session {
-  state: State;
-  detached: boolean;
-}
-
 const ANGLES: CreativeAngle[] = ["price", "ritual", "gift", "quality"];
-const CREDIT_KINDS: CreditKind[] = ["purchase", "render", "grant"];
+const CREDIT_KINDS: CreditKind[] = ["purchase", "render", "grant", "refund"];
+export const RUN_ID_SHAPE = /^run_[0-9a-f]{32}$/;
 export const MAX_AUDIT = 200;
 export const MAX_ROUNDS = 200;
 export const STARTER_CREDITS = 4;
@@ -236,8 +244,10 @@ export function starterCredits(): Credits {
   };
 }
 
-export function emptyState(): State {
+export function emptyState(runId: string): State {
   return {
+    runId,
+    version: 0,
     product: null,
     productOptions: null,
     research: null,
@@ -252,6 +262,11 @@ export function emptyState(): State {
   };
 }
 
+export function liveCohort(state: Pick<State, "creatives">): Creative[] {
+  if (state.creatives.length === 0) return [];
+  const generation = Math.max(...state.creatives.map((c) => c.generation));
+  return state.creatives.filter((c) => c.generation === generation);
+}
 
 function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -284,9 +299,9 @@ function coerceProduct(value: unknown): Product | null {
   const p = record(value);
   if (!p || typeof p.name !== "string") return null;
   return {
-    name: p.name,
-    price: priceLabel(text(p.price)),
-    description: text(p.description),
+    name: p.name.slice(0, MAX_PRODUCT_NAME),
+    price: priceLabel(text(p.price)).slice(0, MAX_PRODUCT_PRICE),
+    description: text(p.description).slice(0, MAX_PRODUCT_DESCRIPTION),
     marketContext: sanitizeMarketContext(p.marketContext),
     variant: sanitizeRefinement(p.variant),
     brand: sanitizeRefinement(p.brand),
@@ -418,38 +433,42 @@ function coerceRound(value: unknown): Round | null {
   };
 }
 
-const MAX_ENTRY_CREDITS = 12;
-const MAX_BALANCE_CREDITS = 60;
-
 function coerceCreditEntry(value: unknown): CreditEntry | null {
   const e = record(value);
   if (!e || !CREDIT_KINDS.includes(e.kind as CreditKind)) return null;
-  const raw = Math.trunc(count(e.amount));
-  if (raw === 0) return null;
-  const amount = Math.min(MAX_ENTRY_CREDITS, Math.max(-MAX_ENTRY_CREDITS, raw));
+  const amount = Math.trunc(count(e.amount));
+  if (amount === 0) return null;
   return { at: text(e.at), kind: e.kind as CreditKind, amount, ref: text(e.ref) };
 }
 
-export function ledgerBalance(entries: CreditEntry[]): number {
-  const sum = entries.reduce((total, e) => total + e.amount, 0);
-  return Math.min(MAX_BALANCE_CREDITS, Math.max(0, sum));
-}
-
-function coerceCredits(value: unknown): Credits {
+function coerceCredits(value: unknown): Credits | null {
   const c = record(value);
-  if (!c) return starterCredits();
+  if (!c) return null;
+  const balance = Number(c.balance);
+  if (!Number.isInteger(balance) || balance < 0) return null;
   const entries = list(c.entries)
     .map(coerceCreditEntry)
     .filter((e): e is CreditEntry => e !== null)
     .slice(0, MAX_AUDIT);
-  return { balance: ledgerBalance(entries), entries };
+  return { balance, entries };
 }
 
+/**
+ * Reads a run back from storage (the server's run store, or the browser's copy
+ * of the view). Returns null when the run cannot be trusted as a whole: no run
+ * id, or a credit balance that is not a whole number of credits. Damaged
+ * entries inside a list are dropped one by one.
+ */
 export function coerceState(value: unknown): State | null {
   const raw = record(value);
   if (!raw) return null;
+  if (typeof raw.runId !== "string" || !RUN_ID_SHAPE.test(raw.runId)) return null;
+  const credits = coerceCredits(raw.credits);
+  if (!credits) return null;
 
   return {
+    runId: raw.runId,
+    version: Math.max(0, Math.floor(count(raw.version))),
     product: coerceProduct(raw.product),
     productOptions: coerceProductOptions(raw.productOptions),
     research: coerceResearch(raw.research),
@@ -468,7 +487,7 @@ export function coerceState(value: unknown): State | null {
       .map(coerceRound)
       .filter((r): r is Round => r !== null)
       .slice(-MAX_ROUNDS),
-    credits: coerceCredits(raw.credits),
+    credits,
     mandateId: typeof raw.mandateId === "string" ? raw.mandateId : null,
     simulatedImpressions: count(raw.simulatedImpressions),
   };

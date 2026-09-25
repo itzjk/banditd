@@ -1,59 +1,10 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { join } from "node:path";
-import { emptyState, coerceState, MAX_AUDIT, MAX_ROUNDS } from "./state-schema.ts";
-import type { State, Session, RoundArm, CreditKind } from "./state-schema.ts";
+import { MAX_AUDIT, MAX_ROUNDS } from "./state-schema.ts";
+import type { State, RoundArm, CreditKind } from "./state-schema.ts";
 
 export * from "./state-schema.ts";
 
-const WRITABLE_ROOT = process.env.VERCEL ? "/tmp" : process.cwd();
-const DATA_DIR = join(WRITABLE_ROOT, "data");
-const DATA_FILE = join(DATA_DIR, "state.json");
-const DISK = !process.env.VERCEL;
-
-let state: State | null = null;
-
-function load(): State {
-  if (state) return state;
-  if (DISK && existsSync(DATA_FILE)) {
-    try {
-      state = coerceState(JSON.parse(readFileSync(DATA_FILE, "utf8"))) ?? emptyState();
-      return state;
-    } catch {
-      state = emptyState();
-      return state;
-    }
-  }
-  state = emptyState();
-  return state;
-}
-
-function persist() {
-  if (!DISK || !state) return;
-  try {
-    if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
-    writeFileSync(DATA_FILE, JSON.stringify(state, null, 2));
-  } catch {
-    return;
-  }
-}
-
-export function getState(): State {
-  return load();
-}
-
-export function openSession(incoming: unknown): Session {
-  const carried = coerceState(incoming);
-  if (carried) return { state: carried, detached: true };
-  return { state: load(), detached: false };
-}
-
-export function commit(session: Session): State {
-  if (!session.detached) {
-    state = session.state;
-    persist();
-  }
-  return session.state;
-}
+// Pure edits on a run. They never persist anything: a route applies them inside
+// `updateRun` (lib/run-store.ts), which writes the run back atomically.
 
 export function logAudit(target: State, kind: string, detail: string) {
   target.audit.unshift({ at: new Date().toISOString(), kind, detail });
@@ -61,9 +12,17 @@ export function logAudit(target: State, kind: string, detail: string) {
 }
 
 export function logCredit(target: State, kind: CreditKind, amount: number, ref: string) {
+  if (!Number.isInteger(amount) || amount === 0) {
+    throw new Error(`a credit movement has to be a whole, non zero number of credits, got ${amount}`);
+  }
+  if (target.credits.balance + amount < 0) {
+    throw new Error(
+      `a ${kind} of ${amount} would take the balance of ${target.credits.balance} below zero`,
+    );
+  }
   target.credits.entries.unshift({ at: new Date().toISOString(), kind, amount, ref });
   if (target.credits.entries.length > MAX_AUDIT) target.credits.entries.length = MAX_AUDIT;
-  target.credits.balance = Math.max(0, target.credits.balance + amount);
+  target.credits.balance += amount;
 }
 
 export function logRound(

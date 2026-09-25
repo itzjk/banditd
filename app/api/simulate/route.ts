@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { openSession, commit, logAudit, logRound } from "@/lib/store";
+import { logAudit, logRound, liveCohort } from "@/lib/store";
 import type { Creative } from "@/lib/store";
 import { simulateTraffic } from "@/lib/bandit";
+import { guard } from "@/lib/access";
+import { updateRun } from "@/lib/run-store";
+import { failure, readJson, HttpFailure } from "@/lib/http";
+import { SimulateInput } from "@/lib/contracts";
 
 const MIN_RATE = 0.015;
 const MAX_RATE = 0.065;
@@ -38,48 +42,53 @@ function hiddenRate(
   return Math.min(MAX_RATE * 1.6, Math.max(MIN_RATE * 0.6, rate));
 }
 
+/**
+ * The only writer of impressions and clicks. The counts every gate, decision
+ * and charge reads come from here, drawn on the server against creatives the
+ * server wrote.
+ */
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => ({}))) as { impressions?: number; state?: unknown };
-  const impressions = body.impressions ?? 1000;
+  try {
+    const client = await guard(req, "simulate");
+    const { runId, impressions } = await readJson(req, SimulateInput);
 
-  const session = openSession(body.state);
-  const state = session.state;
+    const { record } = await updateRun(runId, client, ({ state }) => {
+      const live = liveCohort(state);
+      if (live.length === 0) {
+        throw new HttpFailure("NO_CREATIVES", 400, "no creatives to simulate");
+      }
+      const generation = live[0].generation;
+      const byId = new Map(state.creatives.map((c) => [c.id, c]));
 
-  if (state.creatives.length === 0) {
-    return NextResponse.json({ error: "no creatives to simulate" }, { status: 400 });
+      const served = simulateTraffic(
+        live.map((c) => c.arm),
+        live.map((c) => hiddenRate(c, byId)),
+        impressions,
+        Math.random,
+        "thompson",
+      );
+
+      live.forEach((c, i) => {
+        c.arm.impressions = served[i].impressions;
+        c.arm.clicks = served[i].clicks;
+      });
+      state.simulatedImpressions += impressions;
+
+      logRound(
+        state,
+        generation,
+        impressions,
+        live.map((c) => ({ id: c.id, impressions: c.arm.impressions, clicks: c.arm.clicks })),
+      );
+      logAudit(
+        state,
+        "simulate",
+        `Injected ${impressions} impressions across ${live.length} generation ${generation} creatives`,
+      );
+    });
+
+    return NextResponse.json(record.state);
+  } catch (err) {
+    return failure(err);
   }
-
-  const generation = Math.max(...state.creatives.map((c) => c.generation));
-  const live = state.creatives.filter((c) => c.generation === generation);
-
-  const byId = new Map(state.creatives.map((c) => [c.id, c]));
-
-  const served = simulateTraffic(
-    live.map((c) => c.arm),
-    live.map((c) => hiddenRate(c, byId)),
-    impressions,
-    Math.random,
-    "thompson",
-  );
-
-  live.forEach((c, i) => {
-    c.arm.impressions = served[i].impressions;
-    c.arm.clicks = served[i].clicks;
-  });
-  state.simulatedImpressions += impressions;
-
-  logRound(
-    state,
-    generation,
-    impressions,
-    live.map((c) => ({ id: c.id, impressions: c.arm.impressions, clicks: c.arm.clicks })),
-  );
-
-  logAudit(
-    state,
-    "simulate",
-    `Injected ${impressions} impressions across ${live.length} generation ${generation} creatives`,
-  );
-
-  return NextResponse.json(commit(session));
 }

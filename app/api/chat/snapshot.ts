@@ -1,6 +1,7 @@
 import { evaluate, createRng, DEFAULT_MIN_IMPRESSIONS, DEFAULT_THRESHOLD } from "@/lib/bandit";
 import { cohortSeed } from "@/lib/cohort-seed";
 import type { ChatAd, ChatGates, ChatPurchase, ChatSnapshot } from "@/lib/openai";
+import { liveCohort } from "@/lib/store";
 import type { State } from "@/lib/store";
 
 export const CREDIT_PRICE = process.env.RENDER_CREDIT_PRICE ?? "4.00";
@@ -41,10 +42,8 @@ function describeMandate(state: State): string {
 }
 
 export function cohortOf(state: State) {
-  const generation = state.creatives.length
-    ? Math.max(...state.creatives.map((c) => c.generation))
-    : 0;
-  return { generation, cohort: state.creatives.filter((c) => c.generation === generation) };
+  const cohort = liveCohort(state);
+  return { generation: cohort[0]?.generation ?? 0, cohort };
 }
 
 export function buildSnapshot(state: State): ChatSnapshot {
@@ -169,7 +168,9 @@ export function explainDecision(state: State): DecisionReading {
   const candidate = cohort[evaluation.candidateIndex];
   const lossCeiling = evaluation.posteriorMean * 0.01;
 
-  const blocking = !evaluation.thresholdMet
+  const blocking = evaluation.cohortProblem
+    ? "the live generation carries a single ad, so there is nothing it was measured against"
+    : !evaluation.thresholdMet
     ? "probability best is still under 95 percent"
     : !evaluation.minImpressionsMet
       ? "the candidate ad has fewer than 200 impressions of its own"

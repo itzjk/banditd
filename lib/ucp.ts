@@ -1,4 +1,5 @@
 import agentProfile from "@/public/.well-known/ucp-agent.json";
+import { publicFetch, BlockedDestination } from "./public-fetch.ts";
 
 export const AGENT_PROFILE_PATH = "/.well-known/ucp-agent.json";
 export const MERCHANT_PROFILE_PATH = "/.well-known/ucp";
@@ -277,12 +278,22 @@ async function readProfileDocument(
   let res: Response;
 
   try {
-    res = await fetch(url, {
+    res = await publicFetch(url, {
       headers: { accept: "application/json", "user-agent": "banditd-ucp-agent/1.0" },
       cache: "no-store",
       signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (error) {
+    if (error instanceof BlockedDestination) {
+      return {
+        ok: false,
+        domain,
+        reason: "blocked_host",
+        detail: `Only public hosts are queried: ${error.message}.`,
+        status: null,
+        ms: Date.now() - started,
+      };
+    }
     const aborted = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
     return {
       ok: false,
@@ -516,7 +527,7 @@ export async function searchCatalog(input: SearchInput): Promise<CatalogOutcome>
 
   let res: Response;
   try {
-    res = await fetch(endpoint, {
+    res = await publicFetch(endpoint, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -528,6 +539,9 @@ export async function searchCatalog(input: SearchInput): Promise<CatalogOutcome>
       signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (error) {
+    if (error instanceof BlockedDestination) {
+      return fail("no_endpoint", `The MCP endpoint was not called: ${error.message}.`);
+    }
     const aborted = error instanceof Error && (error.name === "TimeoutError" || error.name === "AbortError");
     return fail("unreachable", aborted ? `No answer within ${timeoutMs} ms.` : "The endpoint refused the call.");
   }

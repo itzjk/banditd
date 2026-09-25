@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
-import { fromOurPage, OFF_PAGE_CODE, OFF_PAGE_MESSAGE } from "@/lib/same-origin";
-import { openSession, logAudit, commit } from "@/lib/store";
+import { logAudit } from "@/lib/store";
+import { guard } from "@/lib/access";
+import { readRun, updateRun } from "@/lib/run-store";
+import { failure, readJson } from "@/lib/http";
+import { PlanInput } from "@/lib/contracts";
 import { chooseNextAction, startBudget } from "@/lib/openai";
 import { mandateQueue } from "@/lib/mandate";
 import {
@@ -36,33 +39,12 @@ const ACTION_DESCRIPTION: Record<string, string> = {
   stop: "End the run here and say why. Use this when nothing left to do would change the outcome.",
 };
 
-function progressOf(value: unknown): PlanProgress {
-  const raw = (value ?? {}) as Record<string, unknown>;
-  const looksTaken = Math.max(0, Math.floor(Number(raw.looksTaken) || 0));
-  const looksLeft = Math.max(0, Math.floor(Number(raw.looksLeft) || 0));
-  return {
-    researched: raw.researched === true,
-    wrote: raw.wrote === true,
-    decided: raw.decided === true,
-    purchaseAttempts: Math.max(0, Math.floor(Number(raw.purchaseAttempts) || 0)),
-    purchased: raw.purchased === true,
-    evolved: raw.evolved === true,
-    retested: raw.retested === true,
-    looksTaken,
-    looksLeft,
-  };
+function lines(value: string[]): string[] {
+  return value.map((item) => item.replace(/[\p{Cc}\p{Cf}]/gu, " ").slice(0, 240)).slice(-12);
 }
 
-function lines(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value
-    .filter((item): item is string => typeof item === "string")
-    .map((item) => item.replace(/[\p{Cc}\p{Cf}]/gu, " ").slice(0, 240))
-    .slice(-12);
-}
-
-function sentence(value: unknown): string | null {
-  if (typeof value !== "string") return null;
+function sentence(value: string | null): string | null {
+  if (value === null) return null;
   const clean = value.replace(/[\p{Cc}\p{Cf}]/gu, " ").trim().slice(0, 400);
   return clean.length ? clean : null;
 }
@@ -107,94 +89,75 @@ function guardChoice(choice: PlanChoice): PlanChoice {
 }
 
 export async function POST(req: Request) {
-  if (!fromOurPage(req)) {
-    return NextResponse.json({ error: OFF_PAGE_MESSAGE, code: OFF_PAGE_CODE }, { status: 403 });
-  }
-
-  const body = (await req.json().catch(() => ({}))) as {
-    state?: unknown;
-    cycle?: unknown;
-    progress?: unknown;
-    history?: unknown;
-    lastDecision?: unknown;
-    lastPurchase?: unknown;
-  };
-
-  const session = openSession(body.state);
-  const state = session.state;
-
-  const cycle = Math.min(MAX_PLAN_CYCLES, Math.max(1, Math.floor(Number(body.cycle) || 1)));
-  const progress = progressOf(body.progress);
-  const mandate = await readMandate(state.mandateId);
-
-  const snapshot = buildSnapshot({
-    state,
-    cycle,
-    progress,
-    history: lines(body.history),
-    mandate,
-    creditPrice: CREDIT_PRICE,
-    lastDecision: sentence(body.lastDecision),
-    lastPurchase: sentence(body.lastPurchase),
-  });
-
-  const started = Date.now();
-  const budget = startBudget("The next action", BUDGET_MS);
-
-  const giveUp = (why: string): NextResponse => {
-    const choice = scriptedNext(snapshot);
-    logAudit(
-      state,
-      "plan",
-      `Cycle ${cycle}: the agent could not choose (${why}), so the run fell back to the scripted order and takes ${ACTION_LABEL[choice.action]}.`,
-    );
-    const payload: PlanResult = {
-      choice,
-      source: "fallback",
-      fallbackBecause: why,
-      snapshot,
-      tookMs: Date.now() - started,
-    };
-    return NextResponse.json({ ...payload, state: commit(session) });
-  };
-
-  let picked;
   try {
-    picked = await chooseNextAction(
-      { actions: PLAN_ACTIONS, descriptions: ACTION_DESCRIPTION, briefing: renderSnapshot(snapshot) },
-      budget,
+    const client = await guard(req, "model");
+    const body = await readJson(req, PlanInput);
+    const { state } = await readRun(body.runId, client);
+
+    const cycle = Math.min(MAX_PLAN_CYCLES, body.cycle);
+    const progress: PlanProgress = body.progress;
+    const mandate = await readMandate(state.mandateId);
+
+    const snapshot = buildSnapshot({
+      state,
+      cycle,
+      progress,
+      history: lines(body.history),
+      mandate,
+      creditPrice: CREDIT_PRICE,
+      lastDecision: sentence(body.lastDecision),
+      lastPurchase: sentence(body.lastPurchase),
+    });
+
+    const started = Date.now();
+    const budget = startBudget("The next action", BUDGET_MS);
+
+    const answer = async (payload: PlanResult, audit: string) => {
+      const { record } = await updateRun(body.runId, client, ({ state: latest }) =>
+        logAudit(latest, "plan", audit),
+      );
+      return NextResponse.json({ ...payload, state: record.state });
+    };
+
+    const giveUp = (why: string) => {
+      const choice = scriptedNext(snapshot);
+      return answer(
+        { choice, source: "fallback", fallbackBecause: why, snapshot, tookMs: Date.now() - started },
+        `Cycle ${cycle}: the agent could not choose (${why}), so the run fell back to the scripted order and takes ${ACTION_LABEL[choice.action]}.`,
+      );
+    };
+
+    let picked;
+    try {
+      picked = await chooseNextAction(
+        { actions: PLAN_ACTIONS, descriptions: ACTION_DESCRIPTION, briefing: renderSnapshot(snapshot) },
+        budget,
+      );
+    } catch (err) {
+      console.error(`plan gave up after ${Math.round((Date.now() - started) / 1000)}s`, err);
+      return giveUp("the model call failed");
+    }
+
+    if (!isPlanAction(picked.action)) {
+      return giveUp(
+        picked.action
+          ? `the model asked for "${String(picked.action)}", which is not an action`
+          : "the model chose no action",
+      );
+    }
+
+    const reason = sentence(picked.reason);
+    if (!reason) return giveUp("the model chose an action without giving a reason");
+
+    const choice = guardChoice({ action: picked.action, reason, impressions: picked.impressions });
+
+    return answer(
+      { choice, source: "model", fallbackBecause: null, snapshot, tookMs: Date.now() - started },
+      `Cycle ${cycle}: the agent chose to ${ACTION_LABEL[choice.action]}${
+        choice.impressions ? ` with ${choice.impressions.toLocaleString("en-US")} more impressions` : ""
+      }. ${choice.reason}`,
     );
   } catch (err) {
-    console.error(`plan gave up after ${Math.round((Date.now() - started) / 1000)}s`, err);
-    return giveUp("the model call failed");
+    return failure(err);
   }
-
-  if (!isPlanAction(picked.action)) {
-    return giveUp(
-      picked.action ? `the model asked for "${String(picked.action)}", which is not an action` : "the model chose no action",
-    );
-  }
-
-  const reason = sentence(picked.reason);
-  if (!reason) return giveUp("the model chose an action without giving a reason");
-
-  const choice = guardChoice({ action: picked.action, reason, impressions: picked.impressions });
-
-  logAudit(
-    state,
-    "plan",
-    `Cycle ${cycle}: the agent chose to ${ACTION_LABEL[choice.action]}${
-      choice.impressions ? ` with ${choice.impressions.toLocaleString("en-US")} more impressions` : ""
-    }. ${choice.reason}`,
-  );
-
-  const payload: PlanResult = {
-    choice,
-    source: "model",
-    fallbackBecause: null,
-    snapshot,
-    tookMs: Date.now() - started,
-  };
-
-  return NextResponse.json({ ...payload, state: commit(session) });
 }

@@ -145,12 +145,12 @@ export default function MerchantHandshake({
           body: JSON.stringify({ domain: clean, query, version }),
           signal: controller.signal,
         });
-        const body = (await res.json()) as MerchantHandshakeResponse & { message?: string };
+        const body = (await res.json()) as MerchantHandshakeResponse & { message?: string; error?: string };
         if (controller.signal.aborted) return;
 
         if (!res.ok) {
           setData(null);
-          setError(body.message ?? "That request did not make it out.");
+          setError(body.message ?? body.error ?? "That request did not make it out.");
           return;
         }
 

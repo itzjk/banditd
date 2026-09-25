@@ -1,5 +1,6 @@
 import { evaluate, createRng, DEFAULT_THRESHOLD, DEFAULT_MIN_IMPRESSIONS, DEFAULT_ALPHA } from "./bandit.ts";
 import { cohortSeed } from "./cohort-seed.ts";
+import { liveCohort } from "./state-schema.ts";
 import type { State, Creative } from "./state-schema.ts";
 
 export const PLAN_ACTIONS = [
@@ -115,11 +116,7 @@ export function clampImpressions(value: unknown): number {
   return Math.min(MAX_PLAN_IMPRESSIONS, Math.max(MIN_PLAN_IMPRESSIONS, Math.round(n)));
 }
 
-export function liveCohort(state: State): Creative[] {
-  if (state.creatives.length === 0) return [];
-  const generation = Math.max(...state.creatives.map((c) => c.generation));
-  return state.creatives.filter((c) => c.generation === generation);
-}
+export { liveCohort };
 
 function rate(impressions: number, clicks: number): string {
   if (!impressions) return "0.00%";
