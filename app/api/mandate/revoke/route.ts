@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { logAudit } from "@/lib/store";
 import { cancelMandate, PravaError } from "@/lib/prava";
-import { guard } from "@/lib/access";
+import { guard, operatorAllowed } from "@/lib/access";
+import { safeError, logUpstream } from "@/lib/redact";
 import type { Client } from "@/lib/access";
 import { readRun, updateRun } from "@/lib/run-store";
-import { failure, readJson } from "@/lib/http";
+import { failure, readJson, HttpFailure } from "@/lib/http";
 import { RunOnly } from "@/lib/contracts";
 
 export const maxDuration = 30;
@@ -14,6 +15,13 @@ export async function POST(req: Request) {
     const client = await guard(req, "purchase");
     const { runId } = await readJson(req, RunOnly);
     await readRun(runId, client);
+    if (!operatorAllowed(req)) {
+      throw new HttpFailure(
+        "REVOKE_DISABLED",
+        403,
+        "Revoking a mandate cannot be undone, so on this deployment it is an operator action: it needs DEMO_FORCE=1 and the operator's admin token. Nothing was revoked.",
+      );
+    }
     return await revoke(runId, client);
   } catch (err) {
     return failure(err);
@@ -50,10 +58,11 @@ async function revoke(runId: string, client: Client) {
       revoked: { mandateId, status: mandate.status },
     });
   } catch (e) {
+    logUpstream(`prava cancel ${mandateId}`, e);
     if (e instanceof PravaError) {
       return NextResponse.json(
         {
-          error: `Prava refused to revoke mandate ${mandateId}: ${e.message}`,
+          error: `Prava refused to revoke mandate ${mandateId}: ${safeError(e)}`,
           code: e.code,
         },
         { status: e.status >= 400 && e.status < 600 ? e.status : 502 },
@@ -61,7 +70,7 @@ async function revoke(runId: string, client: Client) {
     }
     return NextResponse.json(
       {
-        error: `Revoking mandate ${mandateId} failed on the way to Prava: ${e instanceof Error ? e.message : String(e)}`,
+        error: `Revoking mandate ${mandateId} failed on the way to Prava: ${safeError(e)}`,
         code: "REVOKE_FAILED",
       },
       { status: 502 },

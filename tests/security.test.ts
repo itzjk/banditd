@@ -122,7 +122,7 @@ test("a real mandate signed for 5.00 is not taken for the rejection demo by its 
     url.includes("/v1/mandates")
       ? Response.json([
           {
-            id: "mdt_01KZ0KP8EEDFRP425E74Y6HSJ0",
+            id: "mdt_TESTMANDATE000000000001",
             status: "active",
             approvedAmount: "5.00",
             remaining: "5.00",
@@ -135,7 +135,7 @@ test("a real mandate signed for 5.00 is not taken for the rejection demo by its 
     const queue = await mandateQueue(4, null, "seller_test");
     assert.deepEqual(
       queue.candidates.map((c) => c.id),
-      ["mdt_01KZ0KP8EEDFRP425E74Y6HSJ0"],
+      ["mdt_TESTMANDATE000000000001"],
       "the seller's 5.00 mandate dropped out of the charge queue",
     );
     assert.equal(queue.reserved, null);

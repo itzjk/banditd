@@ -4,7 +4,8 @@ import type { State } from "@/lib/store";
 import { evaluate, createRng } from "@/lib/bandit";
 import { cohortSeed } from "@/lib/cohort-seed";
 import { reportCharge, CHARGE_OUTCOME_UNKNOWN } from "@/lib/prava";
-import { guard, forceAllowed } from "@/lib/access";
+import { guard, operatorAllowed } from "@/lib/access";
+import { safeError, logUpstream } from "@/lib/redact";
 import { updateRun } from "@/lib/run-store";
 import type { RunRecord } from "@/lib/run-store";
 import type { Client } from "@/lib/access";
@@ -113,7 +114,7 @@ export async function POST(req: Request) {
     const client = await guard(req, "purchase");
     const body = await readJson(req, PurchaseInput);
     const force: Force = body.force ?? null;
-    if (force && !forceAllowed(req)) {
+    if (force && !operatorAllowed(req)) {
       throw new HttpFailure(
         "FORCE_DISABLED",
         403,
@@ -245,7 +246,7 @@ async function purchase(locked: RunRecord, body: PurchaseRequest, client: Client
   const notes: string[] = [];
   if (queue.listError) {
     notes.push(
-      `Prava did not answer when listing the signed mandates (${queue.listError}), ${attempts.length ? "falling back to the mandate on file" : "and there is no mandate on file to fall back to"}`,
+      `Prava did not answer when listing the signed mandates (${safeError(queue.listError)}), ${attempts.length ? "falling back to the mandate on file" : "and there is no mandate on file to fall back to"}`,
     );
   }
   if (forceCap && attempts.length) {
@@ -275,20 +276,21 @@ async function purchase(locked: RunRecord, body: PurchaseRequest, client: Client
     baseReference,
     chargeContext,
     started + CHARGE_WINDOW_MS,
-  ).catch(
-    (e: unknown): RotationResult => ({
+  ).catch((e: unknown): RotationResult => {
+    logUpstream("purchase rotation", e);
+    return {
       charge: {
         ok: false,
         code: PROVIDER_UNREACHABLE,
-        message: e instanceof Error ? e.message : String(e),
+        message: safeError(e),
         httpStatus: 0,
         mandateId: attempts[0]?.id,
       },
       mandateId: attempts[0]?.id ?? null,
       reference: baseReference,
       rotated: [],
-    }),
-  );
+    };
+  });
 
   for (const skipped of rotation.rotated) {
     notes.push(
@@ -306,7 +308,7 @@ async function purchase(locked: RunRecord, body: PurchaseRequest, client: Client
     const code = result ? result.code : NO_MANDATE_AVAILABLE;
     const family = declineFamily(code);
     const message = result
-      ? (DECLINE_MESSAGES[code] ?? fallbackMessage(code, result.message ?? null, result.httpStatus))
+      ? (DECLINE_MESSAGES[code] ?? fallbackMessage(code, result.message ? safeError(result.message) : null, result.httpStatus))
       : exhaustionMessage(queue, amount);
     const upstream = result && result.httpStatus > 0 ? `upstream HTTP ${result.httpStatus}, ` : "";
 
@@ -349,7 +351,7 @@ async function purchase(locked: RunRecord, body: PurchaseRequest, client: Client
         errorCode: code,
         family,
         message,
-        upstreamMessage: result?.message ?? null,
+        upstreamMessage: result?.message ? safeError(result.message) : null,
         upstreamStatus: result?.httpStatus ?? null,
         mandateId,
         rotatedPast: rotation.rotated.map((r) => r.mandateId),
@@ -410,7 +412,8 @@ async function purchase(locked: RunRecord, body: PurchaseRequest, client: Client
       await reportCharge(usedMandateId, transactionId, delivered, amount);
       reported = true;
     } catch (e) {
-      reportError = e instanceof Error ? e.message : String(e);
+      logUpstream("prava report", e);
+      reportError = safeError(e);
     }
   } else {
     reportError = "the charge came back without a transaction id, so there was nothing to report";

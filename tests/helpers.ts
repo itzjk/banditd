@@ -134,7 +134,7 @@ export function forgedState() {
     audit: [],
     rounds: [],
     credits: { balance: 60, entries: grants },
-    mandateId: "mdt_01KZ0KP8EEDFRP425E74Y6HSJ0",
+    mandateId: "mdt_TESTMANDATE000000000001",
     simulatedImpressions: 2000,
   };
 }

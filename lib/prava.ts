@@ -1,4 +1,5 @@
 import { PROVIDER_UNREACHABLE } from "./declines.ts";
+import { safeError, logUpstream } from "./redact.ts";
 
 const BASE_URL = process.env.PRAVA_BASE_URL ?? "https://sandbox.api.prava.space";
 
@@ -73,7 +74,8 @@ async function call<T>(
         null,
       );
     }
-    throw e;
+    logUpstream(`prava ${method} ${path}`, e);
+    throw new PravaError(`Prava could not be reached: ${safeError(e)}`, "PRAVA_UNREACHABLE", 502, null);
   }
 
   const text = await res.text();
@@ -89,7 +91,11 @@ async function call<T>(
     const err = (obj.error ?? obj) as Json;
     const code = String(err.code ?? err.errorCode ?? `HTTP_${res.status}`);
     const message = String(err.message ?? err.errorMessage ?? res.statusText);
-    throw new PravaError(message, code, res.status, parsed);
+    // The raw answer stays in the server log; what travels on is redacted.
+    logUpstream(`prava ${method} ${path} ${res.status}`, parsed);
+    // `body` keeps the raw answer for server-side tooling (scripts/prava.mts);
+    // no route serializes it.
+    throw new PravaError(safeError(message), code, res.status, parsed);
   }
 
   return parsed as T;
@@ -327,8 +333,11 @@ export async function chargeMandate(
 
   if (raw.status === "failed" || !raw.credentials) {
     const cardless = raw.status !== "failed" && !raw.credentials && !raw.errorCode;
+    if (raw.errorMessage) {
+      logUpstream(`prava charge ${mandateId}`, { status: raw.status, errorCode: raw.errorCode, errorMessage: raw.errorMessage });
+    }
     const message =
-      raw.errorMessage ??
+      (raw.errorMessage ? safeError(raw.errorMessage) : undefined) ??
       (cardless
         ? "Prava answered the charge without card credentials, so no card was ever issued"
         : "Charge was declined");

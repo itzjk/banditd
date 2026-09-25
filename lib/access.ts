@@ -173,12 +173,13 @@ export function requireSession(client: Client): string {
 }
 
 /**
- * The guardrail demos (a deliberate over-cap charge, a charge outside the
- * merchant scope) spend against real mandates. Outside production they are
- * open for development; in production they need DEMO_FORCE=1 and the operator's
- * ADMIN_TOKEN in the x-banditd-admin header.
+ * Operator actions spend against or destroy real mandates: the guardrail demo
+ * charges (over the cap, outside the merchant scope) and revoking a mandate,
+ * which cannot be undone. Outside production they are open for development; in
+ * production they need DEMO_FORCE=1 and the operator's ADMIN_TOKEN (16
+ * characters or more) in the x-banditd-admin header.
  */
-export function forceAllowed(req: Request): boolean {
+export function operatorAllowed(req: Request): boolean {
   if (process.env.NODE_ENV !== "production") return true;
   if (process.env.DEMO_FORCE !== "1") return false;
   const expected = process.env.ADMIN_TOKEN ?? "";

@@ -49,9 +49,9 @@ test("CSV cells that a spreadsheet would run as formulas open as text", () => {
 });
 
 test("a valid mandate id is sent encoded inside /v1/mandates/", async () => {
-  onNetwork(() => Response.json({ id: "mdt_01KZ0KP8EEDFRP425E74Y6HSJ0", status: "active" }));
-  await getMandate("mdt_01KZ0KP8EEDFRP425E74Y6HSJ0");
-  assert.equal(new URL(reached("prava.test")[0].url).pathname, "/v1/mandates/mdt_01KZ0KP8EEDFRP425E74Y6HSJ0");
+  onNetwork(() => Response.json({ id: "mdt_TESTMANDATE000000000001", status: "active" }));
+  await getMandate("mdt_TESTMANDATE000000000001");
+  assert.equal(new URL(reached("prava.test")[0].url).pathname, "/v1/mandates/mdt_TESTMANDATE000000000001");
 });
 
 test("the Beta sampler matches the analytic moments", () => {

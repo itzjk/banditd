@@ -17,6 +17,7 @@ import {
   sanitizeOptionList,
   sanitizePriceRange,
 } from "./state-schema.ts";
+import { safeError, logUpstream } from "./redact.ts";
 
 export const SEARCH_MODEL = process.env.OPENAI_SEARCH_MODEL ?? "gpt-5.6-luna";
 export const TEXT_MODEL = process.env.OPENAI_TEXT_MODEL ?? "gpt-5.6-luna";
@@ -165,6 +166,7 @@ function outOfTime(budget: Budget, cause: string): StepFailure {
 
 function translate(err: unknown, label: string): StepFailure {
   if (err instanceof StepFailure) return err;
+  logUpstream(`openai ${label}`, err);
 
   if (err instanceof APIError && err.status === 429) {
     const hint = waitHintMs(err);
@@ -225,7 +227,7 @@ function translate(err: unknown, label: string): StepFailure {
   if (err instanceof APIError) {
     return new StepFailure(
       "UPSTREAM_REJECTED",
-      `${label} was rejected by OpenAI: ${err.message}`,
+      `${label} was rejected by OpenAI: ${safeError(err)}`,
       502,
       null,
       err,
@@ -234,7 +236,7 @@ function translate(err: unknown, label: string): StepFailure {
 
   return new StepFailure(
     "STEP_FAILED",
-    `${label} failed: ${err instanceof Error ? err.message : String(err)}`,
+    `${label} failed: ${safeError(err)}`,
     502,
     null,
     err,

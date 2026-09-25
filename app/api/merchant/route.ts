@@ -8,6 +8,7 @@ import {
 } from "@/lib/ucp";
 import { guard } from "@/lib/access";
 import { failure, readJson } from "@/lib/http";
+import { safeError, logUpstream } from "@/lib/redact";
 import { MerchantInput } from "@/lib/contracts";
 
 export const runtime = "nodejs";
@@ -101,13 +102,14 @@ async function run(req: Request, input: Body) {
       version: text(input.version, 10) || undefined,
     });
   } catch (error) {
+    logUpstream(`merchant ${domain}`, error);
     return NextResponse.json(
       {
         ok: false,
         error: "HANDSHAKE_FAILED",
         domain,
         profileUrl,
-        message: error instanceof Error ? error.message : "The handshake could not be attempted.",
+        message: `The handshake could not be attempted: ${safeError(error)}`,
       },
       { status: 200, headers: { "Cache-Control": "no-store" } },
     );

@@ -370,7 +370,7 @@ Performance is simulated. Each creative carries a hidden true click rate derived
 
 That is the only simulated thing. The web search and its sources are real, the creative and image generation is real, the statistical decision is real, and the Prava transactions are real sandbox charges against a mandate a human signed with a passkey.
 
-One of those charges is `ord_01KZ085GMNRTHFW216PGWFG7DP`, four dollars of render credits pulled on 2 August 2026 against mandate `mdt_01KZ084...`, a recurring monthly mandate with a fifty dollar ceiling that a human approved with a passkey and that stays valid until 1 September 2026. It shows in the Prava dashboard as a Visa mandate charge that reached Creds_Generated, which is the point where the network hands over a single use card. The reference the agent sent is `banditd_verify_1785641222`. That order is stated here so the claim above can be checked against Prava's own record instead of taken from this file.
+One of those charges is `ord_01KZ085GMNRTHFW216PGWFG7DP`, four dollars of render credits pulled on 2 August 2026 against a recurring monthly mandate with a fifty dollar ceiling that a human approved with a passkey and that stays valid until 1 September 2026. It shows in the Prava dashboard as a Visa mandate charge that reached Creds_Generated, which is the point where the network hands over a single use card. The reference the agent sent is `banditd_verify_1785641222`. That order is stated here so the claim above can be checked against Prava's own record instead of taken from this file.
 
 Three limits worth saying out loud rather than leaving to be found.
 
@@ -385,7 +385,6 @@ A human signed a mandate with a passkey for 60.00 USD, scoped to Allbirds and to
 What that buys is narrow and worth stating narrowly: the mandate, the merchant scope, the single use card and the refusal behave the way this file claims when they meet a store that is not ours. What it does not buy is a claim about autonomy on that path. The agent cannot reach a third party checkout on its own, and until it can, this is a lab note, not a feature.
 
 ```
-mandate      mdt_01KZ0KP8EEDFRP425E74Y6HSJ0
 merchant     Allbirds, scope listed
 ceiling      60.00 USD, valid until 1 September 2026
 transaction  txn_01KZ0KR2YPT13BEVZ9HGT4BF8N, 25.00 USD, failed
