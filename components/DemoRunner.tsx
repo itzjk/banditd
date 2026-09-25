@@ -902,7 +902,7 @@ export default function DemoRunner({
           }
           const next = await call<State>(
             "/api/simulate",
-            { impressions: size, state: held.current },
+            { runId: held.current.runId, impressions: size },
             TIMEOUT.simulate,
             "The traffic simulation",
           );
@@ -989,7 +989,7 @@ export default function DemoRunner({
       await step("decide", label, async () => {
         const res = await call<DecideResponse>(
           "/api/decide",
-          { state: held.current },
+          { runId: held.current.runId },
           TIMEOUT.decide,
           "The spend decision",
         );
@@ -1040,7 +1040,7 @@ export default function DemoRunner({
       await step("research", "Research the market", async () => {
         const next = await call<State>(
           "/api/research",
-          { state: held.current },
+          { runId: held.current.runId },
           TIMEOUT.research,
           "The market research",
         );
@@ -1060,7 +1060,7 @@ export default function DemoRunner({
       await step("creatives", "Write four creatives", async () => {
         const next = await call<State>(
           "/api/creatives",
-          { state: held.current },
+          { runId: held.current.runId },
           TIMEOUT.creatives,
           "The creative generation",
         );
@@ -1079,15 +1079,11 @@ export default function DemoRunner({
 
     const attemptPurchase = async (label: string, tolerant: boolean) => {
       await step("purchase", label, async () => {
-        const cohort = cohortOf(held.current);
         held.purchaseAttempts += 1;
         const payload = {
-          amount: held.decision?.amount ?? "4.00",
+          runId: held.current.runId,
+          ...(held.decision?.amount ? { amount: held.decision.amount } : {}),
           reason: held.decision?.reason ?? "The agent chose to buy render credits at this point in the run",
-          winnerId: held.evaluation?.candidateId ?? cohort[0]?.id,
-          probabilityBest: held.evaluation?.probabilityBest ?? 0,
-          impressions: cohort.reduce((sum, c) => sum + c.arm.impressions, 0),
-          state: held.current,
         };
 
         if (tolerant) {
@@ -1179,7 +1175,7 @@ export default function DemoRunner({
 
         const next = await call<State>(
           "/api/creatives",
-          { parentId: parent.id, state: held.current },
+          { runId: held.current.runId, parentId: parent.id },
           TIMEOUT.creatives,
           "The breeding step",
         );
@@ -1202,7 +1198,7 @@ export default function DemoRunner({
       await step("simulate", `Retest with ${size.toLocaleString()} more`, async () => {
         const next = await call<State>(
           "/api/simulate",
-          { impressions: size, state: held.current },
+          { runId: held.current.runId, impressions: size },
           TIMEOUT.simulate,
           "The second traffic simulation",
         );
@@ -1415,7 +1411,7 @@ export default function DemoRunner({
           const res = await call<PlanResponse>(
             "/api/plan",
             {
-              state: held.current,
+              runId: held.current.runId,
               cycle,
               history: held.history,
               lastDecision: held.decision

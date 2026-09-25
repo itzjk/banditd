@@ -1,4 +1,8 @@
 import { listMandates } from "./prava.ts";
+import { isReservedMandate } from "./mandate.ts";
+import { safeError } from "./redact.ts";
+
+export { safeError };
 import type { Mandate } from "./prava.ts";
 
 export const RENDER_MERCHANT = process.env.RENDER_MERCHANT_NAME ?? "Banditd Render Credits";
@@ -60,29 +64,8 @@ function isRenderMerchant(name: string | null): boolean {
   return name.trim().toLowerCase() === RENDER_MERCHANT.trim().toLowerCase();
 }
 
-function isReserved(m: Mandate): boolean {
-  const pinned = process.env.PRAVA_REJECTION_MANDATE_ID;
-  if (pinned) return m.id === pinned;
-  const reserved = amount(process.env.PRAVA_REJECTION_MANDATE_AMOUNT ?? "5.00") ?? 5;
-  return amount(m.approvedAmount) === reserved;
-}
-
 function usable(m: Mandate): boolean {
   return m.status === "active" && m.state !== "consumed" && m.state !== "expired";
-}
-
-const SECRET_SHAPES = [
-  /\b(?:sk|pk|rk)_[A-Za-z0-9_-]{6,}/g,
-  /\bBearer\s+[A-Za-z0-9._-]{8,}/gi,
-  /\b[\w.+-]+@[\w-]+\.[\w.-]+\b/g,
-];
-
-export function safeError(value: unknown): string {
-  const raw = value instanceof Error ? value.message : String(value);
-  return SECRET_SHAPES.reduce((text, shape) => text.replace(shape, "[redacted]"), raw)
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 240);
 }
 
 function toSigned(m: Mandate): SignedMandate {
@@ -116,7 +99,7 @@ export async function readAuthorization(): Promise<Authorization> {
     const active = listed
       .filter((m) => typeof m?.id === "string")
       .filter(usable)
-      .filter((m) => !isReserved(m))
+      .filter((m) => !isReservedMandate(m))
       .map(toSigned);
     const ours = active.filter((m) => isRenderMerchant(m.merchant) || m.merchant === null);
     const elsewhere = active.filter((m) => m.merchant !== null && !isRenderMerchant(m.merchant));

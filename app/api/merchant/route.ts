@@ -6,6 +6,10 @@ import {
   type CatalogReason,
   type Handshake,
 } from "@/lib/ucp";
+import { guard } from "@/lib/access";
+import { failure, readJson } from "@/lib/http";
+import { safeError, logUpstream } from "@/lib/redact";
+import { MerchantInput } from "@/lib/contracts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,11 +25,10 @@ const NEVER_SENT = new Set<CatalogReason>([
 ]);
 
 interface Body {
-  domain?: unknown;
-  query?: unknown;
-  country?: unknown;
-  profile?: unknown;
-  version?: unknown;
+  domain: string;
+  query?: string;
+  country?: string;
+  version?: string | null;
 }
 
 function publicOrigin(req: Request): string {
@@ -42,8 +45,8 @@ function publicOrigin(req: Request): string {
   return `https://${host}`;
 }
 
-function text(value: unknown, max: number): string {
-  return typeof value === "string" ? value.trim().slice(0, max) : "";
+function text(value: string | null | undefined, max: number): string {
+  return (value ?? "").trim().slice(0, max);
 }
 
 function summarize(shake: Handshake): string {
@@ -87,7 +90,7 @@ async function run(req: Request, input: Body) {
   }
 
   const origin = publicOrigin(req);
-  const profileUrl = text(input.profile, 300) || `${origin}${AGENT_PROFILE_PATH}`;
+  const profileUrl = `${origin}${AGENT_PROFILE_PATH}`;
 
   let shake: Handshake;
   try {
@@ -99,13 +102,14 @@ async function run(req: Request, input: Body) {
       version: text(input.version, 10) || undefined,
     });
   } catch (error) {
+    logUpstream(`merchant ${domain}`, error);
     return NextResponse.json(
       {
         ok: false,
         error: "HANDSHAKE_FAILED",
         domain,
         profileUrl,
-        message: error instanceof Error ? error.message : "The handshake could not be attempted.",
+        message: `The handshake could not be attempted: ${safeError(error)}`,
       },
       { status: 200, headers: { "Cache-Control": "no-store" } },
     );
@@ -130,18 +134,17 @@ async function run(req: Request, input: Body) {
   );
 }
 
-export async function GET(req: Request) {
-  const params = new URL(req.url).searchParams;
-  return run(req, {
-    domain: params.get("domain"),
-    query: params.get("query"),
-    country: params.get("country"),
-    profile: params.get("profile"),
-    version: params.get("version"),
-  });
-}
-
+/**
+ * The handshake calls a host the caller names, so it goes through the same
+ * gate as the paid routes (this site only, per-client limits, a daily
+ * ceiling), only as POST, and only to addresses on the public internet.
+ */
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => ({}))) as Body;
-  return run(req, body);
+  try {
+    await guard(req, "outbound");
+    const body = await readJson(req, MerchantInput);
+    return await run(req, body);
+  } catch (err) {
+    return failure(err);
+  }
 }

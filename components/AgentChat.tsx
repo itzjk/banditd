@@ -118,9 +118,9 @@ const ROUTES: Record<string, string> = {
 
 const WORKING = ["Reading the run", "Working on it", "Writing the answer"];
 
-function stripImages(state: State | null): State | null {
-  if (!state) return null;
-  return { ...state, creatives: state.creatives.map((c) => ({ ...c, imageData: null })) };
+function runIdOf(state: State | null): string {
+  if (!state) throw new Error("There is no run on the board yet. Start one first. Nothing was done.");
+  return state.runId;
 }
 
 function num(value: number): string {
@@ -271,8 +271,8 @@ export default function AgentChat({ state }: Props) {
   }, [turns, busy, live, open]);
 
   const publish = useCallback((next: State) => {
-    const clean = stripImages(next);
-    if (!clean) return;
+    // The server never puts pictures in a run, so this is safe to store as is.
+    const clean = next;
     workRef.current = clean;
     try {
       const rev = Number(window.localStorage.getItem(REV_KEY));
@@ -300,7 +300,7 @@ export default function AgentChat({ state }: Props) {
       if (name === "read_run" || name === "read_mandate_limits" || name === "explain_last_decision") {
         const payload = await post<Record<string, unknown>>(
           "/api/chat/tools",
-          { tool: name, state: stripImages(current) },
+          { runId: runIdOf(current), tool: name },
           TIMEOUT.tools,
         );
         if (name === "read_run") {
@@ -376,7 +376,7 @@ export default function AgentChat({ state }: Props) {
       if (name === "start_run") {
         const productName = shorten(args.name, 120);
         const price = shorten(args.price, 40);
-        const description = shorten(args.description, 400);
+        const description = shorten(args.description, 300);
         if (!productName || !price || !description) {
           throw new Error(
             "A run needs a name, a price and one line of description. Nothing was started.",
@@ -384,19 +384,19 @@ export default function AgentChat({ state }: Props) {
         }
         const withProduct = await post<State>(
           "/api/product",
-          { name: productName, price, description, state: stripImages(workRef.current) },
+          { name: productName, price: price.slice(0, 24), description },
           TIMEOUT.product,
         );
         publish(withProduct);
         const researched = await post<State>(
           "/api/research",
-          { state: stripImages(withProduct) },
+          { runId: withProduct.runId },
           TIMEOUT.research,
         );
         publish(researched);
         const written = await post<State>(
           "/api/creatives",
-          { state: stripImages(researched) },
+          { runId: researched.runId },
           TIMEOUT.creatives,
         );
         publish(written);
@@ -427,7 +427,7 @@ export default function AgentChat({ state }: Props) {
         }
         const next = await post<State>(
           "/api/simulate",
-          { impressions, state: stripImages(current) },
+          { runId: runIdOf(current), impressions },
           TIMEOUT.simulate,
         );
         publish(next);
@@ -458,7 +458,7 @@ export default function AgentChat({ state }: Props) {
         }
         const res = await post<DecideReply>(
           "/api/decide",
-          { state: stripImages(current) },
+          { runId: runIdOf(current) },
           TIMEOUT.decide,
         );
         publish(res.state);
@@ -516,17 +516,9 @@ export default function AgentChat({ state }: Props) {
             },
           };
         }
-        const cohort = cohortOf(current as State);
         const res = await post<PurchaseReply>(
           "/api/purchase",
-          {
-            amount,
-            reason: held.decision.reason,
-            winnerId: held.evaluation.candidateId ?? cohort[0]?.id,
-            probabilityBest: held.evaluation.probabilityBest,
-            impressions: current ? served(current) : 0,
-            state: stripImages(current),
-          },
+          { runId: runIdOf(current), amount, reason: held.decision.reason },
           TIMEOUT.purchase,
         );
         publish(res);
@@ -588,8 +580,8 @@ export default function AgentChat({ state }: Props) {
         let reply = await post<ChatReply>(
           "/api/chat",
           {
+            runId: runIdOf(workRef.current),
             messages: history.map((t) => ({ role: t.role, content: t.content })),
-            state: stripImages(workRef.current),
           },
           TIMEOUT.chat,
         );
@@ -659,7 +651,7 @@ export default function AgentChat({ state }: Props) {
 
           reply = await post<ChatReply>(
             "/api/chat",
-            { responseId: pending.responseId, outputs },
+            { runId: runIdOf(workRef.current), responseId: pending.responseId, outputs },
             TIMEOUT.chat,
           );
         }

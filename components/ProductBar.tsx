@@ -6,6 +6,7 @@ import ProductRefiner from "@/components/ProductRefiner";
 import ProductSwitch from "@/components/ProductSwitch";
 
 interface Props {
+  runId: string;
   product: Product;
   options: ProductOptions | null;
   optionsLoading: boolean;
@@ -41,6 +42,7 @@ function Chevron({ open }: { open: boolean }) {
 }
 
 export default function ProductBar({
+  runId,
   product,
   options,
   optionsLoading,
@@ -128,6 +130,7 @@ export default function ProductBar({
           <div className="space-y-3">
             {refinable ? (
               <ProductRefiner
+                runId={runId}
                 productName={product.name}
                 options={options}
                 loading={optionsLoading}

@@ -1,19 +1,16 @@
 import { NextResponse } from "next/server";
-import { coerceState } from "@/lib/state-schema";
 import type { State } from "@/lib/state-schema";
+import { guard } from "@/lib/access";
+import { readRun } from "@/lib/run-store";
+import { failure, readJson, HttpFailure } from "@/lib/http";
+import { ExportInput } from "@/lib/contracts";
+import { csvRows as rows } from "@/lib/csv";
 
-const SECTIONS = ["creatives", "purchases", "audit", "research", "all"] as const;
-type Section = (typeof SECTIONS)[number];
+type Section = "creatives" | "purchases" | "audit" | "research" | "all";
 type Format = "json" | "csv";
 
 const DISCLOSURE =
   "Impressions, clicks and CTR in this file come from the simulated traffic model inside banditd, not from a live ad platform. Product, research, sources, charges and mandate ids are real.";
-
-interface Body {
-  state?: unknown;
-  format?: string;
-  section?: string;
-}
 
 function rate(impressions: number, clicks: number): number {
   return impressions > 0 ? clicks / impressions : 0;
@@ -32,17 +29,18 @@ function stamp(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function cell(value: unknown): string {
-  if (value === null || value === undefined) return "";
-  const text = String(value).replace(/\r?\n/g, " ").trim();
-  return /[",;]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+function renderedIds(state: State): Set<string> {
+  const net = new Map<string, number>();
+  for (const e of state.credits.entries) {
+    if (e.kind === "render") net.set(e.ref, (net.get(e.ref) ?? 0) + 1);
+    if (e.kind === "refund") net.set(e.ref, (net.get(e.ref) ?? 0) - 1);
+  }
+  return new Set([...net].filter(([, n]) => n > 0).map(([id]) => id));
 }
 
-function rows(header: string[], body: unknown[][]): string {
-  return [header, ...body].map((line) => line.map(cell).join(",")).join("\r\n");
-}
 
 function creativeRows(state: State): string {
+  const rendered = renderedIds(state);
   return rows(
     [
       "id",
@@ -67,7 +65,7 @@ function creativeRows(state: State): string {
       c.body,
       c.targetEmotion,
       c.imagePrompt,
-      c.imageData ? "yes" : "no",
+      rendered.has(c.id) ? "yes" : "no",
       c.arm.impressions,
       c.arm.clicks,
       rate(c.arm.impressions, c.arm.clicks).toFixed(4),
@@ -163,6 +161,7 @@ function csvFor(state: State, section: Section): string {
 }
 
 function jsonFor(state: State) {
+  const rendered = renderedIds(state);
   const impressions = state.creatives.reduce((sum, c) => sum + c.arm.impressions, 0);
   const clicks = state.creatives.reduce((sum, c) => sum + c.arm.clicks, 0);
   const charged = state.purchases
@@ -185,7 +184,7 @@ function jsonFor(state: State) {
       body: c.body,
       targetEmotion: c.targetEmotion,
       imagePrompt: c.imagePrompt,
-      hasImage: Boolean(c.imageData),
+      hasImage: rendered.has(c.id),
       performance: {
         simulated: true,
         impressions: c.arm.impressions,
@@ -209,47 +208,37 @@ function jsonFor(state: State) {
 }
 
 export async function POST(req: Request) {
-  const body = (await req.json().catch(() => ({}))) as Body;
+  try {
+    const client = await guard(req, "read");
+    const body = await readJson(req, ExportInput);
+    const { state } = await readRun(body.runId, client);
 
-  const state = coerceState(body.state);
-  if (!state) {
-    return NextResponse.json(
-      {
-        error:
-          "no run to export: send the agent state on the body, the same shape the other routes take.",
-        code: "NO_STATE",
+    if (!state.product && state.creatives.length === 0 && state.purchases.length === 0) {
+      throw new HttpFailure(
+        "EMPTY_RUN",
+        400,
+        "the run is empty: submit a product and generate creatives before exporting.",
+      );
+    }
+
+    const format: Format = body.format ?? "json";
+    const section: Section = body.section ?? "all";
+
+    const name = `banditd-${slug(state.product?.name)}-${section}-${stamp()}.${format}`;
+    const payload =
+      format === "csv" ? csvFor(state, section) : `${JSON.stringify(jsonFor(state), null, 2)}\n`;
+
+    return new NextResponse(payload, {
+      status: 200,
+      headers: {
+        "Content-Type":
+          format === "csv" ? "text/csv; charset=utf-8" : "application/json; charset=utf-8",
+        "Content-Disposition": `attachment; filename="${name}"`,
+        "Cache-Control": "no-store",
+        "X-Banditd-Rows": String(rowCount(state, section)),
       },
-      { status: 400 },
-    );
+    });
+  } catch (err) {
+    return failure(err);
   }
-
-  if (!state.product && state.creatives.length === 0 && state.purchases.length === 0) {
-    return NextResponse.json(
-      {
-        error: "the run is empty: submit a product and generate creatives before exporting.",
-        code: "EMPTY_RUN",
-      },
-      { status: 400 },
-    );
-  }
-
-  const format: Format = body.format === "csv" ? "csv" : "json";
-  const section: Section = SECTIONS.includes(body.section as Section)
-    ? (body.section as Section)
-    : "all";
-
-  const name = `banditd-${slug(state.product?.name)}-${section}-${stamp()}.${format}`;
-  const payload =
-    format === "csv" ? csvFor(state, section) : `${JSON.stringify(jsonFor(state), null, 2)}\n`;
-
-  return new NextResponse(payload, {
-    status: 200,
-    headers: {
-      "Content-Type":
-        format === "csv" ? "text/csv; charset=utf-8" : "application/json; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${name}"`,
-      "Cache-Control": "no-store",
-      "X-Banditd-Rows": String(rowCount(state, section)),
-    },
-  });
 }

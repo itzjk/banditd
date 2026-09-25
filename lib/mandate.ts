@@ -1,4 +1,4 @@
-import { listMandates, chargeMandate } from "./prava.ts";
+import { listMandates, chargeMandate, isMandateId, CHARGE_OUTCOME_UNKNOWN } from "./prava.ts";
 import { declineFamily } from "./declines.ts";
 import type { ChargeContext, ChargeResult, Mandate } from "./prava.ts";
 
@@ -39,14 +39,15 @@ function toAmount(value: string | undefined, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-function reservedAmount(): number {
-  return toAmount(process.env.PRAVA_REJECTION_MANDATE_AMOUNT ?? "5.00", 5);
-}
-
-function isReserved(m: ListedMandate): boolean {
+/**
+ * The mandate set aside for the over-cap demo is the one the operator names in
+ * PRAVA_REJECTION_MANDATE_ID, and only that one. It is never guessed from its
+ * amount: a real mandate signed for the same amount would otherwise drop out
+ * of the charge queue and become the target of the deliberate 10x charge.
+ */
+export function isReservedMandate(m: { id: string }): boolean {
   const pinned = process.env.PRAVA_REJECTION_MANDATE_ID;
-  if (pinned) return m.id === pinned;
-  return toAmount(m.approvedAmount, 0) === reservedAmount();
+  return Boolean(pinned) && m.id === pinned;
 }
 
 function renderMerchantName(): string {
@@ -72,22 +73,7 @@ function usable(m: ListedMandate): boolean {
   return m.status === "active" && m.state !== "consumed" && m.state !== "expired";
 }
 
-function toCandidate(m: ListedMandate): MandateCandidate {
-  const approved = toAmount(m.approvedAmount, 0);
-  return {
-    id: m.id,
-    approvedAmount: approved,
-    remaining: toAmount(m.remaining, approved),
-    reserved: isReserved(m),
-    foreign: isForeignMerchant(m),
-    merchantName: m.merchantName ?? null,
-    chargedThisCycle: chargedThisCycle(m),
-    lastChargeStatus: m.lastCharge?.status ?? null,
-    lastChargeAt: m.lastCharge?.at ?? null,
-  };
-}
-
-function unknownCandidate(id: string): MandateCandidate {
+function unlistedCandidate(id: string): MandateCandidate {
   return {
     id,
     approvedAmount: 0,
@@ -101,6 +87,21 @@ function unknownCandidate(id: string): MandateCandidate {
   };
 }
 
+function toCandidate(m: ListedMandate): MandateCandidate {
+  const approved = toAmount(m.approvedAmount, 0);
+  return {
+    id: m.id,
+    approvedAmount: approved,
+    remaining: toAmount(m.remaining, approved),
+    reserved: isReservedMandate(m),
+    foreign: isForeignMerchant(m),
+    merchantName: m.merchantName ?? null,
+    chargedThisCycle: chargedThisCycle(m),
+    lastChargeStatus: m.lastCharge?.status ?? null,
+    lastChargeAt: m.lastCharge?.at ?? null,
+  };
+}
+
 export interface MandateQueue {
   all: MandateCandidate[];
   candidates: MandateCandidate[];
@@ -110,18 +111,26 @@ export interface MandateQueue {
   listError: string | null;
 }
 
+/**
+ * The mandates the agent may charge, read live from Prava. `preferredId` is
+ * the run's mandate on file, which only the server writes (PRAVA_MANDATE_ID,
+ * then the mandate the last successful charge used). When the listing fails
+ * or lists nothing, that one id is still tried, and Prava enforces its rules
+ * on the charge itself. No id from a request ever reaches this queue.
+ */
 export async function mandateQueue(
   amount: number,
   preferredId: string | null,
   customerId?: string,
 ): Promise<MandateQueue> {
+  const fallback = isMandateId(preferredId) ? [unlistedCandidate(preferredId)] : [];
   let listed: ListedMandate[];
   try {
     listed = (await listMandates(customerId)) as ListedMandate[];
   } catch (e) {
     return {
-      all: preferredId ? [unknownCandidate(preferredId)] : [],
-      candidates: preferredId ? [unknownCandidate(preferredId)] : [],
+      all: fallback,
+      candidates: fallback,
       skipped: [],
       foreign: [],
       reserved: null,
@@ -129,7 +138,7 @@ export async function mandateQueue(
     };
   }
 
-  const all = listed.filter(usable).map(toCandidate);
+  const all = listed.filter((m) => typeof m.id === "string").filter(usable).map(toCandidate);
   const reserved = all.find((c) => c.reserved && !c.foreign) ?? null;
   const foreign = all.filter((c) => c.foreign);
   const pool = all.filter((c) => !c.reserved && !c.foreign);
@@ -143,9 +152,7 @@ export async function mandateQueue(
     return a.id < b.id ? -1 : 1;
   });
 
-  if (!candidates.length && preferredId && !all.length) {
-    candidates.push(unknownCandidate(preferredId));
-  }
+  if (!candidates.length && !all.length) candidates.push(...fallback);
 
   return { all, candidates, skipped, foreign, reserved, listError: null };
 }
@@ -163,13 +170,11 @@ export function exhaustionMessage(queue: MandateQueue, amount: string): string {
   return NO_MANDATE_MESSAGE;
 }
 
-export function rejectionTarget(queue: MandateQueue, preferredId: string | null): MandateCandidate | null {
+export function rejectionTarget(queue: MandateQueue): MandateCandidate | null {
   if (queue.reserved) return queue.reserved;
   if (queue.candidates.length) return queue.candidates[0];
   const own = queue.all.filter((c) => !c.foreign);
-  const live = own.find((c) => !c.chargedThisCycle) ?? own[0];
-  if (live) return live;
-  return preferredId ? unknownCandidate(preferredId) : null;
+  return own.find((c) => !c.chargedThisCycle) ?? own[0] ?? null;
 }
 
 export function overCapAmount(target: MandateCandidate | null): string {
@@ -185,9 +190,8 @@ export async function merchantDemoTarget(customerId?: string): Promise<MandateCa
   try {
     listed = (await listMandates(customerId)) as ListedMandate[];
   } catch {
-    return pinned ? unknownCandidate(pinned) : null;
+    return isMandateId(pinned) ? unlistedCandidate(pinned) : null;
   }
-
   const match = listed
     .filter(usable)
     .find((m) =>
@@ -195,9 +199,7 @@ export async function merchantDemoTarget(customerId?: string): Promise<MandateCa
         ? m.id === pinned
         : (m.merchantName ?? "").toLowerCase().includes(DEMO_MERCHANT_NAME.toLowerCase()),
     );
-
-  if (match) return toCandidate(match);
-  return pinned ? unknownCandidate(pinned) : null;
+  return match ? toCandidate(match) : null;
 }
 
 export function scopeDemoAmount(target: MandateCandidate): string {
@@ -231,6 +233,11 @@ export interface RotationResult {
 }
 
 const MAX_ATTEMPTS = 4;
+function chargeTimeoutMs(): number {
+  const n = Number(process.env.PRAVA_CHARGE_TIMEOUT_MS ?? 20000);
+  return Number.isFinite(n) && n > 0 ? n : 20000;
+}
+const MIN_ATTEMPT_MS = 5000;
 
 const NOTHING_LEFT_BEHIND = new Set(["CYCLE_ALREADY_CHARGED", "FETCH_AGENTIC_CREDS_ERROR", "NO_TOKEN"]);
 
@@ -238,11 +245,19 @@ function worthRetrying(code: string): boolean {
   return NOTHING_LEFT_BEHIND.has(code.toUpperCase());
 }
 
+/**
+ * Charges the candidates in order until one pays or refuses for a reason that
+ * would repeat. Every attempt has its own timeout and the whole rotation stops
+ * before `deadline` (epoch ms), so the route never dies mid-charge on its
+ * platform limit. A timed out charge is CHARGE_OUTCOME_UNKNOWN and is never
+ * retried on another mandate.
+ */
 export async function chargeWithRotation(
   candidates: MandateCandidate[],
   amount: string,
   reference: string,
-  context?: ChargeContext,
+  context: ChargeContext | undefined,
+  deadline: number,
 ): Promise<RotationResult> {
   const rotated: RotationAttempt[] = [];
   const queue = candidates.slice(0, MAX_ATTEMPTS);
@@ -251,14 +266,23 @@ export async function chargeWithRotation(
   let lastReference: string | null = null;
 
   for (const candidate of queue) {
+    const left = deadline - Date.now();
+    const timeout = Math.min(chargeTimeoutMs(), left);
+    if (timeout < Math.min(MIN_ATTEMPT_MS, chargeTimeoutMs())) break;
     const attemptReference =
       queue.length > 1 ? `${reference}_${candidate.id.slice(-6)}` : reference;
-    const charge = await chargeMandate(candidate.id, amount, attemptReference, context);
+    const charge = await chargeMandate(
+      candidate.id,
+      amount,
+      attemptReference,
+      context,
+      timeout,
+    );
     last = charge;
     lastId = candidate.id;
     lastReference = attemptReference;
 
-    if (charge.ok || !worthRetrying(charge.code)) {
+    if (charge.ok || charge.code === CHARGE_OUTCOME_UNKNOWN || !worthRetrying(charge.code)) {
       return { charge, mandateId: candidate.id, reference: attemptReference, rotated };
     }
 

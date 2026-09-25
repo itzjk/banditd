@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
-import { fromOurPage, OFF_PAGE_CODE, OFF_PAGE_MESSAGE } from "@/lib/same-origin";
-import { openSession } from "@/lib/store";
-import { startAgentTurn, resumeAgentTurn, startBudget, failureBody } from "@/lib/openai";
-import type { AgentStep, AgentToolOutput, ChatTurn } from "@/lib/openai";
+import { startAgentTurn, resumeAgentTurn, startBudget } from "@/lib/openai";
+import type { AgentStep, ChatTurn } from "@/lib/openai";
+import { guard } from "@/lib/access";
+import { readRun, updateRun, rememberChat } from "@/lib/run-store";
+import type { Client } from "@/lib/access";
+import { failure, readJson, HttpFailure } from "@/lib/http";
+import { ChatInput } from "@/lib/contracts";
 import { buildSnapshot, clean } from "./snapshot";
 
 export const maxDuration = 120;
@@ -11,41 +14,23 @@ const BUDGET_MS = Number(process.env.CHAT_BUDGET_MS ?? 60000);
 const MAX_TURNS = 10;
 const MAX_QUESTION = 700;
 const MAX_ANSWER = 1200;
-const MAX_OUTPUTS = 4;
 const MAX_OUTPUT_CHARS = 6000;
 
-function readTurns(value: unknown): ChatTurn[] {
-  if (!Array.isArray(value)) return [];
-  const turns: ChatTurn[] = [];
-  for (const raw of value) {
-    if (!raw || typeof raw !== "object") continue;
-    const item = raw as { role?: unknown; content?: unknown };
-    const role = item.role === "assistant" ? "assistant" : item.role === "user" ? "user" : null;
-    if (!role) continue;
-    const content = clean(item.content, role === "user" ? MAX_QUESTION : MAX_ANSWER);
-    if (!content) continue;
-    turns.push({ role, content });
-  }
-  return turns.slice(-MAX_TURNS);
+function readTurns(messages: { role: "user" | "assistant"; content: string }[]): ChatTurn[] {
+  return messages
+    .map((m) => ({ role: m.role, content: clean(m.content, m.role === "user" ? MAX_QUESTION : MAX_ANSWER) }))
+    .filter((m) => m.content.length > 0)
+    .slice(-MAX_TURNS);
 }
 
-function readOutputs(value: unknown): AgentToolOutput[] {
-  if (!Array.isArray(value)) return [];
-  const outputs: AgentToolOutput[] = [];
-  for (const raw of value.slice(0, MAX_OUTPUTS)) {
-    if (!raw || typeof raw !== "object") continue;
-    const item = raw as { callId?: unknown; output?: unknown };
-    if (typeof item.callId !== "string" || !/^call_[A-Za-z0-9_-]{4,120}$/.test(item.callId)) {
-      continue;
-    }
-    const output = clean(item.output, MAX_OUTPUT_CHARS);
-    outputs.push({ callId: item.callId, output: output || '{"ok":false,"error":"empty result"}' });
-  }
-  return outputs;
-}
-
-function answerOf(step: AgentStep) {
+/**
+ * A step that asks for tools is resumed later by its response id. The id is
+ * recorded on the run, so a caller can only continue a conversation this run
+ * started, not any stored response on the account.
+ */
+async function answerOf(runId: string, client: Client, step: AgentStep) {
   if (step.calls.length > 0) {
+    await updateRun(runId, client, (record) => rememberChat(record, step.responseId));
     return NextResponse.json({
       pending: { responseId: step.responseId, calls: step.calls },
       note: step.text || null,
@@ -55,64 +40,42 @@ function answerOf(step: AgentStep) {
 }
 
 export async function POST(req: Request) {
-  if (!fromOurPage(req)) {
-    return NextResponse.json({ error: OFF_PAGE_MESSAGE, code: OFF_PAGE_CODE }, { status: 403 });
-  }
-
-  const body = (await req.json().catch(() => ({}))) as {
-    messages?: unknown;
-    state?: unknown;
-    responseId?: unknown;
-    outputs?: unknown;
-  };
-
-  const budget = startBudget("The answer", BUDGET_MS);
   const started = Date.now();
-
-  const resuming =
-    typeof body.responseId === "string" && /^resp_[A-Za-z0-9_-]{6,200}$/.test(body.responseId);
-
-  if (resuming) {
-    const outputs = readOutputs(body.outputs);
-    if (outputs.length === 0) {
-      return NextResponse.json(
-        { error: "The tool results did not come back in a shape the agent could read." },
-        { status: 400 },
-      );
-    }
-    try {
-      const step = await resumeAgentTurn(body.responseId as string, outputs, budget);
-      return answerOf(step);
-    } catch (err) {
-      const { status, body: payload } = failureBody(err);
-      console.error(
-        `chat gave up resuming after ${Math.round((Date.now() - started) / 1000)}s: ${payload.code}`,
-        err,
-      );
-      return NextResponse.json(payload, { status });
-    }
-  }
-
-  const turns = readTurns(body.messages);
-  if (turns.length === 0 || turns[turns.length - 1].role !== "user") {
-    return NextResponse.json(
-      { error: "Send a question and the agent will answer it from this run." },
-      { status: 400 },
-    );
-  }
-
-  const session = openSession(body.state);
-  const snapshot = buildSnapshot(session.state);
-
   try {
-    const step = await startAgentTurn(turns, snapshot, budget);
-    return answerOf(step);
+    const client = await guard(req, "model");
+    const body = await readJson(req, ChatInput);
+    const record = await readRun(body.runId, client);
+    const budget = startBudget("The answer", BUDGET_MS);
+
+    if ("responseId" in body) {
+      if (!record.chat.includes(body.responseId)) {
+        throw new HttpFailure(
+          "UNKNOWN_RESPONSE",
+          409,
+          "That conversation step was not started by this run, so it cannot be continued here. Ask the question again.",
+        );
+      }
+      const outputs = body.outputs.map((o) => ({
+        callId: o.callId,
+        output: clean(o.output, MAX_OUTPUT_CHARS) || '{"ok":false,"error":"empty result"}',
+      }));
+      return await answerOf(body.runId, client, await resumeAgentTurn(body.responseId, outputs, budget));
+    }
+
+    const turns = readTurns(body.messages);
+    if (turns.length === 0 || turns[turns.length - 1].role !== "user") {
+      throw new HttpFailure(
+        "NO_QUESTION",
+        400,
+        "Send a question and the agent will answer it from this run.",
+      );
+    }
+    const step = await startAgentTurn(turns, buildSnapshot(record.state), budget);
+    return await answerOf(body.runId, client, step);
   } catch (err) {
-    const { status, body: payload } = failureBody(err);
-    console.error(
-      `chat gave up after ${Math.round((Date.now() - started) / 1000)}s: ${payload.code}`,
-      err,
-    );
-    return NextResponse.json(payload, { status });
+    if (!(err instanceof HttpFailure)) {
+      console.error(`chat gave up after ${Math.round((Date.now() - started) / 1000)}s`, err);
+    }
+    return failure(err);
   }
 }

@@ -1,23 +1,34 @@
 import { NextResponse } from "next/server";
-import { openSession, commit, logAudit } from "@/lib/store";
+import { logAudit } from "@/lib/store";
 import { cancelMandate, PravaError } from "@/lib/prava";
-import { fromOurPage, OFF_PAGE_CODE, OFF_PAGE_MESSAGE } from "@/lib/same-origin";
+import { guard, operatorAllowed } from "@/lib/access";
+import { safeError, logUpstream } from "@/lib/redact";
+import type { Client } from "@/lib/access";
+import { readRun, updateRun } from "@/lib/run-store";
+import { failure, readJson, HttpFailure } from "@/lib/http";
+import { RunOnly } from "@/lib/contracts";
 
 export const maxDuration = 30;
 
-interface RevokeBody {
-  state?: unknown;
+export async function POST(req: Request) {
+  try {
+    const client = await guard(req, "purchase");
+    const { runId } = await readJson(req, RunOnly);
+    await readRun(runId, client);
+    if (!operatorAllowed(req)) {
+      throw new HttpFailure(
+        "REVOKE_DISABLED",
+        403,
+        "Revoking a mandate cannot be undone, so on this deployment it is an operator action: it needs DEMO_FORCE=1 and the operator's admin token. Nothing was revoked.",
+      );
+    }
+    return await revoke(runId, client);
+  } catch (err) {
+    return failure(err);
+  }
 }
 
-export async function POST(req: Request) {
-  if (!fromOurPage(req)) {
-    return NextResponse.json({ error: OFF_PAGE_MESSAGE, code: OFF_PAGE_CODE }, { status: 403 });
-  }
-
-  const body = (await req.json().catch(() => ({}))) as RevokeBody;
-
-  const session = openSession(body.state);
-  const state = session.state;
+async function revoke(runId: string, client: Client) {
   const mandateId = (process.env.PRAVA_REVOKE_DEMO_MANDATE_ID ?? "").trim();
 
   if (!mandateId) {
@@ -34,21 +45,24 @@ export async function POST(req: Request) {
   try {
     const mandate = await cancelMandate(mandateId);
 
-    logAudit(
-      state,
-      "mandate",
-      `Seller revoked the mandate ${mandateId}: Prava reports it as ${mandate.status}. Every future charge attempt dies before it reaches a card, past charges stand.`,
+    const { record } = await updateRun(runId, client, ({ state }) =>
+      logAudit(
+        state,
+        "mandate",
+        `Seller revoked the mandate ${mandateId}: Prava reports it as ${mandate.status}. Every future charge attempt dies before it reaches a card, past charges stand.`,
+      ),
     );
 
     return NextResponse.json({
-      ...commit(session),
+      ...record.state,
       revoked: { mandateId, status: mandate.status },
     });
   } catch (e) {
+    logUpstream(`prava cancel ${mandateId}`, e);
     if (e instanceof PravaError) {
       return NextResponse.json(
         {
-          error: `Prava refused to revoke mandate ${mandateId}: ${e.message}`,
+          error: `Prava refused to revoke mandate ${mandateId}: ${safeError(e)}`,
           code: e.code,
         },
         { status: e.status >= 400 && e.status < 600 ? e.status : 502 },
@@ -56,7 +70,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json(
       {
-        error: `Revoking mandate ${mandateId} failed on the way to Prava: ${e instanceof Error ? e.message : String(e)}`,
+        error: `Revoking mandate ${mandateId} failed on the way to Prava: ${safeError(e)}`,
         code: "REVOKE_FAILED",
       },
       { status: 502 },

@@ -1,32 +1,29 @@
 import { NextResponse } from "next/server";
-import { fromOurPage, OFF_PAGE_CODE, OFF_PAGE_MESSAGE } from "@/lib/same-origin";
-import { openSession } from "@/lib/store";
 import { readMandateFacts, RENDER_MERCHANT } from "@/lib/authorization";
+import type { State } from "@/lib/store";
+import { guard } from "@/lib/access";
+import { readRun } from "@/lib/run-store";
+import { failure, readJson } from "@/lib/http";
+import { ChatToolInput } from "@/lib/contracts";
 import { buildSnapshot, explainDecision, CREDIT_PRICE, MANDATE_CAP } from "../snapshot";
 
 export const maxDuration = 30;
 
-type ReadTool = "read_run" | "read_mandate_limits" | "explain_last_decision";
-
-const TOOLS = new Set<ReadTool>(["read_run", "read_mandate_limits", "explain_last_decision"]);
-
 export async function POST(req: Request) {
-  if (!fromOurPage(req)) {
-    return NextResponse.json({ error: OFF_PAGE_MESSAGE, code: OFF_PAGE_CODE }, { status: 403 });
+  try {
+    const client = await guard(req, "read");
+    const { runId, tool } = await readJson(req, ChatToolInput);
+    const { state } = await readRun(runId, client);
+    return await answer(tool, state);
+  } catch (err) {
+    return failure(err);
   }
+}
 
-  const body = (await req.json().catch(() => ({}))) as { tool?: unknown; state?: unknown };
-  const tool = typeof body.tool === "string" ? body.tool : "";
-
-  if (!TOOLS.has(tool as ReadTool)) {
-    return NextResponse.json(
-      { error: `This chat has no read tool called ${tool || "nothing"}.` },
-      { status: 400 },
-    );
-  }
-
-  const session = openSession(body.state);
-  const state = session.state;
+async function answer(
+  tool: "read_run" | "read_mandate_limits" | "explain_last_decision",
+  state: State,
+) {
 
   if (tool === "read_run") {
     return NextResponse.json({

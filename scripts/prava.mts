@@ -88,7 +88,7 @@ async function list() {
 
 async function charge(mandateId: string, amount: string) {
   const reference = `banditd_smoke_${Date.now()}`;
-  const result = await chargeMandate(mandateId, amount, reference);
+  const result = await chargeMandate(mandateId, amount, reference, undefined, 30000);
 
   if (!result.ok) {
     console.log("CHARGE FAILED");
@@ -102,8 +102,9 @@ async function charge(mandateId: string, amount: string) {
   console.log("  transactionId ", result.transactionId);
   console.log("  status        ", result.status);
   console.log("  deduplicated  ", result.deduplicated);
-  console.log("  card last4    ", result.credentials.token);
-  console.log("  dynamicCvv    ", result.credentials.dynamicCvv);
+  // The token and the dynamic CVV are a working single use card: they never go
+  // to the terminal, where they would stay in the scrollback and the logs.
+  console.log("  card last4    ", result.credentials.token.slice(-4));
   console.log("  expiry        ", `${result.credentials.expiryMonth}/${result.credentials.expiryYear}`);
 
   console.log("");

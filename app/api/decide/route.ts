@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
-import { fromOurPage, OFF_PAGE_CODE, OFF_PAGE_MESSAGE } from "@/lib/same-origin";
-import { openSession, commit, logAudit } from "@/lib/store";
+import { logAudit, liveCohort } from "@/lib/store";
 import { evaluate, createRng } from "@/lib/bandit";
 import { cohortSeed } from "@/lib/cohort-seed";
-import { decideSpend, startBudget, failureBody } from "@/lib/openai";
-import { getMandate, listMandates } from "@/lib/prava";
+import { decideSpend, startBudget } from "@/lib/openai";
+import { getMandate, listMandates, isMandateId } from "@/lib/prava";
+import { guard } from "@/lib/access";
+import { readRun, updateRun } from "@/lib/run-store";
+import { failure, readJson, HttpFailure } from "@/lib/http";
+import { RunOnly } from "@/lib/contracts";
 import { mandateQueue } from "@/lib/mandate";
 import type { DecisionContext } from "@/lib/openai";
 import type { Mandate } from "@/lib/prava";
@@ -54,7 +57,7 @@ function describeBudget(detail: MandateDetail | null, listed: Mandate | null): s
 }
 
 async function readMandate(id: string | null): Promise<MandateFacts> {
-  if (!id) return { remaining: NO_MANDATE, scope: NO_MANDATE, expiry: NO_MANDATE, live: false };
+  if (!isMandateId(id)) return { remaining: NO_MANDATE, scope: NO_MANDATE, expiry: NO_MANDATE, live: false };
 
   const [detailResult, listResult] = await Promise.allSettled([
     getMandate(id),
@@ -89,105 +92,94 @@ async function readMandate(id: string | null): Promise<MandateFacts> {
 }
 
 export async function POST(req: Request) {
-  if (!fromOurPage(req)) {
-    return NextResponse.json({ error: OFF_PAGE_MESSAGE, code: OFF_PAGE_CODE }, { status: 403 });
-  }
-  const body = (await req.json().catch(() => ({}))) as { state?: unknown };
-  const session = openSession(body.state);
-  const state = session.state;
-
-  if (state.creatives.length === 0) {
-    return NextResponse.json({ error: "no creatives to evaluate" }, { status: 400 });
-  }
-
-  const generation = Math.max(...state.creatives.map((c) => c.generation));
-  const cohort = state.creatives.filter((c) => c.generation === generation);
-
-  const evaluation = evaluate(
-    cohort.map((c) => c.arm),
-    {
-      samples: 20000,
-      candidateRule: "probabilityBest",
-      rng: createRng(cohortSeed(cohort)),
-    },
-  );
-
-  const [mandate, queue] = await Promise.all([
-    readMandate(state.mandateId),
-    mandateQueue(Number(CREDIT_PRICE), state.mandateId, process.env.PRAVA_USER_ID),
-  ]);
-
-  if (state.mandateId && !mandate.live) {
-    logAudit(state, "mandate", "Prava did not answer, deciding without live mandate data");
-  }
-
-  const poolRemaining = queue.candidates.reduce((sum, m) => sum + m.remaining, 0);
-  const pool = queue.listError
-    ? "signed mandate pool unknown, Prava did not answer"
-    : queue.candidates.length
-      ? `${queue.candidates.length} signed mandate(s) still chargeable in this cycle, ${poolRemaining.toFixed(2)} USD total, one charge per mandate per monthly cycle`
-      : "every signed mandate has already been charged in this cycle, the next purchase will be refused until the seller signs another mandate";
-
-  const context: DecisionContext = {
-    arms: cohort.map((c) => ({
-      headline: c.headline,
-      angle: c.angle,
-      impressions: c.arm.impressions,
-      clicks: c.arm.clicks,
-      ctr: c.arm.impressions
-        ? `${((c.arm.clicks / c.arm.impressions) * 100).toFixed(2)}%`
-        : "0.00%",
-    })),
-    candidateIndex: evaluation.candidateIndex,
-    probabilityBest: evaluation.probabilityBest,
-    sufficientEvidence: evaluation.sufficientEvidence,
-    totalImpressions: evaluation.totalImpressions,
-    mandateRemaining: `${mandate.remaining}. ${pool}`,
-    mandateScope: mandate.scope,
-    mandateExpiry: mandate.expiry,
-    creditPrice: CREDIT_PRICE,
-  };
-
-  const budget = startBudget("The spend decision", BUDGET_MS);
   const started = Date.now();
-
-  let decision;
   try {
-    decision = await decideSpend(context, budget);
+    const client = await guard(req, "model");
+    const { runId } = await readJson(req, RunOnly);
+    const { state } = await readRun(runId, client);
+
+    const cohort = liveCohort(state);
+    if (cohort.length === 0) throw new HttpFailure("NO_CREATIVES", 400, "no creatives to evaluate");
+    const generation = cohort[0].generation;
+
+    const evaluation = evaluate(
+      cohort.map((c) => c.arm),
+      {
+        samples: 20000,
+        candidateRule: "probabilityBest",
+        rng: createRng(cohortSeed(cohort)),
+      },
+    );
+
+    const [mandate, queue] = await Promise.all([
+      readMandate(state.mandateId),
+      mandateQueue(Number(CREDIT_PRICE), state.mandateId, process.env.PRAVA_USER_ID),
+    ]);
+
+    const poolRemaining = queue.candidates.reduce((sum, m) => sum + m.remaining, 0);
+    const pool = queue.listError
+      ? "signed mandate pool unknown, Prava did not answer"
+      : queue.candidates.length
+        ? `${queue.candidates.length} signed mandate(s) still chargeable in this cycle, ${poolRemaining.toFixed(2)} USD total, one charge per mandate per monthly cycle`
+        : "every signed mandate has already been charged in this cycle, the next purchase will be refused until the seller signs another mandate";
+
+    const context: DecisionContext = {
+      arms: cohort.map((c) => ({
+        headline: c.headline,
+        angle: c.angle,
+        impressions: c.arm.impressions,
+        clicks: c.arm.clicks,
+        ctr: c.arm.impressions
+          ? `${((c.arm.clicks / c.arm.impressions) * 100).toFixed(2)}%`
+          : "0.00%",
+      })),
+      candidateIndex: evaluation.candidateIndex,
+      probabilityBest: evaluation.probabilityBest,
+      sufficientEvidence: evaluation.sufficientEvidence,
+      totalImpressions: evaluation.totalImpressions,
+      mandateRemaining: `${mandate.remaining}. ${pool}`,
+      mandateScope: mandate.scope,
+      mandateExpiry: mandate.expiry,
+      creditPrice: CREDIT_PRICE,
+    };
+
+    const decision = await decideSpend(context, startBudget("The spend decision", BUDGET_MS));
+    const candidate = cohort[evaluation.candidateIndex];
+
+    const { record } = await updateRun(runId, client, ({ state: latest }) => {
+      if (latest.mandateId && !mandate.live) {
+        logAudit(latest, "mandate", "Prava did not answer, deciding without live mandate data");
+      }
+      if (decision.shouldBuy) {
+        logAudit(
+          latest,
+          "decision",
+          `Agent wants to spend ${decision.amount} on render credits for "${candidate?.headline ?? "unknown variant"}" at ${(evaluation.probabilityBest * 100).toFixed(1)}% probability best. ${decision.reason}`,
+        );
+      } else if (decision.trafficPlan) {
+        logAudit(
+          latest,
+          "decision",
+          `Agent asked for ${decision.trafficPlan.targetImpressions.toLocaleString("en-US")} impressions before re-reading the evidence: ${decision.trafficPlan.reason}`,
+        );
+      } else {
+        logAudit(
+          latest,
+          "decision",
+          `Agent held the money back at ${(evaluation.probabilityBest * 100).toFixed(1)}% probability best over ${evaluation.totalImpressions} impressions. ${decision.abstainedBecause}`,
+        );
+      }
+    });
+
+    return NextResponse.json({
+      decision,
+      evaluation: { ...evaluation, generation, candidateId: candidate?.id ?? null },
+      state: record.state,
+    });
   } catch (err) {
-    const { status, body: payload } = failureBody(err);
-    console.error(
-      `decide gave up after ${Math.round((Date.now() - started) / 1000)}s: ${payload.code}`,
-      err,
-    );
-    return NextResponse.json(payload, { status });
+    if (!(err instanceof HttpFailure)) {
+      console.error(`decide gave up after ${Math.round((Date.now() - started) / 1000)}s`, err);
+    }
+    return failure(err);
   }
-
-  const candidate = cohort[evaluation.candidateIndex];
-
-  if (decision.shouldBuy) {
-    logAudit(
-      state,
-      "decision",
-      `Agent wants to spend ${decision.amount} on render credits for "${candidate?.headline ?? "unknown variant"}" at ${(evaluation.probabilityBest * 100).toFixed(1)}% probability best. ${decision.reason}`,
-    );
-  } else if (decision.trafficPlan) {
-    logAudit(
-      state,
-      "decision",
-      `Agent asked for ${decision.trafficPlan.targetImpressions.toLocaleString("en-US")} impressions before re-reading the evidence: ${decision.trafficPlan.reason}`,
-    );
-  } else {
-    logAudit(
-      state,
-      "decision",
-      `Agent held the money back at ${(evaluation.probabilityBest * 100).toFixed(1)}% probability best over ${evaluation.totalImpressions} impressions. ${decision.abstainedBecause}`,
-    );
-  }
-
-  return NextResponse.json({
-    decision,
-    evaluation: { ...evaluation, generation, candidateId: candidate?.id ?? null },
-    state: commit(session),
-  });
 }
